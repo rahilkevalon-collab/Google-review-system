@@ -39,7 +39,22 @@ class ReviewService:
                     else:
                         query_str = f"{r['companyName']} {r['companyLocation']} reviews".strip()
                         ext_link = f"https://www.google.com/search?q={urllib.parse.quote_plus(query_str)}"
-                r["externalReviewLink"] = ext_link
+        # Normalize legacy record fields safely without recalculating or randomizing
+        if "rating" not in r or r["rating"] is None:
+            r["rating"] = 5
+        else:
+            try:
+                r["rating"] = int(r["rating"])
+            except (ValueError, TypeError):
+                r["rating"] = 5
+
+        if "isDemo" not in r:
+            r["isDemo"] = (r.get("ratingType") != "real") and (r.get("source") != "customer-submitted")
+
+        if "selectedKeywords" not in r or not isinstance(r.get("selectedKeywords"), list):
+            kw_str = r.get("keyword", "")
+            r["selectedKeywords"] = [k.strip() for k in kw_str.split(",") if k.strip()] if kw_str else []
+
         return r
 
     def list_reviews(
@@ -99,6 +114,23 @@ class ReviewService:
             r["externalReviewLink"] = ext_link
             r["companyLocation"] = comp_loc
             r["companyName"] = comp_name
+
+            # Normalize legacy record fields safely without recalculating or randomizing
+            if "rating" not in r or r["rating"] is None:
+                r["rating"] = 5
+            else:
+                try:
+                    r["rating"] = int(r["rating"])
+                except (ValueError, TypeError):
+                    r["rating"] = 5
+
+            if "isDemo" not in r:
+                r["isDemo"] = (r.get("ratingType") != "real") and (r.get("source") != "customer-submitted")
+
+            if "selectedKeywords" not in r or not isinstance(r.get("selectedKeywords"), list):
+                kw_str = r.get("keyword", "")
+                r["selectedKeywords"] = [k.strip() for k in kw_str.split(",") if k.strip()] if kw_str else []
+
             enriched_reviews.append(r)
 
         return {

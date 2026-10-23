@@ -81,7 +81,7 @@ export default function ReviewCard({ review }) {
   return (
     <div
       onClick={handleCardClick}
-      className="glass-card group p-5 rounded-2xl flex flex-col justify-between cursor-pointer relative overflow-hidden bg-white border border-slate-200 hover:border-purple-300 hover:shadow-xl hover:shadow-purple-500/5 transition-all duration-200"
+      className="glass-card group p-5 rounded-2xl flex flex-col justify-between cursor-pointer relative overflow-hidden bg-white border border-slate-200 hover:border-purple-300 hover:shadow-xl hover:shadow-purple-500/5 transition-all duration-200 font-sans"
       title="Click card to view details or edit suggestion"
     >
       {/* Top badges */}
@@ -94,15 +94,28 @@ export default function ReviewCard({ review }) {
                 {review.companyName}
               </span>
             )}
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold">
-              <Tag className="w-3 h-3 text-purple-600" />
-              {review.keyword || (review.selectedKeywords && review.selectedKeywords[0]) || 'Featured'}
-            </span>
+            {/* Display relevant keyword labels for this specific review card */}
+            {Array.isArray(review.selectedKeywords) && review.selectedKeywords.length > 0 ? (
+              review.selectedKeywords.map((kw, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold"
+                >
+                  <Tag className="w-3 h-3 text-purple-600" />
+                  {kw}
+                </span>
+              ))
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold">
+                <Tag className="w-3 h-3 text-purple-600" />
+                {review.keyword || 'Featured'}
+              </span>
+            )}
           </div>
 
           {/* Clearly labelled Demo / Real Rating stars */}
           {(() => {
-            const ratingVal = Number(review.rating) || 5;
+            const ratingVal = Math.round(Number(review.rating)) || 5;
             const isDemo = review.isDemo !== false && review.ratingType !== 'real';
             return (
               <div 
@@ -129,9 +142,9 @@ export default function ReviewCard({ review }) {
           })()}
         </div>
 
-        {/* Review Body (Italic, readable) */}
+        {/* Review Body (Clean sans-serif, bold/semibold font-weight 600, no italic) */}
         <div className="my-3">
-          <p className="text-sm text-slate-800 leading-relaxed font-normal italic group-hover:text-slate-900 transition-colors">
+          <p className="text-sm sm:text-[15px] text-slate-800 leading-relaxed font-semibold group-hover:text-slate-900 transition-colors">
             "{review.reviewText}"
           </p>
         </div>

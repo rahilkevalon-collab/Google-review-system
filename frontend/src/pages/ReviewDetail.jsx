@@ -293,7 +293,7 @@ export default function ReviewDetail() {
           value={reviewText}
           onChange={(e) => setReviewText(e.target.value)}
           placeholder="Review text..."
-          className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-500/10 transition-all leading-relaxed text-sm sm:text-base font-normal shadow-2xs italic"
+          className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-500/10 transition-all leading-relaxed text-sm sm:text-base font-semibold font-sans shadow-2xs"
         />
 
         {/* Primary Action Buttons */}

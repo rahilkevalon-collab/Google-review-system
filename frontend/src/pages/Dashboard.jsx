@@ -4,14 +4,10 @@ import {
   Sparkles, 
   MapPin, 
   Globe, 
-  ExternalLink,
-  RefreshCw,
-  PlusCircle,
-  Building2,
-  Info,
   Layers,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Info
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
@@ -89,12 +85,23 @@ export default function Dashboard({ categories = [] }) {
 
           setKeywords(finalKeywords);
 
-          // Restore or set default selected keywords
+          // Restore or set default selected keywords from localStorage
           const savedKw = localStorage.getItem(`reviewcraft_selected_kw_${comp.id}`);
           let initialSelected = [];
-          if (savedKw && finalKeywords.includes(savedKw)) {
-            initialSelected = [savedKw];
-          } else {
+          if (savedKw) {
+            try {
+              const parsed = JSON.parse(savedKw);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                initialSelected = parsed.filter((k) => finalKeywords.includes(k));
+              }
+            } catch (e) {
+              if (finalKeywords.includes(savedKw)) {
+                initialSelected = [savedKw];
+              }
+            }
+          }
+
+          if (initialSelected.length === 0) {
             initialSelected = [finalKeywords[0]];
           }
           setSelectedKeywords(initialSelected);
@@ -135,7 +142,8 @@ export default function Dashboard({ categories = [] }) {
       : (selectedKeywords.length > 0 ? selectedKeywords : [keywords[0] || 'Quality Service']);
 
     try {
-      // Backend automatically applies its configured rating distribution ratio (e.g. 60% 5-star, 40% 4-star)
+      // Backend automatically applies its configured rating distribution ratio (60% 5-star, 40% 4-star)
+      // and natural keyword partitioning across review cards
       const payload = {
         companyId: company.id,
         companyName: company.name,
@@ -208,7 +216,7 @@ export default function Dashboard({ categories = [] }) {
 
     setSelectedKeywords(next);
     if (company?.id) {
-      localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, next[0] || kw);
+      localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, JSON.stringify(next));
     }
   };
 
@@ -224,7 +232,7 @@ export default function Dashboard({ categories = [] }) {
 
       if (company?.id) {
         api.addCompanyKeyword(company.id, clean).catch(() => {});
-        localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, clean);
+        localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, JSON.stringify([clean]));
       }
       generateReviews([clean], true);
       addToast(`Added keyword: "${clean}"`, 'success');
@@ -244,20 +252,9 @@ export default function Dashboard({ categories = [] }) {
 
     if (company?.id) {
       api.removeCompanyKeyword(company.id, kwToRemove).catch(() => {});
+      localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, JSON.stringify(finalSelected));
     }
     addToast(`Removed keyword: "${kwToRemove}"`, 'info');
-  };
-
-  // 7. Regenerate reviews explicitly
-  const handleRegenerate = () => {
-    generateReviews(selectedKeywords, true);
-    addToast('Generating fresh, non-repeating review suggestions...', 'info');
-  };
-
-  // 8. Generate More Reviews
-  const handleGenerateMore = () => {
-    generateReviews(selectedKeywords, true);
-    addToast('Synthesizing additional suggestions...', 'info');
   };
 
   if (loadingCompany) {
@@ -285,81 +282,23 @@ export default function Dashboard({ categories = [] }) {
           to="/setup"
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold shadow-md shadow-purple-600/20"
         >
-          <PlusCircle className="w-4 h-4" />
           <span>Go to Setup Form</span>
         </Link>
       </div>
     );
   }
 
-  const googleReviewDestination = getGoogleReviewUrl(company);
-
   return (
-    <div className="space-y-7 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-300">
       
-      {/* Top Banner: Crisp White heading with Purple Company Name */}
-      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200 relative overflow-hidden bg-white shadow-xl shadow-slate-200/50">
-        <div className="flex flex-wrap items-center justify-between gap-5">
-          
-          <div className="space-y-2 max-w-2xl">
-            {/* Meta Tags / Badges */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] uppercase tracking-wider font-bold px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
-                {company.category || 'Business'}
-              </span>
-              {(company.location || company.formattedAddress) && (
-                <span className="text-xs text-slate-700 font-medium flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200">
-                  <MapPin className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                  <span className="truncate max-w-xs">{company.formattedAddress || company.location}</span>
-                </span>
-              )}
-              {company.preferredLanguage && (
-                <span className="text-[11px] uppercase font-semibold px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-500">
-                  Lang: {company.preferredLanguage === 'hi' ? 'Hindi' : company.preferredLanguage === 'gu' ? 'Gujarati' : 'English'}
-                </span>
-              )}
-            </div>
-
-            {/* Main Page 2 Heading & Subtitle */}
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-              Review <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800">{company.name}</span>
-            </h1>
-            <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-purple-700 pt-0.5">
-              SELECT KEYWORDS & GENERATE REVIEW SUGGESTIONS
-            </p>
-
-            {company.description && (
-              <p className="text-xs text-slate-600 max-w-xl font-normal leading-relaxed pt-1">
-                {company.description}
-              </p>
-            )}
-          </div>
-
-          {/* Right Action: Open Google Review Destination Link */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <a
-              href={googleReviewDestination}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all shadow-2xs group"
-              title="Open Google listing to inspect or write reviews"
-            >
-              <Globe className="w-4 h-4 text-purple-600 group-hover:rotate-12 transition-transform" />
-              <span>Open Google Review Page</span>
-              <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-600" />
-            </a>
-
-            <Link
-              to="/setup"
-              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-purple-50 hover:bg-purple-100/70 border border-purple-200 text-xs font-semibold text-purple-700 transition-all"
-              title="Create or edit business setup"
-            >
-              <Building2 className="w-4 h-4 text-purple-600" />
-              <span>Edit Setup</span>
-            </Link>
-          </div>
-
-        </div>
+      {/* 2. Simplified Company Heading Section (Centered, Clean, No Badges or Buttons) */}
+      <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-slate-200 bg-white shadow-md shadow-slate-200/40 text-center">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          Review <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800">{company.name}</span>
+        </h1>
+        <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-purple-700 pt-1.5">
+          SELECT KEYWORDS & GENERATE REVIEW SUGGESTIONS
+        </p>
       </div>
 
       {/* SEO Keywords Chips Section */}
@@ -384,8 +323,8 @@ export default function Dashboard({ categories = [] }) {
         />
       </div>
 
-      {/* Action Controls: Regenerate & Generate More Reviews */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+      {/* 3. Review Results Section Header (Generation Buttons Removed) */}
+      <div className="flex items-center justify-between gap-3 pt-1">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <span>Customer Review Suggestions</span>
@@ -393,32 +332,6 @@ export default function Dashboard({ categories = [] }) {
               3 Distinct Suggestions
             </span>
           </h2>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          {/* Regenerate Button */}
-          <button
-            type="button"
-            onClick={handleRegenerate}
-            disabled={isGenerating || loadingReviews}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all shadow-2xs active:scale-95 cursor-pointer disabled:opacity-50"
-            title="Generate a fresh new batch of unique suggestions"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 text-purple-600 ${isGenerating ? 'animate-spin' : ''}`} />
-            <span>Regenerate</span>
-          </button>
-
-          {/* Generate More Reviews Button */}
-          <button
-            type="button"
-            onClick={handleGenerateMore}
-            disabled={isGenerating || loadingReviews}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-purple-600/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-            title="Synthesize additional review suggestions"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-white" />
-            <span>Generate More Reviews</span>
-          </button>
         </div>
       </div>
 
@@ -441,7 +354,7 @@ export default function Dashboard({ categories = [] }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {reviews.slice(0, 3).map((rev) => (
             <ReviewCard
-              key={rev.id || rev._id || `${company.name}-${rev.contentHash}`}
+              key={rev._id || rev.id || `${company.name}-${rev.contentHash}`}
               review={{
                 ...rev,
                 companyName: rev.companyName || company.name,
@@ -460,15 +373,8 @@ export default function Dashboard({ categories = [] }) {
           </div>
           <h3 className="text-base font-bold text-slate-900">No Review Suggestions Available</h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Select one of your target SEO keywords above and click "Generate More Reviews".
+            Select one of your target SEO keywords above to synthesize fresh review suggestions.
           </p>
-          <button
-            type="button"
-            onClick={handleRegenerate}
-            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-md shadow-purple-600/20"
-          >
-            Generate Now
-          </button>
         </div>
       )}
 

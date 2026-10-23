@@ -2,6 +2,8 @@ import pytest
 import sys
 import os
 import time
+import urllib.parse
+from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -207,23 +209,40 @@ def test_rating_allocation_and_validation():
     assert neg_ok is False
     assert "negative" in neg_msg.lower()
     
-    # Small batch allocations (60/40)
-    assert allocate_demo_ratings(1) == [5]
-    assert allocate_demo_ratings(2) == [5, 4]
-    assert allocate_demo_ratings(3) == [5, 4, 5]
-    assert allocate_demo_ratings(5) == [5, 4, 5, 4, 5]
+    # Batch allocations with Hamilton method (testing exact counts)
+    assert allocate_demo_ratings(1, shuffle=False) == [5]
+    assert allocate_demo_ratings(2, shuffle=False) == [5, 4]
+    assert sorted(allocate_demo_ratings(3, shuffle=False)) == [4, 5, 5]
+    assert sorted(allocate_demo_ratings(5, shuffle=False)) == [4, 4, 5, 5, 5]
     
     # 70/30 allocation
     dist_70_30 = {"five_star": 70, "four_star": 30}
-    assert allocate_demo_ratings(3, dist_70_30) == [5, 4, 5]
-    assert allocate_demo_ratings(5, dist_70_30) == [5, 4, 5, 5, 5]
+    assert sorted(allocate_demo_ratings(3, dist_70_30, shuffle=False)) == [4, 5, 5]
+    assert sorted(allocate_demo_ratings(5, dist_70_30, shuffle=False)) == [4, 5, 5, 5, 5]
     
     # 50/50 allocation
     dist_50_50 = {"five_star": 50, "four_star": 50}
-    assert allocate_demo_ratings(2, dist_50_50) == [5, 4]
-    assert allocate_demo_ratings(4, dist_50_50) == [5, 4, 5, 4]
+    assert sorted(allocate_demo_ratings(2, dist_50_50, shuffle=False)) == [4, 5]
+    assert sorted(allocate_demo_ratings(4, dist_50_50, shuffle=False)) == [4, 4, 5, 5]
 
-# 16. API Rating Distribution & Generation Tests
+# 16. Fixed Middle 4-Star Bug Fix Verification
+def test_four_star_not_fixed_middle_position():
+    """
+    Verify that the 4-star review is NOT fixed to the middle position.
+    Across multiple batches, the 4-star rating appears in different positions (index 0, 1, 2).
+    """
+    from services.rating_service import allocate_demo_ratings
+    positions_of_four_star = set()
+    for seed in range(50):
+        batch = allocate_demo_ratings(3, seed=seed, shuffle=True)
+        assert sorted(batch) == [4, 5, 5]
+        four_index = batch.index(4)
+        positions_of_four_star.add(four_index)
+
+    # Must appear at index 0, 1, and 2 across randomized batches
+    assert positions_of_four_star == {0, 1, 2}
+
+# 17. API Rating Distribution & Generation Tests
 def test_api_rating_distribution_generation(client):
     unique_company = f"Rating Test Co {time.time()}"
     res = client.post("/api/generate-reviews", json={
@@ -239,7 +258,7 @@ def test_api_rating_distribution_generation(client):
     assert len(data["reviews"]) == 3
     
     ratings = [r["rating"] for r in data["reviews"]]
-    assert ratings == [5, 4, 5]
+    assert sorted(ratings) == [4, 5, 5]
     assert data["ratingBreakdown"] == {"5_star": 2, "4_star": 1}
     
     # Verify 4-star review contains constructive observation
@@ -250,7 +269,7 @@ def test_api_rating_distribution_generation(client):
         "documentation", "response", "reporting", "reports", "kickoff", "sprint", "turnaround", "communication", "handover", "polish"
     ])
 
-# 17. API Rating Distribution Error Handling
+# 18. API Rating Distribution Error Handling
 def test_api_rating_distribution_invalid(client):
     res = client.post("/api/generate-reviews", json={
         "companyName": "Error Test Co",
@@ -262,7 +281,7 @@ def test_api_rating_distribution_invalid(client):
     assert data["success"] is False
     assert "100%" in data["error"]
 
-# 18. Real Customer Review Mode Test
+# 19. Real Customer Review Mode Test
 def test_api_real_customer_review_mode(client):
     res = client.post("/api/generate-reviews", json={
         "companyName": f"Real Co {time.time()}",
@@ -279,7 +298,7 @@ def test_api_real_customer_review_mode(client):
     assert rev["ratingType"] == "real"
     assert rev["source"] == "customer-submitted"
 
-# 19. Category-Specific Review Generation
+# 20. Category-Specific Review Generation
 def test_category_specific_reviews(client):
     res = client.post("/api/generate-reviews", json={
         "companyName": f"Bistro {time.time()}",
@@ -293,7 +312,7 @@ def test_category_specific_reviews(client):
     for r in data["reviews"]:
         assert "Wood Fired Pizza" in r["reviewText"]
 
-# 20. Backend-Managed Rating Ratio (No Frontend Configuration)
+# 21. Backend-Managed Rating Ratio (No Frontend Configuration)
 def test_api_backend_default_rating_ratio_without_frontend_payload(client):
     """
     Verify that when frontend sends NO rating distribution in the request payload,
@@ -311,7 +330,109 @@ def test_api_backend_default_rating_ratio_without_frontend_payload(client):
     assert data["success"] is True
     assert len(data["reviews"]) == 3
     ratings = [r["rating"] for r in data["reviews"]]
-    assert ratings == [5, 4, 5]
+    assert sorted(ratings) == [4, 5, 5]
     assert data["ratingBreakdown"] == {"5_star": 2, "4_star": 1}
+
+# 22. Multiple Selected Keywords Natural Distribution
+def test_multiple_selected_keywords_natural_distribution(client):
+    """
+    Verify that when multiple keywords are selected, reviews focus on distinct subsets
+    rather than stuffing all keywords into every review.
+    """
+    unique_company = f"Multi Keyword Co {time.time()}"
+    kws = ["Web Engineering", "Cloud Architecture", "DevOps Pipelines", "Microservices"]
+    res = client.post("/api/generate-reviews", json={
+        "companyName": unique_company,
+        "category": "IT Services and Software Development",
+        "selectedKeywords": kws,
+        "count": 3
+    })
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["success"] is True
+    reviews = data["reviews"]
+    assert len(reviews) == 3
+
+    for rev in reviews:
+        card_kws = rev.get("selectedKeywords")
+        assert isinstance(card_kws, list)
+        assert 1 <= len(card_kws) <= 2
+        # Ensure all assigned keywords belong to the selected list
+        for k in card_kws:
+            assert k in kws
+
+    # Check that distinct cards focus on different keywords
+    card_kws_set = [tuple(r.get("selectedKeywords")) for r in reviews]
+    assert len(set(card_kws_set)) > 1
+
+# 23. Rating Persistence and Stability on Repeated Fetch
+def test_rating_persistence_and_stability_on_repeated_fetch(client):
+    """
+    Verify that ratings persisted in MongoDB never recalculate or change
+    when fetched repeatedly across GET requests.
+    """
+    unique_company = f"Stability Test Co {time.time()}"
+    res = client.post("/api/generate-reviews", json={
+        "companyName": unique_company,
+        "category": "IT Services and Software Development",
+        "keyword": "Reliability Engineering",
+        "count": 3
+    })
+    assert res.status_code == 200
+    original_reviews = res.get_json()["reviews"]
+    original_ratings = {r["id"]: r["rating"] for r in original_reviews}
+
+    # Fetch repeatedly via GET /api/reviews
+    for _ in range(3):
+        fetch_res = client.get(f"/api/reviews?search={urllib.parse.quote_plus(unique_company)}")
+        assert fetch_res.status_code == 200
+        fetched_reviews = fetch_res.get_json()["reviews"]
+        for fr in fetched_reviews:
+            if fr["id"] in original_ratings:
+                assert fr["rating"] == original_ratings[fr["id"]]
+
+# 24. Legacy Record Compatibility (Handling records with missing rating safely)
+def test_legacy_record_compatibility(client):
+    from utils.db import Database
+    from bson import ObjectId
+    db = Database.get_db()
+    
+    legacy_doc = {
+        "companyName": "Legacy Co",
+        "reviewText": "This is a dependable legacy review without a rating field.",
+        "category": "IT Services and Software Development",
+        "keyword": "Legacy Support",
+        "createdAt": datetime.now(timezone.utc)
+    }
+    inserted = db.generated_reviews.insert_one(legacy_doc)
+    doc_id = str(inserted.inserted_id)
+
+    # Fetch via single review endpoint
+    res = client.get(f"/api/reviews/{doc_id}")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["success"] is True
+    assert data["review"]["rating"] == 5
+    assert data["review"]["isDemo"] is True
+    assert isinstance(data["review"]["selectedKeywords"], list)
+
+    # Cleanup
+    db.generated_reviews.delete_one({"_id": ObjectId(doc_id)})
+
+# 25. Review Length Validation (Target 25-45 Words)
+def test_review_length_validation(client):
+    unique_company = f"Length Test Co {time.time()}"
+    res = client.post("/api/generate-reviews", json={
+        "companyName": unique_company,
+        "category": "IT Services and Software Development",
+        "keyword": "Full Stack Development",
+        "count": 3
+    })
+    assert res.status_code == 200
+    reviews = res.get_json()["reviews"]
+    for r in reviews:
+        word_count = len(r["reviewText"].split())
+        assert 25 <= word_count <= 48, f"Word count {word_count} is out of target range: '{r['reviewText']}'"
+
 
 

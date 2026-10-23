@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 from services.review_service import review_service
 from services.company_service import company_service
+from services.rating_service import SUPPORTED_PRESETS, DEFAULT_FIVE_STAR_PCT, DEFAULT_FOUR_STAR_PCT, validate_rating_distribution
 from ai.generator import generator_service
-from ai.rating_allocator import SUPPORTED_PRESETS, DEFAULT_FIVE_STAR_PCT, DEFAULT_FOUR_STAR_PCT, validate_rating_distribution
 from utils.rate_limiter import generation_rate_limiter
 
 review_bp = Blueprint("review_bp", __name__)
@@ -84,6 +84,13 @@ def generate_reviews():
     threshold = float(data.get("similarityThreshold")) if data.get("similarityThreshold") is not None else None
     
 
+    seed = data.get("seed")
+    if seed is not None:
+        try:
+            seed = int(seed)
+        except (ValueError, TypeError):
+            seed = None
+
     try:
         result = generator_service.generate_reviews(
             company_id=company_id or "default",
@@ -101,7 +108,8 @@ def generate_reviews():
             rating_distribution=rating_distribution,
             mode=mode,
             customer_rating=customer_rating,
-            selected_keywords=selected_keywords
+            selected_keywords=selected_keywords,
+            seed=seed
         )
         return jsonify(result), 200
     except ValueError as ve:
