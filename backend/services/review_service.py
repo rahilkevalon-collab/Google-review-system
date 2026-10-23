@@ -1,4 +1,5 @@
 import logging
+import urllib.parse
 from bson import ObjectId
 from datetime import datetime, timezone
 from utils.db import Database, serialize_doc
@@ -15,18 +16,7 @@ class ReviewService:
         if not ObjectId.is_valid(review_id):
             return None
         doc = self.db.generated_reviews.find_one({"_id": ObjectId(review_id)})
-        if not doc:
-            return None
-        
-        # Enrich with company details if available (e.g. externalReviewLink)
-        enriched = serialize_doc(doc)
-        company_id = doc.get("companyId")
-        if company_id and ObjectId.is_valid(company_id):
-            comp = self.db.companies.find_one({"_id": ObjectId(company_id)})
-            if comp:
-                enriched["externalReviewLink"] = comp.get("externalReviewLink", "")
-                enriched["companyLocation"] = comp.get("location", "")
-        return enriched
+        return serialize_doc(doc) if doc else None
 
     def list_reviews(
         self,
@@ -74,11 +64,17 @@ class ReviewService:
         for r in raw_reviews:
             cid = r.get("companyId")
             c = comp_map.get(cid)
-            if c:
-                r["externalReviewLink"] = c.get("externalReviewLink", "")
-                r["companyLocation"] = c.get("location", "")
-            else:
-                r["externalReviewLink"] = ""
+            comp_name = r.get("companyName") or (c.get("name") if c else "Business")
+            comp_loc = r.get("companyLocation") or (c.get("location") if c else "")
+            
+            ext_link = (c.get("externalReviewLink") if c else "") or r.get("externalReviewLink") or ""
+            if not ext_link or ext_link == "https://search.google.com/local/writereview" or not ext_link.startswith("http"):
+                query_str = f"{comp_name} {comp_loc} reviews".strip()
+                ext_link = f"https://www.google.com/search?q={urllib.parse.quote_plus(query_str)}"
+            
+            r["externalReviewLink"] = ext_link
+            r["companyLocation"] = comp_loc
+            r["companyName"] = comp_name
             enriched_reviews.append(r)
 
         return {

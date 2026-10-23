@@ -131,14 +131,11 @@ export default function App() {
           />
 
           {/* Footer */}
-          <footer className="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500 space-y-1.5">
-            <div className="flex items-center justify-center gap-1.5 font-medium text-slate-700">
+          <footer className="border-t border-slate-200/80 bg-white py-4 text-center text-xs text-slate-500">
+            <div className="flex items-center justify-center gap-1.5 font-medium text-slate-600">
               <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
               <span>ReviewCraft AI • Intelligent SEO Business Review Generator</span>
             </div>
-            <p className="max-w-xl mx-auto text-[11px] text-slate-500 px-4">
-              All generated reviews are AI-synthesized draft suggestions to facilitate brand marketing and SEO. They do not represent real customer testimonials. Powered by Python Flask, Scikit-Learn TF-IDF, and MongoDB.
-            </p>
           </footer>
 
         </div>

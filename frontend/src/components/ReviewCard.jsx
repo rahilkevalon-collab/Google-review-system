@@ -15,6 +15,16 @@ export default function ReviewCard({ review }) {
   const { addToast } = useToast();
   const [copied, setCopied] = useState(false);
 
+  const resolveGoogleReviewUrl = () => {
+    let link = review?.externalReviewLink?.trim();
+    if (!link || link === 'https://search.google.com/local/writereview' || !link.startsWith('http')) {
+      const parts = [review?.companyName, review?.companyLocation, 'reviews'].filter(Boolean);
+      const query = parts.length > 0 ? parts.join(' ') : 'Google reviews';
+      return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+    }
+    return link;
+  };
+
   const handleCardClick = async () => {
     const googleUrl = getGoogleReviewUrl(review);
     try {
