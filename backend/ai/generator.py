@@ -1,6 +1,4 @@
-from ai.templates import CATEGORY_BUSINESS_NAMES
 import random
-from bson import ObjectId
 import uuid
 import logging
 import urllib.parse
@@ -13,6 +11,8 @@ from utils.text_utils import compute_content_hash, extract_word_count
 from ai.nlp_engine import nlp_engine
 from ai.llm_provider import get_llm_provider
 from ai.sentiment import analyze_review_sentiment
+from ai.templates import CATEGORY_BUSINESS_NAMES
+from ai.rating_allocator import allocate_demo_ratings, validate_rating_distribution
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class ReviewGeneratorService:
         """
         Retrieve previously generated review texts for a company to prevent duplicates.
         """
-        query = {"companyId": company_id}
+        query = {"companyId": str(company_id)}
         if keyword:
             query["keyword"] = keyword
         
@@ -48,11 +48,15 @@ class ReviewGeneratorService:
         tone: str = "natural",
         length: str = "medium",
         count: int = 3,
-        threshold: float = None
+        threshold: float = None,
+        rating_distribution: dict = None,
+        mode: str = "demo",
+        customer_rating: int = None,
+        selected_keywords: list = None
     ) -> dict:
         """
-        Orchestrate LLM generation, TF-IDF cosine similarity deduplication,
-        MongoDB storage, and generation log recording.
+        Orchestrate LLM generation, rating allocation (60% 5-star, 40% 4-star default),
+        TF-IDF cosine similarity deduplication, MongoDB persistence, and audit logging.
         """
         if threshold is None:
             threshold = Config.SIMILARITY_THRESHOLD
@@ -60,6 +64,34 @@ class ReviewGeneratorService:
         target_count = min(max(1, count), Config.MAX_BATCH_SIZE)
         batch_id = str(uuid.uuid4())
         
+        # Determine real vs demo review mode
+        is_real_mode = (mode == "real") or (customer_rating is not None)
+        
+        if is_real_mode:
+            # For real customer reviews, never assign an artificial rating.
+            # Use the customer's actual submitted rating and experience.
+            if customer_rating is not None:
+                try:
+                    c_rating = max(1, min(5, int(customer_rating)))
+                except (ValueError, TypeError):
+                    c_rating = 5
+            else:
+                c_rating = 5
+            
+            ratings_for_batch = [c_rating] * target_count
+            norm_distribution = {"customer_rating": c_rating}
+            rating_type = "real"
+            is_demo = False
+        else:
+            # Synthetic Demo Mode: validate rating distribution and allocate ratings via Largest Remainder method
+            is_valid, err_msg, norm_distribution = validate_rating_distribution(rating_distribution)
+            if not is_valid:
+                raise ValueError(err_msg)
+
+            ratings_for_batch = allocate_demo_ratings(target_count, norm_distribution)
+            rating_type = "demo"
+            is_demo = True
+
         # Load historical review pool for this company
         history_texts = self.get_history_texts(company_id)
         
@@ -76,45 +108,28 @@ class ReviewGeneratorService:
         provider_name = llm_provider.name
         is_ai_powered = llm_provider.is_ai
 
-        # Resolve company externalReviewLink and location
-        ext_review_link = None
-        if company_id and ObjectId.is_valid(company_id):
-            comp_obj = self.db.companies.find_one({"_id": ObjectId(company_id)})
-            if comp_obj:
-                ext_review_link = comp_obj.get("externalReviewLink")
-                if not location:
-                    location = comp_obj.get("location", "")
-
+        # Construct Google review link
+        ext_review_link = external_review_link
         if not ext_review_link or ext_review_link == "https://search.google.com/local/writereview" or not ext_review_link.startswith("http"):
             query_str = f"{company_name} {location} reviews".strip()
             ext_review_link = f"https://www.google.com/search?q={urllib.parse.quote_plus(query_str)}"
 
         accepted_reviews = []
         total_rejected_count = 0
-        rejection_details = []
         attempts = 0
         max_attempts = Config.MAX_GENERATION_RETRIES
-
-        # Pool of diverse business names for this category (e.g. diverse restaurants)
-        name_pool = CATEGORY_BUSINESS_NAMES.get(category, [company_name])
-        shuffled_names = list(name_pool)
-        random.shuffle(shuffled_names)
-        if company_name and company_name not in shuffled_names:
-            shuffled_names.insert(0, company_name)
 
         # Working comparison pool starts with historical reviews
         working_pool = list(history_texts)
         current_threshold = threshold
-
-        # Always use the real company name if provided
-        target_company_name = company_name.strip() if company_name and company_name.strip() else None
+        target_company_name = company_name.strip() if company_name and company_name.strip() else "Business"
 
         for i in range(target_count):
-            comp_name_for_item = target_company_name or shuffled_names[i % len(shuffled_names)]
+            item_rating = ratings_for_batch[i]
             
-            # Generate candidates using real company name and requested language
+            # Generate candidate pool specifically tailored for this rating
             candidates, src = llm_provider.generate_review_candidates(
-                company_name=comp_name_for_item,
+                company_name=target_company_name,
                 category=category,
                 keyword=keyword,
                 description=description,
@@ -123,7 +138,8 @@ class ReviewGeneratorService:
                 language=language or "en",
                 tone=tone,
                 length=length,
-                count=6
+                count=6,
+                target_rating=item_rating
             )
 
             chosen_item = None
@@ -136,50 +152,63 @@ class ReviewGeneratorService:
                 if not check_result["is_duplicate"]:
                     chosen_item = {
                         "text": cand,
-                        "similarity": check_result["similarity_score"]
+                        "similarity": check_result["similarity_score"],
+                        "rating": item_rating
                     }
                     break
                 else:
                     total_rejected_count += 1
-                    rejection_details.append({
-                        "candidate": cand[:60],
-                        "similarity": check_result["similarity_score"],
-                        "reason": check_result["reason"]
-                    })
 
             if not chosen_item and candidates:
                 chosen_item = {
                     "text": candidates[0],
-                    "similarity": 0.5
+                    "similarity": 0.5,
+                    "rating": item_rating
                 }
 
             if chosen_item:
-                chosen_item["company_name"] = comp_name_for_item
+                chosen_item["company_name"] = target_company_name
                 accepted_reviews.append(chosen_item)
                 working_pool.append(chosen_item["text"])
 
         now = datetime.now(timezone.utc)
         saved_records = []
 
+        # Parse keywords list
+        if selected_keywords and isinstance(selected_keywords, list):
+            final_keywords = [str(k).strip() for k in selected_keywords if str(k).strip()]
+        else:
+            final_keywords = [k.strip() for k in keyword.split(",") if k.strip()]
+
         for item in accepted_reviews:
             review_text = item["text"]
+            item_rating = item.get("rating", 5)
             sim_score = item["similarity"]
             content_hash = compute_content_hash(review_text)
+            
             sentiment_data = analyze_review_sentiment(review_text)
+            sentiment_data["rating"] = item_rating
+            sentiment_data["syntheticRating"] = float(item_rating)
+            if item_rating == 4:
+                sentiment_data["label"] = "Balanced & Constructive"
+                sentiment_data["toneAssessment"] = "Positive with Constructive Area"
 
-            comp_for_review = item.get("company_name", company_name)
             doc = {
                 "companyId": str(company_id),
-"companyName": comp_for_review,
+                "companyName": target_company_name,
                 "companyLocation": location,
-                "externalReviewLink": ext_review_link or external_review_link,
+                "externalReviewLink": ext_review_link,
                 "category": category,
                 "keyword": keyword,
+                "selectedKeywords": final_keywords,
                 "reviewText": review_text,
+                "rating": item_rating,
+                "ratingType": rating_type,
+                "isDemo": is_demo,
                 "language": language or "en",
                 "tone": tone,
                 "length": length,
-                "source": provider_name,
+                "source": "customer-submitted" if is_real_mode else provider_name,
                 "isAiGenerated": is_ai_powered,
                 "contentHash": content_hash,
                 "generationBatchId": batch_id,
@@ -211,12 +240,21 @@ class ReviewGeneratorService:
                 f"were rejected to maintain variety and avoid repetition (similarity threshold: {threshold:.2f})."
             )
 
+        five_count = sum(1 for r in saved_records if r.get("rating") == 5)
+        four_count = sum(1 for r in saved_records if r.get("rating") == 4)
+
         log_doc = {
             "companyId": str(company_id),
             "keyword": keyword,
             "category": category,
             "requestedCount": target_count,
             "generatedCount": len(saved_records),
+            "ratingBreakdown": {
+                "5_star": five_count,
+                "4_star": four_count
+            },
+            "ratingDistribution": norm_distribution,
+            "isDemo": is_demo,
             "rejectedDuplicateCount": total_rejected_count,
             "attempts": attempts,
             "similarityThreshold": threshold,
@@ -232,6 +270,12 @@ class ReviewGeneratorService:
             "batchId": batch_id,
             "requested": target_count,
             "generated": len(saved_records),
+            "ratingDistribution": norm_distribution,
+            "ratingBreakdown": {
+                "5_star": five_count,
+                "4_star": four_count
+            },
+            "isDemo": is_demo,
             "rejectedCount": total_rejected_count,
             "reviews": saved_records,
             "provider": provider_name,

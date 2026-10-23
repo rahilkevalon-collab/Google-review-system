@@ -99,135 +99,202 @@ CATEGORY_BUSINESS_NAMES = {
     ]
 }
 
-# Restaurant-specific openers in English
-RESTAURANT_OPENERS_EN = [
-    "Dining at {company} was an incredible culinary experience, especially with their focus on {keyword}.",
-    "The food quality and hospitality at {company} regarding {keyword} were truly world-class.",
-    "If you are looking for exceptional taste and {keyword}, {company} is hands down the best place in town.",
-    "My dinner at {company} exceeded all expectations—their {keyword} was phenomenal.",
-    "Hands down the most delightful restaurant for an unforgettable meal and outstanding {keyword}.",
-    "From the appetizers to the final dessert at {company}, everything revolving around {keyword} was exquisite.",
-    "We reserved a table at {company} for our family dinner, and their {keyword} made it truly memorable.",
-    "Super impressed with the culinary craft, presentation, and {keyword} at {company}.",
-    "I was recommended {company} for {keyword}, and it turned out to be one of our favorite food destinations.",
-    "The chefs and service team at {company} take immense pride in their {keyword}, and it shows in every dish.",
-    "Outstanding food taste and attentive warmth from {company}—their attention to {keyword} is second to none.",
-    "We recently visited {company} and were genuinely blown away by the authentic flavors and their dedication to {keyword}.",
-    "A fantastic dining experience from start to finish with {company} for {keyword}.",
-    "Can't say enough good things about {company} and their mouthwatering menu and {keyword}."
+# ==============================================================================
+# 5-STAR TEMPLATES: Natural, professional, grounded praise without hype
+# ==============================================================================
+
+# English 5-Star General Business
+OPENERS_5_EN = [
+    "We partnered with {company} for our {keyword} needs, and the experience was solid and professional.",
+    "Working with {company} regarding {keyword} met all our expectations in terms of quality and execution.",
+    "Our team engaged {company} for {keyword}, and their execution was dependable from day one.",
+    "The service provided by {company} for {keyword} was organized, timely, and delivered as scoped.",
+    "We entrusted {company} with our {keyword} requirements, and they handled everything conscientiously.",
+    "Choosing {company} for {keyword} proved to be a sound operational decision for our business.",
+    "A smooth and straightforward engagement with {company} on our {keyword} project.",
+    "From initial discussions to completion, {company} delivered dependable results for {keyword}.",
+    "We had a positive experience working with {company} for our {keyword} goals.",
+    "The engineering and support team at {company} demonstrated genuine professionalism in {keyword}."
 ]
 
-RESTAURANT_BODIES_EN = [
-    "The dishes were freshly prepared, rich in authentic flavors, and served with great care and attention.",
-    "Every course arrived promptly, perfectly seasoned, and beautifully presented by courteous staff.",
-    "The ingredients were remarkably fresh, and the hospitality team made us feel right at home.",
-    "The balance of authentic spices, generous portions, and attentive table service made for a perfect meal.",
-    "The culinary expertise was evident in every bite, accompanied by swift, warm, and friendly service.",
-    "The atmosphere was welcoming, the decor was tasteful, and every special food request was accommodated seamlessly.",
-    "The signature recipes and beverage pairings elevated our entire dining experience."
+BODIES_5_EN = [
+    "Their team communicated clearly at key milestones, respected deadlines, and maintained consistent quality throughout.",
+    "Technical execution was sharp, turnaround matched the agreed timeline, and queries were addressed promptly.",
+    "The deliverables matched our exact specifications without unnecessary revisions or delays.",
+    "The entire collaboration was streamlined, transparent, and focused on delivering practical business value.",
+    "They brought reliable domain knowledge to the table and kept our core requirements front and center.",
+    "Communication was straightforward, requirements were understood quickly, and the output was well-tested.",
+    "They delivered quality work on schedule and were always approachable when adjustments were requested."
 ]
 
-RESTAURANT_CLOSERS_EN = [
-    "I will definitely be bringing my friends and family back to {company} very soon!",
-    "A true gastronomic gem! Highly recommend booking a table at {company}.",
-    "Easily a five-star culinary experience. You will not be disappointed!",
-    "Can't wait to visit again and explore more of their delightful menu.",
-    "An extraordinary dining journey from start to finish. Hats off to the entire team at {company}!",
-    "Truly one of the finest dining spots around. Worth every single penny!"
+CLOSERS_5_EN = [
+    "I would certainly recommend {company} to anyone needing reliable service.",
+    "A dependable partner that stands behind their commitments. Would gladly work with them again.",
+    "Very pleased with the outcome and looking forward to continuing our collaboration.",
+    "A professional, stress-free engagement from start to finish.",
+    "Dependable team and quality deliverables—definitely worthy of a 5-star rating."
 ]
 
-# General business openers in English
-OPENERS_EN = [
-    "I had a thoroughly positive experience with {company} for {keyword}.",
-    "Working with {company} regarding {keyword} has been an absolute pleasure.",
-    "If you are looking for dependable quality in {keyword}, {company} is the real deal.",
-    "My experience with {company} regarding {keyword} exceeded all expectations.",
-    "Hands down the most reliable and efficient team for {keyword}.",
-    "From the first interaction with {company}, everything was handled with exceptional care.",
-    "We entrusted {company} with our {keyword} needs, and they delivered flawlessly.",
-    "Super impressed with the professionalism and standard of work at {company}.",
-    "I was recommended {company} for {keyword}, and I could not be happier with the outcome.",
-    "Choosing {company} for our {keyword} was one of the best decisions we made.",
-    "The commitment to excellence at {company} regarding {keyword} is immediately noticeable.",
-    "Outstanding service from {company}—their attention to {keyword} is second to none.",
-    "We recently engaged {company} for {keyword} and were genuinely blown away by their dedication.",
-    "A fantastic experience from start to finish with {company} for {keyword}.",
-    "Can't say enough good things about {company} and their expertise in {keyword}."
+# English 5-Star Restaurant
+RESTAURANT_OPENERS_5_EN = [
+    "Dining at {company} was an enjoyable experience, with attentive service and fresh {keyword}.",
+    "The food quality and warm hospitality at {company} regarding {keyword} were consistently high.",
+    "We had dinner at {company} and were very pleased with their flavorful {keyword} and clean ambience.",
+    "A delightful meal at {company}—their attention to {keyword} and fresh ingredients stood out.",
+    "We reserved a table at {company} for an evening out, and the {keyword} made it a memorable visit."
 ]
 
-BODIES_EN = [
-    "Their team demonstrated deep industry knowledge and fulfilled our requirements right on schedule.",
-    "The quality of the service was top-tier, communication was clear, and delivery was remarkably fast.",
-    "Every single detail of our {keyword} request was executed with precision and prompt support.",
-    "They understood our specific requirements immediately and provided a seamless, effective solution.",
-    "The turnaround time was swift, the pricing was fair, and customer care was world-class.",
-    "The entire process was stress-free, transparent, and built around our exact goals.",
-    "Their specialists were courteous, responsive, and always ready to go the extra mile.",
-    "They kept us informed at every milestone and ensured everything met strict quality standards.",
-    "Consistent excellence, high standards, and genuine care for customer satisfaction set them apart.",
-    "The attention to detail and care shown toward our {keyword} was truly commendable.",
-    "Their prompt communication and solution-oriented mindset made the entire collaboration effortless.",
-    "They tackled every nuance of our {keyword} project with unmatched professionalism."
+RESTAURANT_BODIES_5_EN = [
+    "The dishes were freshly prepared, well-seasoned, and brought out promptly by attentive staff.",
+    "Every course arrived warm, thoughtfully presented, and accurately matched our dietary preferences.",
+    "The balance of authentic spices, generous portions, and courteous table service made for a great meal.",
+    "The dining atmosphere was welcoming and the kitchen accommodated our table requests smoothly."
 ]
 
-CLOSERS_EN = [
-    "I would definitely recommend them to anyone seeking premium quality and dependable service.",
-    "Five stars all around! Looking forward to continuing our partnership in the future.",
-    "A trustworthy company that stands firmly behind its promises and deliverables.",
-    "Very pleased with the results and will certainly be returning for future requirements.",
-    "Do not hesitate to give {company} a try—you will be thrilled with their high standard.",
-    "Couldn't have asked for a smoother experience. Truly deserving of every bit of praise!",
-    "A breath of fresh air in the industry. Highly, highly recommended!",
-    "Honest, reliable, and thorough from start to finish. Big thumbs up to the entire team!",
-    "An absolute pleasure to do business with. Keep up the phenomenal work!",
-    "I have already recommended them to several friends and business associates."
+RESTAURANT_CLOSERS_5_EN = [
+    "We will definitely return to {company} for future family dinners.",
+    "A dependable culinary spot with consistent quality. Highly recommended!",
+    "Great dining experience all around—deserving of full five stars.",
+    "Looking forward to visiting {company} again soon."
 ]
 
-# Hindi templates
-OPENERS_HI = [
-    "{company} के साथ {keyword} के संबंध में हमारा अनुभव बहुत ही शानदार रहा।",
-    "{company} की सेवा और {keyword} में उनकी दक्षता वाकई प्रशंसनीय है।",
-    "यदि आप उत्कृष्ट {keyword} की तलाश में हैं, तो {company} सबसे बेहतरीन विकल्प है।",
-    "{company} की पूरी टीम ने {keyword} को लेकर हमारे हर लक्ष्य को समय पर पूरा किया।",
-    "{company} के साथ काम करना हमारे लिए बहुत ही सुखद और संतोषजनक अनुभव रहा।"
+# ==============================================================================
+# 4-STAR TEMPLATES: Overall positive, with one mild, plausible improvement area
+# (e.g., response time, reporting detail, delivery timelines, communication, documentation)
+# ==============================================================================
+
+OPENERS_4_EN = [
+    "We had a positive overall experience with {company} for {keyword}.",
+    "Our collaboration with {company} on {keyword} produced solid results across the board.",
+    "Engaging {company} for our {keyword} requirements was a productive engagement for our team.",
+    "Overall very satisfied with the work {company} delivered for {keyword}.",
+    "We partnered with {company} for {keyword} and were generally pleased with the final outcome.",
+    "A good experience overall with {company} regarding their work on {keyword}.",
+    "The team at {company} did a commendable job handling our {keyword} needs."
 ]
 
-BODIES_HI = [
-    "शुरुआत से लेकर अंत तक पूरी प्रक्रिया बेहद पारदर्शी, समयबद्ध और पेशेवर रही।",
-    "गुणवत्ता, ग्राहक संतुष्टि और निरंतर संवाद के मामले में उन्होंने हमारे विश्वास को पूरा किया।",
-    "उनकी टीम हर विवरण पर बारीकी से ध्यान देती है और हमेशा मदद के लिए तत्पर रहती है।",
-    "सभी कार्य उच्चतम मानकों के अनुसार और बिना किसी परेशानी के पूरे किए गए।"
+BODIES_4_EN = [
+    "The core technical deliverables were strong, though onboarding documentation could have been slightly more detailed at the start.",
+    "The final output met our quality benchmarks, while initial project kickoff took a few extra days to get fully scheduled.",
+    "Their specialists demonstrated genuine domain expertise; regular status reporting could be slightly more frequent between major milestones.",
+    "Solid execution and dependable output, though communication during initial sprint planning was a bit gradual.",
+    "The work was completed to our satisfaction, with just minor room for a slightly faster turnaround on initial inquiry responses.",
+    "The quality of work was reliable throughout, though weekly summary reports would have added even more clarity to the roadmap.",
+    "Core deliverables were dependable and cleanly executed; occasional handover notes could be slightly more comprehensive."
 ]
 
-CLOSERS_HI = [
-    "हम सभी को {company} की पुरजोर अनुशंसा करते हैं। बेहतरीन कार्य!",
-    "शानदार सेवा! भविष्य में भी हम {company} के साथ ही जुड़ना चाहेंगे।",
-    "{company} की पूरी टीम को हार्दिक धन्यवाद और शुभकामनाएं।",
-    "उत्कृष्ट परिणाम और शत-प्रतिशत संतुष्टि! ज़रूर संपर्क करें।"
+CLOSERS_4_EN = [
+    "A dependable team delivering quality work—solid 4 stars with just minor room for process polish.",
+    "Overall very happy with the end results and would gladly recommend them.",
+    "Good experience all around, and we would certainly consider working with them again on future initiatives.",
+    "Constructive collaboration with dependable professionals who deliver on their core promises.",
+    "Very satisfied with the core service and confident in their technical capabilities."
 ]
 
-# Gujarati templates
-OPENERS_GU = [
-    "{company} સાથે અમારો {keyword} અંગેનો અનુભવ ખુબ જ ઉત્તમ અને સંતોષકારક રહ્યો.",
-    "{company} ની ટીમ અને {keyword} માં તેમનું કામ ખરેખર શ્રેષ્ઠ અને ભરોસાપાત્ર છે.",
-    "જો તમે ગુણવત્તાસભર {keyword} શોધી રહ્યા હોવ, તો {company} શ્રેષ્ઠ પસંદગી છે.",
-    "{company} એ અમારી જરૂરિયાત સમજીને {keyword} બાબતે ખુબ સુંદર પરિણામ આપ્યું.",
-    "{company} સાથે કામ કરવું ખૂબ જ સરળ અને પ્રોફેશનલ રહ્યું."
+# English 4-Star Restaurant
+RESTAURANT_OPENERS_4_EN = [
+    "We had a pleasant dining experience at {company} and enjoyed their {keyword}.",
+    "Dinner at {company} was tasty and satisfying, especially their take on {keyword}.",
+    "Overall a good visit to {company} with great flavors centered around {keyword}."
 ]
 
-BODIES_GU = [
-    "સમયસર સેવા, સ્પષ્ટ વાતચીત અને શ્રેષ્ઠ ગુણવત્તા તેમના કામની વિશેષતા છે.",
+RESTAURANT_BODIES_4_EN = [
+    "The food taste was delicious and freshly prepared, though table seating took a little longer than expected during peak hours.",
+    "Flavorful courses and generous portions, with just minor room for slightly faster beverage service between courses.",
+    "The main dishes were flavorful and satisfying, while dessert options were somewhat limited on the evening we visited."
+]
+
+RESTAURANT_CLOSERS_4_EN = [
+    "A solid 4-star meal with tasty food and welcoming hospitality. Would gladly visit again.",
+    "Good food and pleasant ambience overall—definitely worth checking out.",
+    "Very satisfied with the meal and we look forward to returning."
+]
+
+# ==============================================================================
+# HINDI TEMPLATES (5-Star & 4-Star)
+# ==============================================================================
+
+OPENERS_5_HI = [
+    "{company} के साथ {keyword} के संबंध में हमारा अनुभव बहुत ही पेशेवर और संतोषजनक रहा।",
+    "{company} की टीम ने {keyword} के कार्य को समयबद्ध और उच्च गुणवत्ता के साथ पूरा किया।",
+    "यदि आप भरोसेमंद {keyword} की तलाश में हैं, तो {company} एक बेहतरीन विकल्प है।",
+    "{company} के साथ काम करना हमारे लिए एक सहज और व्यवस्थित अनुभव साबित हुआ।"
+]
+
+BODIES_5_HI = [
+    "शुरुआत से अंत तक पूरी प्रक्रिया पारदर्शी, समय पर और तय मानकों के अनुसार पूरी की गई।",
+    "गुणवत्ता, पेशेवर संवाद और समय पर डिलीवरी के मामले में उन्होंने हमारे विश्वास को पूरा किया।",
+    "उनकी टीम बारीकियों पर ध्यान देती है और जरूरत पड़ने पर हमेशा उपयोगी सुझाव देती है।"
+]
+
+CLOSERS_5_HI = [
+    "हम {company} की सेवाओं की अनुशंसा करते हैं। 5-स्टार गुणवत्ता!",
+    "शानदार सेवा! भविष्य में भी हम {company} के साथ जुड़ना चाहेंगे।",
+    "उत्कृष्ट परिणाम और पूरा संतोष। पूरी टीम को धन्यवाद।"
+]
+
+OPENERS_4_HI = [
+    "{company} के साथ {keyword} को लेकर हमारा अनुभव कुल मिलाकर काफी सकारात्मक रहा।",
+    "{company} की टीम ने {keyword} के कार्य में अच्छी कार्यकुशलता और परिणाम दिए।",
+    "{company} के साथ साझेदारी अच्छी रही और हमें संतोषजनक परिणाम मिले।"
+]
+
+BODIES_4_HI = [
+    "काम की गुणवत्ता अच्छी रही, हालांकि शुरुआती दस्तावेज़ीकरण और प्रक्रिया में थोड़ा और स्पष्टीकरण मददगार होता।",
+    "अंतिम परिणाम हमारी अपेक्षाओं के अनुरूप थे, बस प्रोजेक्ट की शुरुआत में प्रतिक्रिया समय थोड़ा और तेज हो सकता था।",
+    "उनकी टीम काफी पेशेवर है, हालांकि नियमित स्टेटस रिपोर्टिंग थोड़ी और बारंबार हो सकती थी।"
+]
+
+CLOSERS_4_HI = [
+    "कुल मिलाकर अच्छा अनुभव रहा—ठोस 4 स्टार और हम भविष्य में भी उनके साथ काम करने पर विचार करेंगे।",
+    "एक भरोसेमंद टीम जिसने अपना काम अच्छे से निभाया। अच्छी सेवा!",
+    "संतोषजनक काम और अच्छी गुणवत्ता। हम उनकी सेवाओं से खुश हैं।"
+]
+
+# ==============================================================================
+# GUJARATI TEMPLATES (5-Star & 4-Star)
+# ==============================================================================
+
+OPENERS_5_GU = [
+    "{company} સાથે અમારો {keyword} અંગેનો અનુભવ વ્યવસાયિક અને અત્યંત સંતોષકારક રહ્યો.",
+    "{company} ની ટીમ અને {keyword} માં તેમનું કામ ભરોસાપાત્ર અને સમયબદ્ધ છે.",
+    "જો તમે ગુણવત્તાસભર {keyword} શોધી રહ્યા હોવ, તો {company} એક શ્રેષ્ઠ પસંદગી છે.",
+    "{company} સાથે કામ કરવું સરળ, પારદર્શક અને ખૂબ પ્રોફેશનલ રહ્યું."
+]
+
+BODIES_5_GU = [
+    "સમયસર સેવા, સ્પષ્ટ વાતચીત અને શ્રેષ્ઠ ગુણવત્તા તેમના કામની મુખ્ય વિશેષતા છે.",
     "દરેક તબક્કે પારદર્શિતા જળવાઈ રહી અને ગ્રાહક સંતોષને સર્વોચ્ચ પ્રાથમિકતા આપી.",
-    "તેમનું ગ્રાહકલક્ષી વલણ અને ટીમનો ઉત્સાહ ખરેખર પ્રશંસનીય છે.",
     "બધું કામ નક્કી કરેલા ધોરણો અને સમય મર્યાદામાં ઉત્કૃષ્ટ રીતે પૂર્ણ થયું."
 ]
 
-CLOSERS_GU = [
-    "અમે {company} ની સેવાઓને દિલથી ભલામણ કરીએ છીએ. ઉત્તમ કાર્ય!",
+CLOSERS_5_GU = [
+    "અમે {company} ની સેવાઓની દિલથી ભલામણ કરીએ છીએ. ઉત્તમ 5-સ્ટાર કાર્ય!",
     "ફરીથી તેમની સાથે જોડાવાનો ચોક્કસ આનંદ થશે. ખૂબ ખૂબ આભાર {company}!",
-    "શ્રેષ્ઠ ગુણવત્તા અને પૂરેપૂરો સંતોષ! અદ્ભુત અનુભવ.",
-    "{company} ની સમગ્ર ટીમને ઉત્કૃષ્ટ કાર્ય બદલ અભિનંદન."
+    "શ્રેષ્ઠ ગુણવત્તા અને પૂરેપૂરો સંતોષ."
 ]
+
+OPENERS_4_GU = [
+    "{company} સાથે {keyword} અંગેનો અમારો અનુભવ એકંદરે સારો અને ઉત્પાદક રહ્યો.",
+    "{company} ની ટીમે {keyword} ના કામમાં સારી કુશળતા દાખવી અને સંતોષકારક પરિણામ આપ્યું.",
+    "{company} સાથેનો અનુભવ સકારાત્મક રહ્યો અને કામ સમયસર પૂરું થયું."
+]
+
+BODIES_4_GU = [
+    "કામની અંતિમ ગુણવત્તા ખૂબ સરસ રહી, જોકે શરૂઆતના આયોજન અને દસ્તાવેજીકરણમાં થોડી વધુ ઝડપ રાખી શકાઈ હોત.",
+    "તેમની ટીમ પ્રોફેશનલ છે, માત્ર માઈલસ્ટોન વચ્ચે સ્ટેટસ અપડેટ્સ થોડા વધુ નિયમિત મળ્યા હોત તો વધુ સારું રહેત.",
+    "પરિણામ સારું મળ્યું, બસ શરૂઆતના પ્રશ્નોના ઉત્તરમાં થોડી ઝડપ હોત તો પ્રક્રિયા વધુ સરળ બની હોત."
+]
+
+CLOSERS_4_GU = [
+    "એકંદરે સારો અનુભવ રહ્યો—વિશ્વસનીય 4-સ્ટાર પરિણામ અને અમે ફરી તેમની સાથે કામ કરવા વિચારીશું.",
+    "વિશ્વાસપાત્ર ટીમ અને ગુણવત્તાસભર કામ. સારી સેવા!",
+    "કામથી સંતુષ્ટ છીએ અને તેમના પ્રયત્નોની સરાહના કરીએ છીએ."
+]
+
+# ==============================================================================
+# CANDIDATE GENERATION ENGINE
+# ==============================================================================
 
 def generate_template_candidates(
     company_name: str,
@@ -240,36 +307,59 @@ def generate_template_candidates(
     tone: str = "natural",
     length: str = "medium",
     count: int = 5,
+    target_rating: int = 5,
     **kwargs
 ) -> list[str]:
     """
     Generate a large pool of unique review variations in English, Hindi, or Gujarati.
-    Produces 40+ distinct candidates by combining dynamic openers, bodies, and closers.
+    Produces distinct candidates by combining dynamic openers, bodies, and closers
+    tailored specifically to the target rating (4-star vs 5-star).
     """
     results = []
     seen = set()
 
     lang = (language or "en").lower().strip()
     is_restaurant = category and "restaurant" in category.lower()
+    is_four_star = int(target_rating) == 4
 
     if lang in ("gu", "gujarati"):
-        openers = OPENERS_GU
-        bodies = BODIES_GU
-        closers = CLOSERS_GU
+        if is_four_star:
+            openers = OPENERS_4_GU
+            bodies = BODIES_4_GU
+            closers = CLOSERS_4_GU
+        else:
+            openers = OPENERS_5_GU
+            bodies = BODIES_5_GU
+            closers = CLOSERS_5_GU
     elif lang in ("hi", "hindi"):
-        openers = OPENERS_HI
-        bodies = BODIES_HI
-        closers = CLOSERS_HI
+        if is_four_star:
+            openers = OPENERS_4_HI
+            bodies = BODIES_4_HI
+            closers = CLOSERS_4_HI
+        else:
+            openers = OPENERS_5_HI
+            bodies = BODIES_5_HI
+            closers = CLOSERS_5_HI
     elif is_restaurant:
-        openers = RESTAURANT_OPENERS_EN
-        bodies = RESTAURANT_BODIES_EN
-        closers = RESTAURANT_CLOSERS_EN
+        if is_four_star:
+            openers = RESTAURANT_OPENERS_4_EN
+            bodies = RESTAURANT_BODIES_4_EN
+            closers = RESTAURANT_CLOSERS_4_EN
+        else:
+            openers = RESTAURANT_OPENERS_5_EN
+            bodies = RESTAURANT_BODIES_5_EN
+            closers = RESTAURANT_CLOSERS_5_EN
     else:
-        openers = OPENERS_EN
-        bodies = BODIES_EN
-        closers = CLOSERS_EN
+        if is_four_star:
+            openers = OPENERS_4_EN
+            bodies = BODIES_4_EN
+            closers = CLOSERS_4_EN
+        else:
+            openers = OPENERS_5_EN
+            bodies = BODIES_5_EN
+            closers = CLOSERS_5_EN
 
-    # Generate combinatorial permutations with interleaved offsets
+    # Combinatorial permutations with shuffled offsets
     sample_openers = list(openers)
     sample_bodies = list(bodies)
     sample_closers = list(closers)
@@ -279,10 +369,8 @@ def generate_template_candidates(
     random.shuffle(sample_closers)
 
     loc_str = ""
-    if location and random.random() > 0.5:
-        if lang in ("hi", "hindi"):
-            loc_str = f" ({location})"
-        elif lang in ("gu", "gujarati"):
+    if location and random.random() > 0.4:
+        if lang in ("hi", "hindi", "gu", "gujarati"):
             loc_str = f" ({location})"
         else:
             loc_str = f" in {location}"
@@ -300,12 +388,20 @@ def generate_template_candidates(
         if length == "short":
             full_review = f"{sentence1} {sentence3}"
         elif length == "long":
-            if lang in ("hi", "hindi"):
-                extra = f"{keyword} के प्रति उनका समर्पण हमारे लिए बेहद मददगार साबित हुआ।"
-            elif lang in ("gu", "gujarati"):
-                extra = f"{keyword} માટેનું તેમનું સમર્પણ અમારા માટે ખૂબ ફાયદાકારક સાબિત થયું."
+            if is_four_star:
+                if lang in ("hi", "hindi"):
+                    extra = "प्रक्रिया में थोड़े और सुधार के साथ यह टीम और भी अधिक प्रभावशाली हो सकती है।"
+                elif lang in ("gu", "gujarati"):
+                    extra = "પ્રક્રિયામાં થોડા વધુ સુધારા સાથે આ ટીમ વધુ પ્રભાવશાળી પરિણામ આપી શકે છે."
+                else:
+                    extra = "With just minor ongoing process tuning, their service will be even stronger."
             else:
-                extra = f"Their dedication to {keyword} made all the difference for us."
+                if lang in ("hi", "hindi"):
+                    extra = f"{keyword} के प्रति उनका समर्पण हमारे लिए बेहद मददगार साबित हुआ।"
+                elif lang in ("gu", "gujarati"):
+                    extra = f"{keyword} માટેનું તેમનું સમર્પણ અમારા માટે ખૂબ ફાયદાકારક સાબિત થયું."
+                else:
+                    extra = f"Their disciplined approach to {keyword} made a measurable positive difference for us."
             full_review = f"{sentence1} {sentence2} {extra} {sentence3}"
         else:  # medium
             full_review = f"{sentence1} {sentence2} {sentence3}"

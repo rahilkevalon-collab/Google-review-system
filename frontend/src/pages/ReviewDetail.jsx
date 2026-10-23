@@ -212,15 +212,34 @@ export default function ReviewDetail() {
             )}
           </div>
 
-          {/* Clearly labelled Demo Rating */}
-          <div 
-            className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 text-amber-300 border border-amber-500/20 text-xs font-bold"
-            title="Demonstration rating preview - not a verified customer rating"
-          >
-            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-            <span>5.0</span>
-            <span className="text-[10px] text-amber-200/80 font-normal ml-0.5">(Demo Rating)</span>
-          </div>
+          {/* Clearly labelled Demo / Real Rating */}
+          {(() => {
+            const ratingVal = Number(review.rating) || 5;
+            const isDemo = review.isDemo !== false && review.ratingType !== 'real';
+            return (
+              <div 
+                className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 text-amber-300 border border-amber-500/20 text-xs font-bold"
+                title={isDemo ? "Demonstration rating preview - not a verified customer rating" : "Verified Customer Rating"}
+              >
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((starNum) => (
+                    <Star 
+                      key={starNum} 
+                      className={`w-3.5 h-3.5 ${
+                        starNum <= ratingVal 
+                          ? 'fill-amber-400 text-amber-400' 
+                          : 'fill-slate-800/80 text-slate-700'
+                      }`} 
+                    />
+                  ))}
+                </div>
+                <span className="ml-1">{ratingVal.toFixed(1)}</span>
+                <span className="text-[10px] text-amber-200/80 font-normal ml-0.5">
+                  {isDemo ? '(Demo Rating)' : '(Verified Rating)'}
+                </span>
+              </div>
+            );
+          })()}
         </div>
 
         <div>

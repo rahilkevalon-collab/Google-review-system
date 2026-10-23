@@ -51,6 +51,13 @@ graph TD
 ### Page 2 — Review Generation UI (`/reviews/:companyId`)
 - **Visual Identity**: Dark, modern, premium UI inspired by the Tapzy Reviews screenshot with deep purple radial gradients and glassmorphism.
 - **Header**: "Review [Company Name]" (white heading with purple gradient business name) and subtitle "SELECT KEYWORDS & GENERATE REVIEW SUGGESTIONS".
+- **Configurable Rating Distribution Settings**:
+  - Toolbar with presets: **60% 5★ / 40% 4★ (Recommended Mix)**, **70% 5★ / 30% 4★ (High Praise)**, **50% 5★ / 50% 4★ (Balanced Mix)**, **100% 5★**.
+  - **Custom Ratio Mode**: Live validation ensuring that custom percentages sum to exactly 100%.
+  - Persisted in `localStorage` across page reloads.
+- **Natural, Balanced Review Suggestions**:
+  - **5-Star Suggestions**: Grounded, specific, and professional praise without hyperbolic marketing fluff or fake enthusiasm.
+  - **4-Star Suggestions**: Genuinely positive overall while incorporating one mild, plausible operational or process observation (e.g., initial response time, onboarding documentation, or milestone status reporting frequency).
 - **Rounded Purple Keyword Chips**:
   - Dynamically rendered from the user-provided SEO keywords.
   - Supports single-select and multi-select.
@@ -58,7 +65,7 @@ graph TD
 - **3 Review Cards**:
   - Italic, readable review drafts incorporating the company's real details.
   - SEO keyword badge and company name badge.
-  - Clearly labelled Demo Rating stars (`★ 5.0 (Demo)`).
+  - Star rating display with clearly labelled Demo Rating tags (`★ 4.0 (Demo)` and `★ 5.0 (Demo)` with 4 or 5 gold stars).
   - One-click **Copy Review** button with instant feedback toast.
   - **Open Google Reviews** button resolving direct Google Place ID review URLs (`https://search.google.com/local/writereview?placeid=...`) without Google 400 Bad Request errors.
   - Clicking a review card navigates to `/review/:reviewId`.
@@ -68,7 +75,7 @@ graph TD
   - **Persistence**: Reloading the page reloads the company and keywords directly from MongoDB.
 
 ### Page 3 — Review Detail & Editor (`/review/:reviewId`)
-- Displays company name, location/address, selected keyword, demo star rating, and word/character counts.
+- Displays company name, location/address, selected keyword, assigned star rating (`4.0` or `5.0`), demo rating badge, and word/character counts.
 - Editable textarea allowing users to customize suggestions to reflect their genuine experience.
 - **Save Edits** button: Persists changes to MongoDB via `PATCH /api/reviews/:reviewId`.
 - **Copy Review Text** button: Copies to clipboard with success toast.
@@ -81,6 +88,7 @@ graph TD
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/health` | Health check and active AI model status |
+| `GET` | `/api/settings/rating-distribution` | Supported rating presets (60/40, 70/30, 50/50, 100/0) & default configuration |
 | `GET` | `/api/categories` | List all business categories |
 | `GET` | `/api/categories/:cat/keywords` | List default keywords for a category |
 | `POST` | `/api/companies` | Create a company profile with Place ID, services, and SEO keywords |

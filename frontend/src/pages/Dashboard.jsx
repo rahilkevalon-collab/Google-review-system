@@ -11,7 +11,11 @@ import {
   Info,
   Layers,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Sliders,
+  Star,
+  Check,
+  ChevronDown
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
@@ -19,6 +23,13 @@ import KeywordChips from '../components/KeywordChips';
 import ReviewCard from '../components/ReviewCard';
 import SkeletonReviewCard from '../components/SkeletonReviewCard';
 import { getGoogleReviewUrl } from '../utils/googleReviewUrl';
+
+const RATING_PRESETS = [
+  { id: '60-40', label: '60% 5★ / 40% 4★ (Recommended)', five_star: 60, four_star: 40 },
+  { id: '70-30', label: '70% 5★ / 30% 4★ (High Praise)', five_star: 70, four_star: 30 },
+  { id: '50-50', label: '50% 5★ / 50% 4★ (Balanced Mix)', five_star: 50, four_star: 50 },
+  { id: '100-0', label: '100% 5★ (All 5-Star)', five_star: 100, four_star: 0 },
+];
 
 export default function Dashboard({ categories = [] }) {
   const { companyId: routeCompanyId } = useParams();
@@ -32,6 +43,25 @@ export default function Dashboard({ categories = [] }) {
   // Keyword states
   const [keywords, setKeywords] = useState([]);
   const [selectedKeywords, setSelectedKeywords] = useState([]);
+
+  // Rating Distribution Configuration (60% 5-star, 40% 4-star default)
+  const [ratingDistribution, setRatingDistribution] = useState(() => {
+    try {
+      const saved = localStorage.getItem('reviewcraft_rating_distribution');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.five_star !== undefined && parsed.four_star !== undefined) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return { five_star: 60, four_star: 40 };
+  });
+
+  const [showRatingSettings, setShowRatingSettings] = useState(false);
+  const [isCustomRating, setIsCustomRating] = useState(false);
+  const [customFive, setCustomFive] = useState('60');
+  const [customFour, setCustomFour] = useState('40');
 
   // Reviews state (strictly 3 distinct suggestions)
   const [reviews, setReviews] = useState([]);
@@ -115,7 +145,7 @@ export default function Dashboard({ categories = [] }) {
   }, [routeCompanyId, navigate]);
 
   // 2. Generate Review Suggestions using Flask + Scikit-Learn TF-IDF deduplication
-  const generateReviews = useCallback(async (keywordsToUse, forceFresh = false) => {
+  const generateReviews = useCallback(async (keywordsToUse, forceFresh = false, overrideRatingDist = null) => {
     if (!company?.id) return;
 
     // Concurrency / rapid-click guard (throttle within 800ms)
@@ -134,6 +164,8 @@ export default function Dashboard({ categories = [] }) {
       ? keywordsToUse
       : (selectedKeywords.length > 0 ? selectedKeywords : [keywords[0] || 'Quality Service']);
 
+    const distToUse = overrideRatingDist || ratingDistribution;
+
     try {
       const payload = {
         companyId: company.id,
@@ -146,7 +178,8 @@ export default function Dashboard({ categories = [] }) {
         language: company.preferredLanguage || 'en',
         tone: 'natural',
         length: 'medium',
-        count: 3
+        count: 3,
+        ratingDistribution: distToUse
       };
 
       const res = await api.generateReviews(payload);
@@ -183,7 +216,7 @@ export default function Dashboard({ categories = [] }) {
       setIsGenerating(false);
       isGeneratingRef.current = false;
     }
-  }, [company, selectedKeywords, keywords, addToast]);
+  }, [company, selectedKeywords, keywords, ratingDistribution, addToast]);
 
   // 3. Trigger initial generation when company and keywords are loaded
   useEffect(() => {
@@ -260,6 +293,41 @@ export default function Dashboard({ categories = [] }) {
     addToast('Synthesizing additional suggestions...', 'info');
   };
 
+  // 9. Handle Rating Preset Selection
+  const handleSelectPreset = (preset) => {
+    const newDist = { five_star: preset.five_star, four_star: preset.four_star };
+    setRatingDistribution(newDist);
+    setIsCustomRating(false);
+    localStorage.setItem('reviewcraft_rating_distribution', JSON.stringify(newDist));
+    addToast(`Rating distribution set to ${preset.five_star}% 5★ / ${preset.four_star}% 4★`, 'success');
+    generateReviews(selectedKeywords, true, newDist);
+  };
+
+  // 10. Handle Custom Rating Distribution Apply
+  const handleApplyCustomRating = (e) => {
+    e?.preventDefault();
+    const f5 = parseFloat(customFive);
+    const f4 = parseFloat(customFour);
+
+    if (isNaN(f5) || isNaN(f4) || f5 < 0 || f4 < 0) {
+      addToast('Percentages must be non-negative numbers.', 'warning');
+      return;
+    }
+
+    const total = Math.round((f5 + f4) * 100) / 100;
+    if (total !== 100) {
+      addToast(`Percentages must total 100% (currently ${total}%).`, 'warning');
+      return;
+    }
+
+    const newDist = { five_star: f5, four_star: f4 };
+    setRatingDistribution(newDist);
+    setIsCustomRating(true);
+    localStorage.setItem('reviewcraft_rating_distribution', JSON.stringify(newDist));
+    addToast(`Custom rating distribution applied: ${f5}% 5★ / ${f4}% 4★`, 'success');
+    generateReviews(selectedKeywords, true, newDist);
+  };
+
   if (loadingCompany) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
@@ -293,6 +361,7 @@ export default function Dashboard({ categories = [] }) {
   }
 
   const googleReviewDestination = getGoogleReviewUrl(company);
+  const customSum = (parseFloat(customFive) || 0) + (parseFloat(customFour) || 0);
 
   return (
     <div className="space-y-7 animate-in fade-in duration-300">
@@ -382,6 +451,114 @@ export default function Dashboard({ categories = [] }) {
           onAddKeyword={handleAddKeyword}
           onRemoveKeyword={handleRemoveKeyword}
         />
+      </div>
+
+      {/* Rating Distribution Settings Toolbar */}
+      <div className="glass-panel p-4 rounded-2xl border border-purple-500/20 bg-slate-950/70 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Sliders className="w-4 h-4 text-purple-400 shrink-0" />
+            <span className="text-xs font-bold uppercase tracking-wider text-purple-200">
+              Demo Rating Mix:
+            </span>
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-lg bg-purple-500/15 text-purple-300 border border-purple-500/30">
+              {ratingDistribution.five_star}% 5★ • {ratingDistribution.four_star}% 4★
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowRatingSettings(!showRatingSettings)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-purple-500/30 text-xs font-semibold text-purple-300 hover:text-white transition-all cursor-pointer"
+          >
+            <span>Change Mix</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showRatingSettings ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+
+        {/* Expandable Rating Configuration Panel */}
+        {showRatingSettings && (
+          <div className="pt-3 border-t border-purple-500/15 space-y-4 animate-in fade-in duration-200">
+            <div className="flex flex-wrap items-center gap-2">
+              {RATING_PRESETS.map((p) => {
+                const isActive = !isCustomRating && ratingDistribution.five_star === p.five_star && ratingDistribution.four_star === p.four_star;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleSelectPreset(p)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                      isActive
+                        ? 'bg-purple-600 text-white border-purple-400 shadow-md shadow-purple-600/30'
+                        : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 border-purple-500/20 hover:border-purple-400'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={() => setIsCustomRating(true)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                  isCustomRating
+                    ? 'bg-purple-600 text-white border-purple-400 shadow-md shadow-purple-600/30'
+                    : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 border-purple-500/20 hover:border-purple-400'
+                }`}
+              >
+                Custom Ratio...
+              </button>
+            </div>
+
+            {/* Custom Ratio Input Form */}
+            {isCustomRating && (
+              <form onSubmit={handleApplyCustomRating} className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-slate-900/80 border border-purple-500/25">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-slate-300 font-medium">5-Star %:</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={customFive}
+                    onChange={(e) => setCustomFive(e.target.value)}
+                    className="w-20 px-2.5 py-1 rounded-lg bg-slate-950 border border-purple-500/40 text-xs text-white focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-slate-300 font-medium">4-Star %:</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={customFour}
+                    onChange={(e) => setCustomFour(e.target.value)}
+                    className="w-20 px-2.5 py-1 rounded-lg bg-slate-950 border border-purple-500/40 text-xs text-white focus:outline-none"
+                  />
+                </div>
+
+                <div className="text-xs font-semibold flex items-center gap-1.5">
+                  <span className={customSum === 100 ? 'text-emerald-400' : 'text-amber-400'}>
+                    Total: {customSum}% {customSum === 100 ? '✓' : '(Must total 100%)'}
+                  </span>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={customSum !== 100}
+                  className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold transition-all disabled:opacity-40 cursor-pointer"
+                >
+                  Apply Custom Mix
+                </button>
+              </form>
+            )}
+
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              * Note: In demo mode, a 60/40 mix produces realistic feedback where 4-star suggestions remain positive while highlighting one constructive, plausible process detail (such as response time or reporting frequency).
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Action Controls: Regenerate & Generate More Reviews */}
@@ -476,7 +653,7 @@ export default function Dashboard({ categories = [] }) {
       <div className="p-4 rounded-2xl bg-slate-900/60 border border-purple-500/15 flex items-start sm:items-center gap-3 text-xs text-slate-400">
         <Info className="w-4 h-4 text-purple-400 shrink-0 mt-0.5 sm:mt-0" />
         <p className="leading-relaxed">
-          <strong className="text-purple-300 font-semibold">AI Review Draft Notice:</strong> All suggestions are AI-synthesized templates using your business details and selected keywords. Reviews must be reviewed, edited, and voluntarily submitted by real customers on Google.
+          <strong className="text-purple-300 font-semibold">AI Review Draft Notice:</strong> All suggestions are AI-synthesized templates using your business details, selected keywords, and configured rating distribution. Reviews must be reviewed, edited, and voluntarily submitted by real customers on Google.
         </p>
       </div>
 

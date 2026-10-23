@@ -100,18 +100,33 @@ export default function ReviewCard({ review }) {
             </span>
           </div>
 
-          {/* Clearly labelled Demo Rating stars */}
-          <div 
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20 text-xs font-bold"
-            title="Demonstration rating preview - not an actual customer rating"
-          >
-            <div className="flex items-center text-amber-400">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
-              ))}
-            </div>
-            <span className="text-[10px] text-amber-200/90 font-medium ml-1">5.0 (Demo)</span>
-          </div>
+          {/* Clearly labelled Demo / Real Rating stars */}
+          {(() => {
+            const ratingVal = Number(review.rating) || 5;
+            const isDemo = review.isDemo !== false && review.ratingType !== 'real';
+            return (
+              <div 
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20 text-xs font-bold"
+                title={isDemo ? "AI-generated synthetic demo suggestion - not a verified customer rating" : "Verified Customer Rating"}
+              >
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((starNum) => (
+                    <Star 
+                      key={starNum} 
+                      className={`w-3 h-3 ${
+                        starNum <= ratingVal 
+                          ? 'fill-amber-400 text-amber-400' 
+                          : 'fill-slate-800/80 text-slate-700'
+                      }`} 
+                    />
+                  ))}
+                </div>
+                <span className="text-[10px] text-amber-200 font-semibold ml-0.5">
+                  {ratingVal.toFixed(1)} {isDemo ? '(Demo)' : ''}
+                </span>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Review Body (Italic, readable) */}

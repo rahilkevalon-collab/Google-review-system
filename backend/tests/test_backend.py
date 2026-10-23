@@ -187,3 +187,109 @@ def test_api_review_patch(client):
         patch_res = client.patch(f"/api/reviews/{rid}", json={"reviewText": new_txt})
         assert patch_res.status_code == 200
         assert patch_res.get_json()["review"]["reviewText"] == new_txt
+
+# 15. Rating Allocation and Validation Tests
+def test_rating_allocation_and_validation():
+    from ai.rating_allocator import allocate_demo_ratings, validate_rating_distribution
+    
+    # Validation tests
+    ok, msg, norm = validate_rating_distribution({"five_star": 60, "four_star": 40})
+    assert ok is True
+    assert norm["five_star"] == 60.0 and norm["four_star"] == 40.0
+    
+    # Invalid sum != 100
+    bad_sum, bad_msg, _ = validate_rating_distribution({"five_star": 70, "four_star": 40})
+    assert bad_sum is False
+    assert "sum to 100%" in bad_msg
+    
+    # Negative value
+    neg_ok, neg_msg, _ = validate_rating_distribution({"five_star": -10, "four_star": 110})
+    assert neg_ok is False
+    assert "negative" in neg_msg.lower()
+    
+    # Small batch allocations (60/40)
+    assert allocate_demo_ratings(1) == [5]
+    assert allocate_demo_ratings(2) == [5, 4]
+    assert allocate_demo_ratings(3) == [5, 4, 5]
+    assert allocate_demo_ratings(5) == [5, 4, 5, 4, 5]
+    
+    # 70/30 allocation
+    dist_70_30 = {"five_star": 70, "four_star": 30}
+    assert allocate_demo_ratings(3, dist_70_30) == [5, 4, 5]
+    assert allocate_demo_ratings(5, dist_70_30) == [5, 4, 5, 5, 5]
+    
+    # 50/50 allocation
+    dist_50_50 = {"five_star": 50, "four_star": 50}
+    assert allocate_demo_ratings(2, dist_50_50) == [5, 4]
+    assert allocate_demo_ratings(4, dist_50_50) == [5, 4, 5, 4]
+
+# 16. API Rating Distribution & Generation Tests
+def test_api_rating_distribution_generation(client):
+    unique_company = f"Rating Test Co {time.time()}"
+    res = client.post("/api/generate-reviews", json={
+        "companyName": unique_company,
+        "category": "IT Services and Software Development",
+        "keyword": "Web Engineering",
+        "count": 3,
+        "ratingDistribution": {"five_star": 60, "four_star": 40}
+    })
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["success"] is True
+    assert len(data["reviews"]) == 3
+    
+    ratings = [r["rating"] for r in data["reviews"]]
+    assert ratings == [5, 4, 5]
+    assert data["ratingBreakdown"] == {"5_star": 2, "4_star": 1}
+    
+    # Verify 4-star review contains constructive observation
+    four_star_reviews = [r for r in data["reviews"] if r["rating"] == 4]
+    assert len(four_star_reviews) == 1
+    four_star_text = four_star_reviews[0]["reviewText"]
+    assert any(term in four_star_text.lower() for term in [
+        "documentation", "response", "reporting", "kickoff", "sprint", "turnaround", "communication"
+    ])
+
+# 17. API Rating Distribution Error Handling
+def test_api_rating_distribution_invalid(client):
+    res = client.post("/api/generate-reviews", json={
+        "companyName": "Error Test Co",
+        "keyword": "Testing",
+        "ratingDistribution": {"five_star": 80, "four_star": 30}
+    })
+    assert res.status_code == 400
+    data = res.get_json()
+    assert data["success"] is False
+    assert "100%" in data["error"]
+
+# 18. Real Customer Review Mode Test
+def test_api_real_customer_review_mode(client):
+    res = client.post("/api/generate-reviews", json={
+        "companyName": f"Real Co {time.time()}",
+        "keyword": "Customer Support",
+        "mode": "real",
+        "customerRating": 4,
+        "count": 1
+    })
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["isDemo"] is False
+    rev = data["reviews"][0]
+    assert rev["rating"] == 4
+    assert rev["ratingType"] == "real"
+    assert rev["source"] == "customer-submitted"
+
+# 19. Category-Specific Review Generation
+def test_category_specific_reviews(client):
+    res = client.post("/api/generate-reviews", json={
+        "companyName": f"Bistro {time.time()}",
+        "category": "Restaurants and Food",
+        "keyword": "Wood Fired Pizza",
+        "count": 2
+    })
+    assert res.status_code == 200
+    data = res.get_json()
+    assert len(data["reviews"]) == 2
+    for r in data["reviews"]:
+        assert "Wood Fired Pizza" in r["reviewText"]
+

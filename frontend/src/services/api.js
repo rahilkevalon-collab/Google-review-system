@@ -85,7 +85,12 @@ export const api = {
     return handleResponse(res);
   },
 
-  // Review Generation
+  // Review Generation & Rating Settings
+  getRatingDistributionSettings: async () => {
+    const res = await fetch(`${API_BASE}/settings/rating-distribution`);
+    return handleResponse(res);
+  },
+
   generateReviews: async (payload) => {
     const res = await fetch(`${API_BASE}/generate-reviews`, {
       method: 'POST',

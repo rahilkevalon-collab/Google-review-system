@@ -31,7 +31,8 @@ class BaseLLMProvider(ABC):
         language: str = "en",
         tone: str = "natural",
         length: str = "medium",
-        count: int = 5
+        count: int = 5,
+        target_rating: int = 5
     ) -> tuple[list[str], str]:
         """
         Returns (list_of_candidate_texts, provider_source_string)
@@ -58,7 +59,8 @@ class DemoTemplateProvider(BaseLLMProvider):
         language: str = "en",
         tone: str = "natural",
         length: str = "medium",
-        count: int = 5
+        count: int = 5,
+        target_rating: int = 5
     ) -> tuple[list[str], str]:
         candidates = generate_template_candidates(
             company_name=company_name,
@@ -69,7 +71,8 @@ class DemoTemplateProvider(BaseLLMProvider):
             length=length,
             count=count,
             location=location,
-            services=services
+            services=services,
+            target_rating=target_rating
         )
         return candidates, "template-demo"
 
@@ -107,12 +110,13 @@ class GeminiLLMProvider(BaseLLMProvider):
         language: str = "en",
         tone: str = "natural",
         length: str = "medium",
-        count: int = 5
+        count: int = 5,
+        target_rating: int = 5
     ) -> tuple[list[str], str]:
         if not self._client:
             logger.warning("Gemini client not initialized, falling back to template engine.")
             return DemoTemplateProvider().generate_review_candidates(
-                company_name, category, keyword, description, services, location, language, tone, length, count
+                company_name, category, keyword, description, services, location, language, tone, length, count, target_rating
             )
 
         lang_name = {"en": "English", "hi": "Hindi (Devanagari script)", "gu": "Gujarati (Gujarati script)"}.get(language, "English")
@@ -121,6 +125,18 @@ class GeminiLLMProvider(BaseLLMProvider):
             "medium": "2 to 3 well-crafted sentences (approx 35-65 words)",
             "long": "4 to 5 detailed, story-like sentences (approx 75-120 words)"
         }.get(length, "2-3 sentences")
+
+        if int(target_rating) == 4:
+            rating_instructions = f"""
+- Target Rating: 4 Stars (Out of 5)
+- Tone & Substance: The review must be genuinely positive and appreciative of {company_name}'s overall work on "{keyword}", but mention ONE mild, plausible constructive observation (such as initial response time, onboarding documentation detail, or milestone status reporting frequency).
+- Critical Guardrail: Do NOT invent major complaints, service outages, or hostile claims. Keep the feedback balanced, constructive, professional, and natural.
+"""
+        else:
+            rating_instructions = f"""
+- Target Rating: 5 Stars (Out of 5)
+- Tone & Substance: Professional, specific, natural, and positive without exaggerated marketing hype or unnatural praise. Emphasize dependable execution, clear collaboration, and solid results on "{keyword}".
+"""
 
         prompt = f"""
 You are an expert review generation assistant. Generate {count + 2} diverse, authentic-sounding customer review suggestions for a business.
@@ -135,10 +151,11 @@ Business Details:
 
 Review Specifications:
 - Language: {lang_name}
-- Tone: {tone.capitalize()} (Must reflect this style naturally)
+- Tone: {tone.capitalize()}
 - Length: {length_guideline}
-- Focus: Each review suggestion MUST naturally weave in the SEO keyword "{keyword}" without sounding forced or repetitive.
-- Variety: Make sure each suggestion uses distinct phrasing, different angles of customer satisfaction, and varied sentence structures.
+{rating_instructions}
+- Keyword Integration: Naturally weave in the SEO keyword "{keyword}" without sounding forced, stuffed, or repetitive.
+- Variety: Ensure each candidate uses distinct openings and varied sentence structures.
 
 Output Format:
 Return ONLY a valid JSON array of strings containing the review suggestions. No markdown formatting, no code blocks, just raw JSON array:
@@ -169,7 +186,7 @@ Return ONLY a valid JSON array of strings containing the review suggestions. No 
         # Fallback if API fails
         logger.info("Falling back to DemoTemplateProvider due to API error.")
         return DemoTemplateProvider().generate_review_candidates(
-            company_name, category, keyword, description, services, location, language, tone, length, count
+            company_name, category, keyword, description, services, location, language, tone, length, count, target_rating
         )
 
 def get_llm_provider() -> BaseLLMProvider:
