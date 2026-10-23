@@ -12,7 +12,6 @@ import CategorySelector from '../components/CategorySelector';
 import KeywordChips from '../components/KeywordChips';
 import ReviewCard from '../components/ReviewCard';
 import SkeletonReviewCard from '../components/SkeletonReviewCard';
-import AnalyticsWidget from '../components/AnalyticsWidget';
 
 export default function Dashboard({
   companies = [],
@@ -37,9 +36,6 @@ export default function Dashboard({
   const [reviews, setReviews] = useState([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-
-  // Analytics
-  const [analytics, setAnalytics] = useState(null);
 
   // When selected company changes, sync category & localStorage
   useEffect(() => {
@@ -155,22 +151,6 @@ export default function Dashboard({
       generateThreeFreshReviews(selectedKeyword);
     }
   }, [selectedCompany?.id, selectedKeyword]);
-
-  // Fetch analytics overview
-  const fetchAnalytics = useCallback(async () => {
-    try {
-      const res = await api.getAnalyticsOverview();
-      if (res.success) {
-        setAnalytics(res.analytics);
-      }
-    } catch (err) {
-      console.error('Analytics fetch error:', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchAnalytics();
-  }, [fetchAnalytics]);
 
   // When clicking a keyword tag
   const handleSelectKeyword = (kw) => {
@@ -312,8 +292,6 @@ export default function Dashboard({
         )}
       </div>
 
-      {/* Analytics Overview Widget */}
-      <AnalyticsWidget analytics={analytics} onRefreshAnalytics={fetchAnalytics} />
 
     </div>
   );
