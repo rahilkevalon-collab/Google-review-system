@@ -13,7 +13,19 @@ export default function ReviewCard({ review }) {
   const { addToast } = useToast();
   const [copied, setCopied] = useState(false);
 
+  const resolveGoogleReviewUrl = () => {
+    let link = review?.externalReviewLink?.trim();
+    if (!link || link === 'https://search.google.com/local/writereview' || !link.startsWith('http')) {
+      const parts = [review?.companyName, review?.companyLocation, 'reviews'].filter(Boolean);
+      const query = parts.length > 0 ? parts.join(' ') : 'Google reviews';
+      return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+    }
+    return link;
+  };
+
   const handleCardClick = async () => {
+    const googleUrl = resolveGoogleReviewUrl();
+
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(review.reviewText);
@@ -32,14 +44,12 @@ export default function ReviewCard({ review }) {
       // Track analytics copy event on backend
       api.recordCopyEvent(review.id).catch(() => {});
       
-      // Open Google Review Link immediately
-      const googleUrl = review.externalReviewLink || 'https://search.google.com/local/writereview';
+      // Open verified Google URL
       window.open(googleUrl, '_blank', 'noopener,noreferrer');
       
       setTimeout(() => setCopied(false), 2500);
     } catch (err) {
       addToast('Opening Google Review page...', 'info');
-      const googleUrl = review.externalReviewLink || 'https://search.google.com/local/writereview';
       window.open(googleUrl, '_blank', 'noopener,noreferrer');
     }
   };

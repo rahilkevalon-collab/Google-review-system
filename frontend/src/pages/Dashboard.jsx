@@ -237,12 +237,16 @@ export default function Dashboard({
             </div>
 
             {/* External Google Review Link button */}
-            {selectedCompany.externalReviewLink && (
+            {selectedCompany && (
               <a
-                href={selectedCompany.externalReviewLink}
+                href={
+                  selectedCompany.externalReviewLink && selectedCompany.externalReviewLink !== 'https://search.google.com/local/writereview' && selectedCompany.externalReviewLink.startsWith('http')
+                    ? selectedCompany.externalReviewLink
+                    : `https://www.google.com/search?q=${encodeURIComponent(`${selectedCompany.name} ${selectedCompany.location || ''} reviews`.trim())}`
+                }
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all shadow-2xs group"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all shadow-2xs group cursor-pointer"
               >
                 <Globe className="w-4 h-4 text-indigo-600 group-hover:rotate-12 transition-transform" />
                 <span>Open Google Review Page</span>

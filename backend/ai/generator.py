@@ -1,5 +1,7 @@
 import uuid
 import logging
+import urllib.parse
+from bson import ObjectId
 from datetime import datetime, timezone
 from pymongo.errors import DuplicateKeyError
 from config import Config
@@ -23,7 +25,11 @@ class ReviewGeneratorService:
         if keyword:
             query["keyword"] = keyword
         
-        cursor = self.db.generated_reviews.find(query, {"reviewText": 1})
+        cursor = self.db.generated_reviews.find(
+            query,
+            {"reviewText": 1, "_id": 0}
+        ).sort("createdAt", -1).limit(100)
+        
         return [doc["reviewText"] for doc in cursor if "reviewText" in doc]
 
     def generate_reviews(
@@ -58,6 +64,19 @@ class ReviewGeneratorService:
         provider_name = llm_provider.name
         is_ai_powered = llm_provider.is_ai
 
+        # Resolve company externalReviewLink and location
+        ext_review_link = None
+        if company_id and ObjectId.is_valid(company_id):
+            comp_obj = self.db.companies.find_one({"_id": ObjectId(company_id)})
+            if comp_obj:
+                ext_review_link = comp_obj.get("externalReviewLink")
+                if not location:
+                    location = comp_obj.get("location", "")
+
+        if not ext_review_link or ext_review_link == "https://search.google.com/local/writereview" or not ext_review_link.startswith("http"):
+            query_str = f"{company_name} {location} reviews".strip()
+            ext_review_link = f"https://www.google.com/search?q={urllib.parse.quote_plus(query_str)}"
+
         accepted_reviews = []
         total_rejected_count = 0
         rejection_details = []
@@ -67,7 +86,7 @@ class ReviewGeneratorService:
         # Working comparison pool starts with historical reviews
         working_pool = list(history_texts)
 
-        # Effective threshold can dynamically adapt if history is dense
+        # Dynamic threshold adaptation
         current_threshold = threshold
 
         while len(accepted_reviews) < target_count and attempts < max_attempts:
@@ -88,38 +107,48 @@ class ReviewGeneratorService:
                 count=max(6, needed * 5)
             )
 
-            # Filter candidates against working history + current accepted items
-            accepted, rejected = nlp_engine.filter_batch(
-                candidate_texts=candidates,
-                historical_texts=working_pool,
-                threshold=current_threshold
-            )
+            # Relax threshold slightly on retry passes to strictly guarantee target_count
+            if attempts > 1:
+                current_threshold = min(0.92, threshold + (attempts * 0.05))
 
-            total_rejected_count += len(rejected)
-            rejection_details.extend(rejected)
+            for cand in candidates:
+                if len(accepted_reviews) >= target_count:
+                    break
 
-            for item in accepted:
-                if len(accepted_reviews) < target_count:
-                    accepted_reviews.append(item)
-                    working_pool.append(item["text"])
+                check_result = nlp_engine.check_candidate(
+                    candidate_text=cand,
+                    existing_texts=working_pool,
+                    threshold=current_threshold
+                )
 
-            # If still needed on subsequent attempts, slightly relax threshold to accept diverse sentences
-            if len(accepted_reviews) < target_count and attempts >= 2:
-                current_threshold = min(current_threshold + 0.05, 0.82)
+                if check_result["is_duplicate"]:
+                    total_rejected_count += 1
+                    rejection_details.append({
+                        "candidate": cand[:60],
+                        "similarity": check_result["similarity_score"],
+                        "reason": check_result["reason"]
+                    })
+                else:
+                    accepted_reviews.append({
+                        "text": cand,
+                        "similarity": check_result["similarity_score"]
+                    })
+                    working_pool.append(cand)
 
-        # Prepare records for database insertion
         now = datetime.now(timezone.utc)
         saved_records = []
 
         for item in accepted_reviews:
             review_text = item["text"]
-            content_hash = item["hash"]
-            sim_score = item.get("max_similarity", 0.0)
+            sim_score = item["similarity"]
+            content_hash = compute_content_hash(review_text)
             sentiment_data = analyze_review_sentiment(review_text)
 
             doc = {
                 "companyId": str(company_id),
                 "companyName": company_name,
+                "companyLocation": location,
+                "externalReviewLink": ext_review_link,
                 "category": category,
                 "keyword": keyword,
                 "reviewText": review_text,
@@ -142,7 +171,6 @@ class ReviewGeneratorService:
                 doc["_id"] = res.inserted_id
                 saved_records.append(serialize_doc(doc))
             except DuplicateKeyError:
-                # Caught an exact contentHash conflict across concurrent sessions
                 logger.warning("DuplicateKeyError caught for hash %s. Skipping.", content_hash)
                 total_rejected_count += 1
             except Exception as e:

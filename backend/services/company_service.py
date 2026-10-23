@@ -30,7 +30,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Natural Skincare, Eco-friendly Home Decor, Organic Teas, Sustainable Packaging",
         "location": "Mumbai, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "https://www.google.com/search?q=Aura+Organic+Living+Mumbai+reviews",
         "keywords": [
             "Product Quality",
             "Fast Delivery",
@@ -51,7 +51,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Fine Dining, Private Banquet, Catering, Royal Thali Experience",
         "location": "Delhi, India",
         "preferredLanguage": "hi",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "https://www.google.com/search?q=Spice+Pavilion+Fine+Dine+Delhi+reviews",
         "keywords": [
             "Culinary Taste",
             "Ambiance & Atmosphere",
@@ -70,7 +70,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Preventive Care, Cosmetic Dentistry, Diagnostics, Routine Checkups",
         "location": "Bangalore, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "https://www.google.com/search?q=Apex+Care+Multispeciality+Clinic+Bangalore+reviews",
         "keywords": [
             "Doctor Expertise",
             "Compassionate Care",
@@ -87,7 +87,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Residential Sales, Commercial Leasing, Property Advisory, Legal Due Diligence",
         "location": "Pune, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "https://www.google.com/search?q=Prime+Landmark+Realty+Pune+reviews",
         "keywords": [
             "Prime Location",
             "Transparent Dealings",
@@ -105,7 +105,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "STEM Education, Competitive Exam Preparation, Student Mentoring, Career Counseling",
         "location": "Hyderabad, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "https://www.google.com/search?q=BrightPath+International+Academy+Hyderabad+reviews",
         "keywords": [
             "Experienced Faculty",
             "Interactive Curriculum",
@@ -122,7 +122,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Curated Tour Packages, Luxury Hotel Bookings, Visa Assistance, Custom Itineraries",
         "location": "Goa, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "https://www.google.com/search?q=Wanderlust+Horizon+Travels+Goa+reviews",
         "keywords": [
             "Comfortable Stay",
             "Scenic Location",
@@ -139,7 +139,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Hair Styling, Botanical Facials, Spa Therapies, Bridal Makeovers",
         "location": "Jaipur, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "https://www.google.com/search?q=Glow+and+Grace+Luxury+Wellness+Salon+Jaipur+reviews",
         "keywords": [
             "Expert Stylists",
             "Premium Products",
@@ -156,7 +156,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Search Engine Optimization, Performance Ads, Content Strategy, Brand Consulting",
         "location": "Gurgaon, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "https://www.google.com/search?q=NexGen+Growth+Media+Gurgaon+reviews",
         "keywords": [
             "SEO Ranking Growth",
             "Targeted Lead Generation",
@@ -173,7 +173,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Fashion Apparel, Footwear, Home Accents, Personal Shopping",
         "location": "Chennai, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "https://www.google.com/search?q=Urban+Trendz+Lifestyle+Superstore+Chennai+reviews",
         "keywords": [
             "Wide Selection",
             "Helpful Staff",
@@ -190,7 +190,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Business Advisory, Financial Consulting, Supply Chain Optimization, Risk Management",
         "location": "Kolkata, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "https://www.google.com/search?q=Elite+Falcon+Global+Consulting+Kolkata+reviews",
         "keywords": [
             "Professionalism",
             "Timely Delivery",
@@ -207,7 +207,7 @@ class CompanyService:
         self.db = Database.get_db()
 
     def seed_companies_if_empty(self):
-        """Seed sample companies if missing for any category."""
+        """Seed sample companies if missing for any category and update broken writereview links."""
         try:
             now = datetime.now(timezone.utc)
             for comp in DEFAULT_SAMPLE_COMPANIES:
@@ -217,6 +217,14 @@ class CompanyService:
                     doc["createdAt"] = now
                     self.db.companies.insert_one(doc)
                     logger.info("Sample company seeded for category %s: %s", comp["category"], comp["name"])
+                else:
+                    # If company has empty or broken Google writereview link, upgrade to working link
+                    curr_link = exists.get("externalReviewLink", "")
+                    if not curr_link or curr_link == "https://search.google.com/local/writereview":
+                        self.db.companies.update_one(
+                            {"_id": exists["_id"]},
+                            {"$set": {"externalReviewLink": comp["externalReviewLink"]}}
+                        )
         except Exception as e:
             logger.warning("Error seeding companies: %s", str(e))
 
@@ -237,14 +245,20 @@ class CompanyService:
         if not name:
             raise ValueError("Company name is required.")
 
+        ext_link = data.get("externalReviewLink", "").strip()
+        location = data.get("location", "").strip()
+        if not ext_link or ext_link == "https://search.google.com/local/writereview":
+            import urllib.parse
+            ext_link = f"https://www.google.com/search?q={urllib.parse.quote_plus(f'{name} {location} reviews'.strip())}"
+
         doc = {
             "name": name,
             "category": data.get("category", "Other"),
             "description": data.get("description", "").strip(),
             "services": data.get("services", "").strip(),
-            "location": data.get("location", "").strip(),
+            "location": location,
             "preferredLanguage": data.get("preferredLanguage", "en"),
-            "externalReviewLink": data.get("externalReviewLink", "").strip(),
+            "externalReviewLink": ext_link,
             "keywords": data.get("keywords", []) if isinstance(data.get("keywords"), list) else [],
             "createdAt": now
         }
