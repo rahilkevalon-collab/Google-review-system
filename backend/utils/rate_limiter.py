@@ -16,11 +16,12 @@ class RateLimiter:
     def is_allowed(self, identifier: str) -> tuple[bool, str]:
         now = time.time()
         
-        # Check cooldown
-        last_time = self.last_generation_time[identifier]
-        if now - last_time < self.cooldown_seconds:
-            remaining = round(self.cooldown_seconds - (now - last_time), 1)
-            return False, f"Cooldown active. Please wait {remaining} seconds before generating again."
+        # Check cooldown if configured
+        if self.cooldown_seconds > 0:
+            last_time = self.last_generation_time[identifier]
+            if now - last_time < self.cooldown_seconds:
+                remaining = round(self.cooldown_seconds - (now - last_time), 1)
+                return False, f"Cooldown active. Please wait {remaining} seconds before generating again."
         
         # Clean timestamps older than 60 seconds
         window_start = now - 60.0

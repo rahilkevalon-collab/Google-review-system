@@ -96,9 +96,9 @@ def test_api_companies_flow(client):
     assert res_single.status_code == 200
     assert res_single.get_json()["company"]["id"] == company_id
 
-    # Create new company
+    # Create temporary test company and verify
     new_payload = {
-        "name": "Test Dental Clinic",
+        "name": "Pytest Ephemeral Dental Clinic",
         "category": "Healthcare",
         "description": "Family dental care and cosmetic dentistry",
         "services": "Teeth Whitening, Dental Implants",
@@ -110,6 +110,11 @@ def test_api_companies_flow(client):
     assert res_create.status_code == 201
     created_id = res_create.get_json()["company"]["id"]
     assert created_id is not None
+
+    # Clean up test company so live DB stays pristine
+    from utils.db import Database
+    from bson import ObjectId
+    Database.get_db().companies.delete_one({"_id": ObjectId(created_id)})
 
 def test_api_review_generation_and_copy(client):
     # Fetch a company

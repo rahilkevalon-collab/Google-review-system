@@ -22,5 +22,5 @@ class Config:
     MAX_BATCH_SIZE = int(os.getenv("MAX_BATCH_SIZE", "5"))
     
     # Rate Limiting & Cooldown (Seconds)
-    RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "20"))
-    COOLDOWN_SECONDS = int(os.getenv("COOLDOWN_SECONDS", "3"))
+    RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
+    COOLDOWN_SECONDS = int(os.getenv("COOLDOWN_SECONDS", "0"))

@@ -34,7 +34,23 @@ export default function App() {
           const loadedCompanies = compRes.value.companies || [];
           setCompanies(loadedCompanies);
           if (loadedCompanies.length > 0) {
-            setSelectedCompany(loadedCompanies[0]);
+            const savedCompanyId = localStorage.getItem('reviewcraft_company_id');
+            const savedCategory = localStorage.getItem('reviewcraft_category');
+
+            let matched = null;
+            if (savedCompanyId) {
+              matched = loadedCompanies.find((c) => c.id === savedCompanyId);
+            }
+            if (!matched && savedCategory) {
+              matched = loadedCompanies.find((c) => c.category === savedCategory);
+            }
+
+            const activeComp = matched || loadedCompanies.find((c) => c.category === 'E-commerce') || loadedCompanies[0];
+            setSelectedCompany(activeComp);
+            if (activeComp) {
+              localStorage.setItem('reviewcraft_company_id', activeComp.id);
+              localStorage.setItem('reviewcraft_category', activeComp.category);
+            }
           }
         }
 
@@ -56,9 +72,17 @@ export default function App() {
     return () => { isMounted = false; };
   }, []);
 
+  const handleSelectCompany = (comp) => {
+    setSelectedCompany(comp);
+    if (comp) {
+      localStorage.setItem('reviewcraft_company_id', comp.id);
+      localStorage.setItem('reviewcraft_category', comp.category);
+    }
+  };
+
   const handleCompanyCreated = (newCompany) => {
     setCompanies((prev) => [newCompany, ...prev]);
-    setSelectedCompany(newCompany);
+    handleSelectCompany(newCompany);
   };
 
   return (
@@ -87,7 +111,7 @@ export default function App() {
                       companies={companies}
                       selectedCompany={selectedCompany}
                       categories={categories}
-                      onSelectCompany={setSelectedCompany}
+                      onSelectCompany={handleSelectCompany}
                       onOpenNewCompanyModal={() => setIsModalOpen(true)}
                     />
                   }

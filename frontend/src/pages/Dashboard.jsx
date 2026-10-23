@@ -22,12 +22,16 @@ export default function Dashboard({
 }) {
   const { addToast } = useToast();
 
-  // Active category & keyword selection
-  const [selectedCategory, setSelectedCategory] = useState(
-    selectedCompany?.category || categories[0]?.name || 'IT Services and Software Development'
-  );
+  // Active category & keyword selection with localStorage persistence
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    return localStorage.getItem('reviewcraft_category') ||
+      selectedCompany?.category ||
+      'E-commerce';
+  });
   const [keywords, setKeywords] = useState([]);
-  const [selectedKeyword, setSelectedKeyword] = useState('');
+  const [selectedKeyword, setSelectedKeyword] = useState(() => {
+    return localStorage.getItem('reviewcraft_keyword') || '';
+  });
 
   // Reviews state (strictly 3 reviews)
   const [reviews, setReviews] = useState([]);
@@ -37,19 +41,23 @@ export default function Dashboard({
   // Analytics
   const [analytics, setAnalytics] = useState(null);
 
-  // When selected company changes
+  // When selected company changes, sync category & localStorage
   useEffect(() => {
     if (selectedCompany && selectedCompany.category) {
       setSelectedCategory(selectedCompany.category);
+      localStorage.setItem('reviewcraft_category', selectedCompany.category);
+      localStorage.setItem('reviewcraft_company_id', selectedCompany.id);
     }
   }, [selectedCompany]);
 
-  // When category changes, auto-switch to a matching company profile if available
+  // When category changes, auto-switch to a matching company profile
   const handleSelectCategory = (catName) => {
     setSelectedCategory(catName);
+    localStorage.setItem('reviewcraft_category', catName);
     const matchingCompany = companies.find((c) => c.category === catName);
     if (matchingCompany && onSelectCompany) {
       onSelectCompany(matchingCompany);
+      localStorage.setItem('reviewcraft_company_id', matchingCompany.id);
     }
   };
 
@@ -65,9 +73,19 @@ export default function Dashboard({
         const companyKws = selectedCompany?.keywords || [];
         const combined = Array.from(new Set([...presetKeywords, ...companyKws]));
         setKeywords(combined);
-        
-        if (!combined.includes(selectedKeyword)) {
-          setSelectedKeyword(combined[0] || '');
+
+        // Check if there is an existing keyword in localStorage or state
+        const savedKw = localStorage.getItem('reviewcraft_keyword');
+        if (savedKw && combined.includes(savedKw)) {
+          if (selectedKeyword !== savedKw) {
+            setSelectedKeyword(savedKw);
+          }
+        } else if (!combined.includes(selectedKeyword)) {
+          const defaultKw = combined[0] || '';
+          setSelectedKeyword(defaultKw);
+          if (defaultKw) {
+            localStorage.setItem('reviewcraft_keyword', defaultKw);
+          }
         }
       })
       .catch((err) => {
@@ -87,11 +105,11 @@ export default function Dashboard({
     setIsGenerating(true);
 
     try {
-      // Generate 3 fresh non-repeating reviews from the backend ML engine
+      // Always generate 3 fresh non-repeating reviews from the backend ML engine
       const genRes = await api.generateReviews({
         companyId: selectedCompany.id,
         companyName: selectedCompany.name,
-        category: selectedCategory,
+        category: selectedCategory || selectedCompany.category,
         keyword: kw,
         description: selectedCompany.description,
         services: selectedCompany.services,
@@ -105,7 +123,7 @@ export default function Dashboard({
       if (genRes.success && genRes.reviews && genRes.reviews.length >= 3) {
         setReviews(genRes.reviews.slice(0, 3));
       } else {
-        // Fetch latest 3 from DB if needed
+        // Fallback to latest reviews in DB
         const res = await api.getReviews({
           companyId: selectedCompany.id,
           keyword: kw,
@@ -116,7 +134,7 @@ export default function Dashboard({
         }
       }
     } catch (err) {
-      // In case of rapid click cooldown, load the latest 3 from DB
+      console.warn('Generation error, falling back to cached reviews:', err);
       const res = await api.getReviews({
         companyId: selectedCompany.id,
         keyword: kw,
@@ -131,7 +149,7 @@ export default function Dashboard({
     }
   }, [selectedCompany, selectedCategory, selectedKeyword]);
 
-  // Initial load / refresh: generate 3 fresh reviews for active keyword
+  // Initial load / refresh / tag change: generate 3 fresh reviews for active keyword
   useEffect(() => {
     if (selectedKeyword && selectedCompany?.id) {
       generateThreeFreshReviews(selectedKeyword);
@@ -154,18 +172,28 @@ export default function Dashboard({
     fetchAnalytics();
   }, [fetchAnalytics]);
 
-  // When clicking a keyword tag: directly generate 3 fresh reviews
+  // When clicking a keyword tag
   const handleSelectKeyword = (kw) => {
-    setSelectedKeyword(kw);
-    generateThreeFreshReviews(kw);
+    localStorage.setItem('reviewcraft_keyword', kw);
+    if (kw === selectedKeyword) {
+      // Re-clicking active tag generates 3 brand-new reviews
+      generateThreeFreshReviews(kw);
+    } else {
+      // Updating selectedKeyword triggers the useEffect above
+      setSelectedKeyword(kw);
+    }
   };
 
   const handleAddCustomKeyword = (newKw) => {
     if (!keywords.includes(newKw)) {
       setKeywords([newKw, ...keywords]);
     }
-    setSelectedKeyword(newKw);
-    generateThreeFreshReviews(newKw);
+    localStorage.setItem('reviewcraft_keyword', newKw);
+    if (newKw === selectedKeyword) {
+      generateThreeFreshReviews(newKw);
+    } else {
+      setSelectedKeyword(newKw);
+    }
   };
 
   return (
