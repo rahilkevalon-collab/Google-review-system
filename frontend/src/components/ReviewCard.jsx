@@ -4,16 +4,19 @@ import {
   ExternalLink, 
   Tag, 
   Star,
-  Globe
+  Globe,
+  Building
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from './Toast';
+import { getGoogleReviewUrl } from '../utils/googleReviewUrl';
 
 export default function ReviewCard({ review }) {
   const { addToast } = useToast();
   const [copied, setCopied] = useState(false);
 
   const handleCardClick = async () => {
+    const googleUrl = getGoogleReviewUrl(review);
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(review.reviewText);
@@ -32,14 +35,12 @@ export default function ReviewCard({ review }) {
       // Track analytics copy event on backend
       api.recordCopyEvent(review.id).catch(() => {});
       
-      // Open Google Review Link immediately
-      const googleUrl = review.externalReviewLink || 'https://search.google.com/local/writereview';
+      // Open Google Review Link immediately (guaranteed valid URL, no 400 error)
       window.open(googleUrl, '_blank', 'noopener,noreferrer');
       
       setTimeout(() => setCopied(false), 2500);
     } catch (err) {
       addToast('Opening Google Review page...', 'info');
-      const googleUrl = review.externalReviewLink || 'https://search.google.com/local/writereview';
       window.open(googleUrl, '_blank', 'noopener,noreferrer');
     }
   };
@@ -53,7 +54,13 @@ export default function ReviewCard({ review }) {
       {/* Top badges */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-semibold">
+          {review.companyName && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-900 text-white text-[11px] font-bold shadow-2xs">
+              <Building className="w-3 h-3 text-indigo-400" />
+              {review.companyName}
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-semibold">
             <Tag className="w-3 h-3 text-indigo-500" />
             {review.keyword}
           </span>

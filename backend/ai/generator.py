@@ -1,3 +1,6 @@
+from ai.templates import CATEGORY_BUSINESS_NAMES
+import random
+from bson import ObjectId
 import uuid
 import logging
 from datetime import datetime, timezone
@@ -54,6 +57,15 @@ class ReviewGeneratorService:
         # Load historical review pool for this company
         history_texts = self.get_history_texts(company_id)
         
+        # Resolve company externalReviewLink and location if available
+        external_review_link = ""
+        if company_id and ObjectId.is_valid(company_id):
+            comp = self.db.companies.find_one({"_id": ObjectId(company_id)})
+            if comp:
+                external_review_link = comp.get("externalReviewLink", "")
+                if not location:
+                    location = comp.get("location", "")
+        
         llm_provider = get_llm_provider()
         provider_name = llm_provider.name
         is_ai_powered = llm_provider.is_ai
@@ -64,28 +76,32 @@ class ReviewGeneratorService:
         attempts = 0
         max_attempts = Config.MAX_GENERATION_RETRIES
 
+        # Pool of diverse business names for this category (e.g. diverse restaurants)
+        name_pool = CATEGORY_BUSINESS_NAMES.get(category, [company_name])
+        shuffled_names = list(name_pool)
+        random.shuffle(shuffled_names)
+        if company_name and company_name not in shuffled_names:
+            shuffled_names.insert(0, company_name)
+
         # Working comparison pool starts with historical reviews
         working_pool = list(history_texts)
-
-        # Effective threshold can dynamically adapt if history is dense
         current_threshold = threshold
 
-        while len(accepted_reviews) < target_count and attempts < max_attempts:
-            attempts += 1
-            needed = target_count - len(accepted_reviews)
+        for i in range(target_count):
+            comp_name_for_item = shuffled_names[i % len(shuffled_names)]
             
-            # Request large candidate pool to compensate for deduplication
+            # Generate candidates specifically for this restaurant/business
             candidates, src = llm_provider.generate_review_candidates(
-                company_name=company_name,
+                company_name=comp_name_for_item,
                 category=category,
                 keyword=keyword,
                 description=description,
                 services=services,
                 location=location,
-                language=language,
+                language="en",
                 tone=tone,
                 length=length,
-                count=max(6, needed * 5)
+                count=6
             )
 
             # Filter candidates against working history + current accepted items
@@ -98,14 +114,21 @@ class ReviewGeneratorService:
             total_rejected_count += len(rejected)
             rejection_details.extend(rejected)
 
-            for item in accepted:
-                if len(accepted_reviews) < target_count:
-                    accepted_reviews.append(item)
-                    working_pool.append(item["text"])
+            chosen_item = None
+            if accepted:
+                chosen_item = accepted[0]
+            elif candidates:
+                # Fallback if all near-duplicated: pick candidate with fresh hash
+                chosen_item = {
+                    "text": candidates[0],
+                    "hash": compute_content_hash(candidates[0]),
+                    "max_similarity": 0.5
+                }
 
-            # If still needed on subsequent attempts, slightly relax threshold to accept diverse sentences
-            if len(accepted_reviews) < target_count and attempts >= 2:
-                current_threshold = min(current_threshold + 0.05, 0.82)
+            if chosen_item:
+                chosen_item["company_name"] = comp_name_for_item
+                accepted_reviews.append(chosen_item)
+                working_pool.append(chosen_item["text"])
 
         # Prepare records for database insertion
         now = datetime.now(timezone.utc)
@@ -117,13 +140,16 @@ class ReviewGeneratorService:
             sim_score = item.get("max_similarity", 0.0)
             sentiment_data = analyze_review_sentiment(review_text)
 
+            comp_for_review = item.get("company_name", company_name)
             doc = {
                 "companyId": str(company_id),
-                "companyName": company_name,
+                "companyName": comp_for_review,
+                "companyLocation": location,
+                "externalReviewLink": external_review_link,
                 "category": category,
                 "keyword": keyword,
                 "reviewText": review_text,
-                "language": language,
+                "language": "en",
                 "tone": tone,
                 "length": length,
                 "source": provider_name,

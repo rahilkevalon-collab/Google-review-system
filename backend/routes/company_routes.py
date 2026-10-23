@@ -27,3 +27,14 @@ def create_company():
         return jsonify({"success": True, "company": new_comp}), 201
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+@company_bp.route("/companies/<company_id>/keywords", methods=["POST"])
+def add_company_keyword(company_id):
+    data = request.get_json(silent=True) or {}
+    keyword = data.get("keyword", "").strip()
+    if not keyword:
+        return jsonify({"success": False, "error": "Keyword is required."}), 400
+    success = company_service.add_keyword(company_id, keyword)
+    if not success:
+        return jsonify({"success": False, "error": "Could not add keyword to company."}), 400
+    return jsonify({"success": True, "message": "Keyword added to company.", "keyword": keyword}), 200

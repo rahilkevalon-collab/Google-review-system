@@ -30,6 +30,15 @@ export const api = {
     return handleResponse(res);
   },
 
+  addCategoryKeyword: async (categoryIdentifier, keyword) => {
+    const res = await fetch(`${API_BASE}/categories/${encodeURIComponent(categoryIdentifier)}/keywords`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keyword }),
+    });
+    return handleResponse(res);
+  },
+
   // Companies
   getCompanies: async () => {
     const res = await fetch(`${API_BASE}/companies`);
@@ -46,6 +55,15 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(companyData),
+    });
+    return handleResponse(res);
+  },
+
+  addCompanyKeyword: async (companyId, keyword) => {
+    const res = await fetch(`${API_BASE}/companies/${companyId}/keywords`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keyword }),
     });
     return handleResponse(res);
   },

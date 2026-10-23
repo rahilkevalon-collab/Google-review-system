@@ -10,12 +10,13 @@ import {
   Building, 
   Calendar, 
   Star, 
-  Sparkles,
-  Info,
-  CheckCircle2
+  Sparkles, 
+  Info, 
+  CheckCircle2 
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
+import { getGoogleReviewUrl } from '../utils/googleReviewUrl';
 
 export default function ReviewDetail() {
   const { id } = useParams();
@@ -275,31 +276,27 @@ export default function ReviewDetail() {
               )}
             </button>
 
-            {/* Separate Google Review Link Button */}
-            {review.externalReviewLink && (
-              <a
-                href={review.externalReviewLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all shadow-2xs group"
-                title="Open external review page in new tab"
-              >
-                <Globe className="w-3.5 h-3.5 text-indigo-600 group-hover:rotate-12 transition-transform" />
-                <span>Open Google Review Page</span>
-                <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600" />
-              </a>
-            )}
+            {/* Separate Google Review Link Button (Guaranteed valid URL) */}
+            <a
+              href={getGoogleReviewUrl(review)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all shadow-2xs group"
+              title="Open Google review page in new tab"
+            >
+              <Globe className="w-3.5 h-3.5 text-indigo-600 group-hover:rotate-12 transition-transform" />
+              <span>Open Google Review Page</span>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600" />
+            </a>
 
           </div>
 
         </div>
 
         {/* Explanatory note on separate actions */}
-        {review.externalReviewLink && (
-          <p className="text-xs text-slate-500 pt-2 border-t border-slate-100">
-            * Note: Copying the review text and opening the external review page are separate actions. In compliance with review policies, reviews are never automatically submitted to Google or third-party platforms.
-          </p>
-        )}
+        <p className="text-xs text-slate-500 pt-2 border-t border-slate-100">
+          * Note: Copying the review text and opening the external review page are separate actions. In compliance with review policies, reviews are never automatically submitted to Google or third-party platforms.
+        </p>
 
       </div>
 

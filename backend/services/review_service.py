@@ -75,10 +75,10 @@ class ReviewService:
             cid = r.get("companyId")
             c = comp_map.get(cid)
             if c:
-                r["externalReviewLink"] = c.get("externalReviewLink", "https://search.google.com/local/writereview")
+                r["externalReviewLink"] = c.get("externalReviewLink", "")
                 r["companyLocation"] = c.get("location", "")
             else:
-                r["externalReviewLink"] = "https://search.google.com/local/writereview"
+                r["externalReviewLink"] = ""
             enriched_reviews.append(r)
 
         return {

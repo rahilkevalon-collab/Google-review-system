@@ -13,6 +13,38 @@ import KeywordChips from '../components/KeywordChips';
 import ReviewCard from '../components/ReviewCard';
 import SkeletonReviewCard from '../components/SkeletonReviewCard';
 import AnalyticsWidget from '../components/AnalyticsWidget';
+import { getGoogleReviewUrl } from '../utils/googleReviewUrl';
+
+// Helpers to persist and retrieve custom tags in localStorage
+function getCustomTags(category, companyId) {
+  try {
+    const catTags = JSON.parse(localStorage.getItem(`reviewcraft_custom_tags_${category}`) || '[]');
+    const compTags = companyId ? JSON.parse(localStorage.getItem(`reviewcraft_custom_tags_company_${companyId}`) || '[]') : [];
+    return Array.from(new Set([...catTags, ...compTags]));
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomTag(category, companyId, newTag) {
+  try {
+    if (!newTag) return;
+    const catKey = `reviewcraft_custom_tags_${category}`;
+    const existingCat = JSON.parse(localStorage.getItem(catKey) || '[]');
+    if (!existingCat.includes(newTag)) {
+      localStorage.setItem(catKey, JSON.stringify([newTag, ...existingCat]));
+    }
+    if (companyId) {
+      const compKey = `reviewcraft_custom_tags_company_${companyId}`;
+      const existingComp = JSON.parse(localStorage.getItem(compKey) || '[]');
+      if (!existingComp.includes(newTag)) {
+        localStorage.setItem(compKey, JSON.stringify([newTag, ...existingComp]));
+      }
+    }
+  } catch (e) {
+    console.error('Failed to save custom tag to localStorage:', e);
+  }
+}
 
 export default function Dashboard({
   companies = [],
@@ -26,7 +58,7 @@ export default function Dashboard({
   const [selectedCategory, setSelectedCategory] = useState(() => {
     return localStorage.getItem('reviewcraft_category') ||
       selectedCompany?.category ||
-      'E-commerce';
+      'Restaurants and Food';
   });
   const [keywords, setKeywords] = useState([]);
   const [selectedKeyword, setSelectedKeyword] = useState(() => {
@@ -66,21 +98,32 @@ export default function Dashboard({
     if (!selectedCategory) return;
     let isMounted = true;
 
+    // Immediately fetch custom tags from localStorage so custom tags are NEVER lost
+    const customTags = getCustomTags(selectedCategory, selectedCompany?.id);
+    const savedKw = localStorage.getItem('reviewcraft_keyword');
+    if (savedKw && !customTags.includes(savedKw)) {
+      customTags.unshift(savedKw);
+    }
+
     api.getCategoryKeywords(selectedCategory)
       .then((res) => {
         if (!isMounted) return;
         const presetKeywords = res.keywords || [];
         const companyKws = selectedCompany?.keywords || [];
-        const combined = Array.from(new Set([...presetKeywords, ...companyKws]));
+        const combined = Array.from(new Set([...customTags, ...companyKws, ...presetKeywords]));
         setKeywords(combined);
 
         // Check if there is an existing keyword in localStorage or state
-        const savedKw = localStorage.getItem('reviewcraft_keyword');
-        if (savedKw && combined.includes(savedKw)) {
-          if (selectedKeyword !== savedKw) {
-            setSelectedKeyword(savedKw);
+        const activeKw = localStorage.getItem('reviewcraft_keyword');
+        if (activeKw && combined.includes(activeKw)) {
+          if (selectedKeyword !== activeKw) {
+            setSelectedKeyword(activeKw);
           }
-        } else if (!combined.includes(selectedKeyword)) {
+        } else if (activeKw) {
+          // If activeKw is custom, keep it in combined list and select it
+          setKeywords([activeKw, ...combined]);
+          setSelectedKeyword(activeKw);
+        } else {
           const defaultKw = combined[0] || '';
           setSelectedKeyword(defaultKw);
           if (defaultKw) {
@@ -90,13 +133,16 @@ export default function Dashboard({
       })
       .catch((err) => {
         console.error('Error fetching keywords:', err);
+        if (customTags.length > 0) {
+          setKeywords(customTags);
+        }
       });
 
     return () => { isMounted = false; };
   }, [selectedCategory, selectedCompany]);
 
-  // Generate and display exactly 3 brand new reviews on refresh or tag click
-  const generateThreeFreshReviews = useCallback(async (targetKw) => {
+  // Generate 3 fresh, unique reviews on every refresh / tag change with diverse business names
+  const generateFreshReviews = useCallback(async (targetKw) => {
     if (!selectedCompany?.id) return;
     const kw = targetKw || selectedKeyword;
     if (!kw) return;
@@ -105,7 +151,7 @@ export default function Dashboard({
     setIsGenerating(true);
 
     try {
-      // Always generate 3 fresh non-repeating reviews from the backend ML engine
+      // Always generate 3 fresh, unique reviews from the backend ML engine in English
       const genRes = await api.generateReviews({
         companyId: selectedCompany.id,
         companyName: selectedCompany.name,
@@ -114,7 +160,7 @@ export default function Dashboard({
         description: selectedCompany.description,
         services: selectedCompany.services,
         location: selectedCompany.location,
-        language: selectedCompany.preferredLanguage || 'en',
+        language: 'en', // Strictly English as requested
         tone: 'natural',
         length: 'medium',
         count: 3
@@ -123,7 +169,7 @@ export default function Dashboard({
       if (genRes.success && genRes.reviews && genRes.reviews.length >= 3) {
         setReviews(genRes.reviews.slice(0, 3));
       } else {
-        // Fallback to latest reviews in DB
+        // Fallback to latest reviews in DB if rate limit
         const res = await api.getReviews({
           companyId: selectedCompany.id,
           keyword: kw,
@@ -149,10 +195,10 @@ export default function Dashboard({
     }
   }, [selectedCompany, selectedCategory, selectedKeyword]);
 
-  // Initial load / refresh / tag change: generate 3 fresh reviews for active keyword
+  // Initial load / refresh / tag change: ALWAYS generate 3 fresh unique reviews
   useEffect(() => {
     if (selectedKeyword && selectedCompany?.id) {
-      generateThreeFreshReviews(selectedKeyword);
+      generateFreshReviews(selectedKeyword);
     }
   }, [selectedCompany?.id, selectedKeyword]);
 
@@ -172,28 +218,40 @@ export default function Dashboard({
     fetchAnalytics();
   }, [fetchAnalytics]);
 
-  // When clicking a keyword tag
+  // When clicking a keyword tag: generate fresh reviews
   const handleSelectKeyword = (kw) => {
     localStorage.setItem('reviewcraft_keyword', kw);
     if (kw === selectedKeyword) {
-      // Re-clicking active tag generates 3 brand-new reviews
-      generateThreeFreshReviews(kw);
+      generateFreshReviews(kw);
     } else {
-      // Updating selectedKeyword triggers the useEffect above
       setSelectedKeyword(kw);
     }
   };
 
   const handleAddCustomKeyword = (newKw) => {
-    if (!keywords.includes(newKw)) {
-      setKeywords([newKw, ...keywords]);
+    const cleanKw = newKw.trim();
+    if (!cleanKw) return;
+
+    // 1. Persist to localStorage immediately
+    saveCustomTag(selectedCategory, selectedCompany?.id, cleanKw);
+    localStorage.setItem('reviewcraft_keyword', cleanKw);
+
+    // 2. Add to active keywords state
+    if (!keywords.includes(cleanKw)) {
+      setKeywords([cleanKw, ...keywords]);
     }
-    localStorage.setItem('reviewcraft_keyword', newKw);
-    if (newKw === selectedKeyword) {
-      generateThreeFreshReviews(newKw);
-    } else {
-      setSelectedKeyword(newKw);
+
+    // 3. Persist to backend in background
+    if (selectedCompany?.id) {
+      api.addCompanyKeyword(selectedCompany.id, cleanKw).catch(() => {});
     }
+    if (selectedCategory) {
+      api.addCategoryKeyword(selectedCategory, cleanKw).catch(() => {});
+    }
+
+    // 4. Set as selected keyword and generate fresh reviews
+    setSelectedKeyword(cleanKw);
+    generateFreshReviews(cleanKw);
   };
 
   return (
@@ -236,19 +294,18 @@ export default function Dashboard({
               )}
             </div>
 
-            {/* External Google Review Link button */}
-            {selectedCompany.externalReviewLink && (
-              <a
-                href={selectedCompany.externalReviewLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all shadow-2xs group"
-              >
-                <Globe className="w-4 h-4 text-indigo-600 group-hover:rotate-12 transition-transform" />
-                <span>Open Google Review Page</span>
-                <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600" />
-              </a>
-            )}
+            {/* External Google Review Link button - Guaranteed valid URL without Google 400 error */}
+            <a
+              href={getGoogleReviewUrl(selectedCompany)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all shadow-2xs group"
+              title="Open Google listing to view or write a review"
+            >
+              <Globe className="w-4 h-4 text-indigo-600 group-hover:rotate-12 transition-transform" />
+              <span>Open Google Review Page</span>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600" />
+            </a>
 
           </div>
         </div>
@@ -269,14 +326,14 @@ export default function Dashboard({
         onAddCustomKeyword={handleAddCustomKeyword}
       />
 
-      {/* Reviews Section Header (No search, no regenerate, no tone dropdown) */}
+      {/* Reviews Section Header */}
       <div className="space-y-4 pt-1">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <span>Customer Review Suggestions</span>
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                3 Ready
+                3 Unique Suggestions
               </span>
             </h2>
             <p className="text-xs text-slate-500 font-medium">
@@ -295,7 +352,15 @@ export default function Dashboard({
         ) : reviews.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {reviews.slice(0, 3).map((rev) => (
-              <ReviewCard key={rev.id} review={rev} />
+              <ReviewCard
+                key={rev.id || `${rev.companyName}-${rev.contentHash}`}
+                review={{
+                  ...rev,
+                  companyName: rev.companyName || selectedCompany?.name,
+                  companyLocation: rev.companyLocation || selectedCompany?.location,
+                  externalReviewLink: rev.externalReviewLink || selectedCompany?.externalReviewLink
+                }}
+              />
             ))}
           </div>
         ) : (

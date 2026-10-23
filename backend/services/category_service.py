@@ -49,4 +49,19 @@ class CategoryService:
 
         return ["Quality Service", "Customer Satisfaction", "Reliability", "Professionalism"]
 
+    def add_keyword(self, category_identifier: str, keyword: str) -> bool:
+        """Add a custom keyword to a category."""
+        if not category_identifier or not keyword:
+            return False
+        kw = keyword.strip()
+        if not kw:
+            return False
+        query = {}
+        if ObjectId.is_valid(category_identifier):
+            query = {"$or": [{"_id": ObjectId(category_identifier)}, {"name": category_identifier}]}
+        else:
+            query = {"name": category_identifier}
+        res = self.db.categories.update_one(query, {"$addToSet": {"keywords": kw}})
+        return res.matched_count > 0
+
 category_service = CategoryService()

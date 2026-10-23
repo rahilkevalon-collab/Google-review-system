@@ -30,7 +30,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Natural Skincare, Eco-friendly Home Decor, Organic Teas, Sustainable Packaging",
         "location": "Mumbai, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "",
         "keywords": [
             "Product Quality",
             "Fast Delivery",
@@ -51,7 +51,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Fine Dining, Private Banquet, Catering, Royal Thali Experience",
         "location": "Delhi, India",
         "preferredLanguage": "hi",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "",
         "keywords": [
             "Culinary Taste",
             "Ambiance & Atmosphere",
@@ -70,7 +70,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Preventive Care, Cosmetic Dentistry, Diagnostics, Routine Checkups",
         "location": "Bangalore, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "",
         "keywords": [
             "Doctor Expertise",
             "Compassionate Care",
@@ -87,7 +87,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Residential Sales, Commercial Leasing, Property Advisory, Legal Due Diligence",
         "location": "Pune, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "",
         "keywords": [
             "Prime Location",
             "Transparent Dealings",
@@ -105,7 +105,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "STEM Education, Competitive Exam Preparation, Student Mentoring, Career Counseling",
         "location": "Hyderabad, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "",
         "keywords": [
             "Experienced Faculty",
             "Interactive Curriculum",
@@ -122,7 +122,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Curated Tour Packages, Luxury Hotel Bookings, Visa Assistance, Custom Itineraries",
         "location": "Goa, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "",
         "keywords": [
             "Comfortable Stay",
             "Scenic Location",
@@ -139,7 +139,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Hair Styling, Botanical Facials, Spa Therapies, Bridal Makeovers",
         "location": "Jaipur, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "",
         "keywords": [
             "Expert Stylists",
             "Premium Products",
@@ -156,7 +156,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Search Engine Optimization, Performance Ads, Content Strategy, Brand Consulting",
         "location": "Gurgaon, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "",
         "keywords": [
             "SEO Ranking Growth",
             "Targeted Lead Generation",
@@ -173,7 +173,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Fashion Apparel, Footwear, Home Accents, Personal Shopping",
         "location": "Chennai, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "",
         "keywords": [
             "Wide Selection",
             "Helpful Staff",
@@ -190,7 +190,7 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Business Advisory, Financial Consulting, Supply Chain Optimization, Risk Management",
         "location": "Kolkata, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://search.google.com/local/writereview",
+        "externalReviewLink": "",
         "keywords": [
             "Professionalism",
             "Timely Delivery",
@@ -251,5 +251,18 @@ class CompanyService:
         res = self.db.companies.insert_one(doc)
         doc["_id"] = res.inserted_id
         return serialize_doc(doc)
+
+
+    def add_keyword(self, company_id: str, keyword: str) -> bool:
+        if not ObjectId.is_valid(company_id) or not keyword:
+            return False
+        kw = keyword.strip()
+        if not kw:
+            return False
+        res = self.db.companies.update_one(
+            {"_id": ObjectId(company_id)},
+            {"$addToSet": {"keywords": kw}}
+        )
+        return res.matched_count > 0
 
 company_service = CompanyService()
