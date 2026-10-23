@@ -45,8 +45,18 @@ export const api = {
     return handleResponse(res);
   },
 
+  searchCompanies: async (query) => {
+    const res = await fetch(`${API_BASE}/companies/search?query=${encodeURIComponent(query)}`);
+    return handleResponse(res);
+  },
+
   getCompanyById: async (id) => {
     const res = await fetch(`${API_BASE}/companies/${id}`);
+    return handleResponse(res);
+  },
+
+  getCompanyGoogleReviewLink: async (id) => {
+    const res = await fetch(`${API_BASE}/companies/${id}/google-review-link`);
     return handleResponse(res);
   },
 
@@ -64,6 +74,13 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ keyword }),
+    });
+    return handleResponse(res);
+  },
+
+  removeCompanyKeyword: async (companyId, keyword) => {
+    const res = await fetch(`${API_BASE}/companies/${companyId}/keywords/${encodeURIComponent(keyword)}`, {
+      method: 'DELETE',
     });
     return handleResponse(res);
   },
@@ -98,6 +115,15 @@ export const api = {
   updateReviewText: async (id, reviewText) => {
     const res = await fetch(`${API_BASE}/reviews/${id}`, {
       method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reviewText }),
+    });
+    return handleResponse(res);
+  },
+
+  patchReviewText: async (id, reviewText) => {
+    const res = await fetch(`${API_BASE}/reviews/${id}`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reviewText }),
     });

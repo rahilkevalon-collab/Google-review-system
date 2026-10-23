@@ -13,15 +13,25 @@ def generate_reviews():
     company_id = data.get("companyId", "").strip()
     company_name = data.get("companyName", "").strip()
     category = data.get("category", "").strip()
-    keyword = data.get("keyword", "").strip()
+    raw_kws = data.get("selectedKeywords") or data.get("keywords") or data.get("keyword") or ""
+    if isinstance(raw_kws, list):
+        kw_list = [str(k).strip() for k in raw_kws if str(k).strip()]
+        keyword = ", ".join(kw_list)
+    else:
+        keyword = str(raw_kws).strip()
 
     # Fallback to look up company if company_name not provided
-    if company_id and not company_name:
+    comp = None
+    if company_id:
         comp = company_service.get_company_by_id(company_id)
         if comp:
-            company_name = comp.get("name", "")
+            if not company_name:
+                company_name = comp.get("name", "")
             if not category:
                 category = comp.get("category", "")
+            if not keyword:
+                comp_kws = comp.get("seoKeywords") or comp.get("keywords") or []
+                keyword = ", ".join(comp_kws) if isinstance(comp_kws, list) else str(comp_kws)
 
     if not company_name:
         return jsonify({"success": False, "error": "Company name or valid company ID is required."}), 400
@@ -35,13 +45,13 @@ def generate_reviews():
     if not allowed:
         return jsonify({"success": False, "error": rate_msg, "rateLimited": True}), 429
 
-    language = data.get("language", "en")
+    language = data.get("language") or (comp.get("preferredLanguage") if comp else "en") or "en"
     tone = data.get("tone", "natural")
     length = data.get("length", "medium")
     count = int(data.get("count", 3))
-    description = data.get("description", "")
-    services = data.get("services", "")
-    location = data.get("location", "")
+    description = data.get("description") or (comp.get("description") if comp else "") or ""
+    services = data.get("services") or (comp.get("services") if comp else "") or ""
+    location = data.get("location") or (comp.get("location") if comp else "") or ""
     threshold = float(data.get("similarityThreshold")) if data.get("similarityThreshold") is not None else None
 
     try:
@@ -93,7 +103,7 @@ def get_single_review(review_id):
         return jsonify({"success": False, "error": "Review suggestion not found"}), 404
     return jsonify({"success": True, "review": review}), 200
 
-@review_bp.route("/reviews/<review_id>", methods=["PUT"])
+@review_bp.route("/reviews/<review_id>", methods=["PUT", "PATCH"])
 def update_review(review_id):
     data = request.get_json(silent=True) or {}
     text = data.get("reviewText", "").strip()

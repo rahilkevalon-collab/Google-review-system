@@ -106,10 +106,13 @@ class ReviewGeneratorService:
         working_pool = list(history_texts)
         current_threshold = threshold
 
+        # Always use the real company name if provided
+        target_company_name = company_name.strip() if company_name and company_name.strip() else None
+
         for i in range(target_count):
-            comp_name_for_item = shuffled_names[i % len(shuffled_names)]
+            comp_name_for_item = target_company_name or shuffled_names[i % len(shuffled_names)]
             
-            # Generate candidates specifically for this restaurant/business
+            # Generate candidates using real company name and requested language
             candidates, src = llm_provider.generate_review_candidates(
                 company_name=comp_name_for_item,
                 category=category,
@@ -117,7 +120,7 @@ class ReviewGeneratorService:
                 description=description,
                 services=services,
                 location=location,
-                language="en",
+                language=language or "en",
                 tone=tone,
                 length=length,
                 count=6
@@ -173,7 +176,7 @@ class ReviewGeneratorService:
                 "category": category,
                 "keyword": keyword,
                 "reviewText": review_text,
-                "language": "en",
+                "language": language or "en",
                 "tone": tone,
                 "length": length,
                 "source": provider_name,

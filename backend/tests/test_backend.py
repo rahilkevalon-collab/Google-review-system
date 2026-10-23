@@ -1,6 +1,7 @@
 import pytest
 import sys
 import os
+import time
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -157,3 +158,32 @@ def test_api_analytics_overview(client):
     assert "analytics" in data
     assert "totalCompanies" in data["analytics"]
     assert "totalReviews" in data["analytics"]
+
+def test_api_company_search(client):
+    res = client.get("/api/companies/search?query=Kevalon")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["success"] is True
+    assert "results" in data
+
+def test_api_google_review_link(client):
+    companies = client.get("/api/companies").get_json()["companies"]
+    assert len(companies) > 0
+    cid = companies[0]["id"]
+    res = client.get(f"/api/companies/{cid}/google-review-link")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["success"] is True
+    assert "googleReviewUrl" in data
+
+def test_api_review_patch(client):
+    companies = client.get("/api/companies").get_json()["companies"]
+    cid = companies[0]["id"]
+    gen_res = client.post("/api/generate-reviews", json={"companyId": cid, "keyword": "Support", "count": 1})
+    if gen_res.status_code == 200:
+        rev = gen_res.get_json()["reviews"][0]
+        rid = rev["id"]
+        new_txt = f"Patched review text {time.time()}."
+        patch_res = client.patch(f"/api/reviews/{rid}", json={"reviewText": new_txt})
+        assert patch_res.status_code == 200
+        assert patch_res.get_json()["review"]["reviewText"] == new_txt

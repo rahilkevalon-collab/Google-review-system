@@ -1,135 +1,176 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Check, 
+  Copy, 
   ExternalLink, 
   Tag, 
   Star,
   Globe,
-  Building
+  Building,
+  Edit3
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from './Toast';
 import { getGoogleReviewUrl } from '../utils/googleReviewUrl';
 
 export default function ReviewCard({ review }) {
+  const navigate = useNavigate();
   const { addToast } = useToast();
   const [copied, setCopied] = useState(false);
 
-  const resolveGoogleReviewUrl = () => {
-    let link = review?.externalReviewLink?.trim();
-    if (!link || link === 'https://search.google.com/local/writereview' || !link.startsWith('http')) {
-      const parts = [review?.companyName, review?.companyLocation, 'reviews'].filter(Boolean);
-      const query = parts.length > 0 ? parts.join(' ') : 'Google reviews';
-      return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-    }
-    return link;
-  };
+  const reviewId = review?.id || review?._id;
 
-  const handleCardClick = async () => {
-    const googleUrl = getGoogleReviewUrl(review);
+  const copyToClipboard = async () => {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(review.reviewText);
       } else {
-        const textArea = document.createElement("textarea");
+        const textArea = document.createElement('textarea');
         textArea.value = review.reviewText;
         document.body.appendChild(textArea);
         textArea.select();
-        document.execCommand("copy");
+        document.execCommand('copy');
         document.body.removeChild(textArea);
       }
-      
-      setCopied(true);
-      addToast('Review copied! Opening Google Review page...', 'success');
-      
-      // Track analytics copy event on backend
-      api.recordCopyEvent(review.id).catch(() => {});
-      
-      // Open Google Review Link immediately (guaranteed valid URL, no 400 error)
-      window.open(googleUrl, '_blank', 'noopener,noreferrer');
-      
-      setTimeout(() => setCopied(false), 2500);
+      return true;
     } catch (err) {
-      addToast('Opening Google Review page...', 'info');
-      window.open(googleUrl, '_blank', 'noopener,noreferrer');
+      console.warn('Clipboard write failed:', err);
+      return false;
+    }
+  };
+
+  // 1. One-click Copy Review handler
+  const handleCopyReview = async (e) => {
+    e.stopPropagation();
+    const ok = await copyToClipboard();
+    if (ok) {
+      setCopied(true);
+      addToast('Review text copied to clipboard!', 'success');
+      if (reviewId) {
+        api.recordCopyEvent(reviewId).catch(() => {});
+      }
+      setTimeout(() => setCopied(false), 2500);
+    } else {
+      addToast('Failed to copy to clipboard.', 'error');
+    }
+  };
+
+  // 2. Open Google Reviews handler
+  const handleOpenGoogle = async (e) => {
+    e.stopPropagation();
+    const googleUrl = getGoogleReviewUrl(review);
+    
+    // Copy review text first so user can simply paste it on Google
+    await copyToClipboard();
+    if (reviewId) {
+      api.recordCopyEvent(reviewId).catch(() => {});
+    }
+
+    addToast('Review text copied! Opening Google Reviews — please paste and submit your review.', 'info', 6000);
+    window.open(googleUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  // 3. Card click navigates to /review/:reviewId for editing
+  const handleCardClick = () => {
+    if (reviewId) {
+      navigate(`/review/${reviewId}`);
     }
   };
 
   return (
     <div
       onClick={handleCardClick}
-      className="glass-card group p-5 rounded-2xl flex flex-col justify-between cursor-pointer relative overflow-hidden bg-white border border-slate-200/90 hover:border-indigo-500 hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
-      title="Click to copy review and open Google Review page"
+      className="glass-card group p-5 rounded-2xl flex flex-col justify-between cursor-pointer relative overflow-hidden bg-[#10142a]/95 border border-purple-500/20 hover:border-purple-400/60 hover:shadow-2xl hover:shadow-purple-950/40 transition-all duration-200"
+      title="Click card to view details or edit suggestion"
     >
       {/* Top badges */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {review.companyName && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-900 text-white text-[11px] font-bold shadow-2xs">
-              <Building className="w-3 h-3 text-indigo-400" />
-              {review.companyName}
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {review.companyName && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-900 border border-slate-700/80 text-white text-[11px] font-bold shadow-xs">
+                <Building className="w-3 h-3 text-purple-400" />
+                {review.companyName}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-purple-950/70 text-purple-300 border border-purple-500/30 text-xs font-semibold">
+              <Tag className="w-3 h-3 text-purple-400" />
+              {review.keyword || (review.selectedKeywords && review.selectedKeywords[0]) || 'Featured'}
             </span>
-          )}
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-semibold">
-            <Tag className="w-3 h-3 text-indigo-500" />
-            {review.keyword}
-          </span>
-          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-medium capitalize">
-            {review.tone || 'Natural'}
-          </span>
-        </div>
-
-        {/* 5-Star Indicator */}
-        <div 
-          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold"
-        >
-          <div className="flex items-center text-amber-500">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
-            ))}
           </div>
-          <span className="ml-1">5.0</span>
+
+          {/* Clearly labelled Demo Rating stars */}
+          <div 
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20 text-xs font-bold"
+            title="Demonstration rating preview - not an actual customer rating"
+          >
+            <div className="flex items-center text-amber-400">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
+              ))}
+            </div>
+            <span className="text-[10px] text-amber-200/90 font-medium ml-1">5.0 (Demo)</span>
+          </div>
+        </div>
+
+        {/* Review Body (Italic, readable) */}
+        <div className="my-3">
+          <p className="text-sm text-slate-200 leading-relaxed font-normal italic group-hover:text-white transition-colors">
+            "{review.reviewText}"
+          </p>
         </div>
       </div>
 
-      {/* Review Body */}
-      <div className="my-2.5 flex-1">
-        <p className="text-sm text-slate-800 leading-relaxed font-normal group-hover:text-slate-950 transition-colors">
-          "{review.reviewText}"
-        </p>
-      </div>
-
-      {/* Card Action Button: Click to copy and open Google */}
-      <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between">
-        <span className="text-[11px] text-slate-400 group-hover:text-indigo-600 transition-colors font-medium flex items-center gap-1">
-          <Globe className="w-3 h-3" />
-          Click to copy & post
+      {/* Card Action Row */}
+      <div className="mt-4 pt-3.5 border-t border-purple-500/15 flex flex-wrap items-center justify-between gap-2">
+        
+        {/* Edit / Details hint */}
+        <span className="text-[11px] text-slate-400 group-hover:text-purple-300 transition-colors font-medium flex items-center gap-1">
+          <Edit3 className="w-3 h-3" />
+          Click card to edit
         </span>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleCardClick();
-          }}
-          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer ${
-            copied
-              ? 'bg-emerald-600 text-white'
-              : 'bg-indigo-600 group-hover:bg-indigo-500 text-white shadow-indigo-600/20 active:scale-95'
-          }`}
-        >
-          {copied ? (
-            <>
-              <Check className="w-3.5 h-3.5 text-white" />
-              <span>Copied! Opening...</span>
-            </>
-          ) : (
-            <>
-              <span>Copy & Post on Google</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </>
-          )}
-        </button>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
+          
+          {/* Copy Review Button */}
+          <button
+            type="button"
+            onClick={handleCopyReview}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer ${
+              copied
+                ? 'bg-emerald-600 text-white'
+                : 'bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white border border-purple-500/30 active:scale-95'
+            }`}
+            title="Copy review text"
+          >
+            {copied ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-white" />
+                <span>Copied!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3.5 h-3.5 text-purple-400" />
+                <span>Copy Review</span>
+              </>
+            )}
+          </button>
+
+          {/* Open Google Reviews Button */}
+          <button
+            type="button"
+            onClick={handleOpenGoogle}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md shadow-purple-600/20 active:scale-95 transition-all cursor-pointer"
+            title="Copy review and open Google Review page"
+          >
+            <Globe className="w-3.5 h-3.5 text-purple-200" />
+            <span>Open Google</span>
+            <ExternalLink className="w-3 h-3 text-purple-200" />
+          </button>
+
+        </div>
       </div>
 
     </div>

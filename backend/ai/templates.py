@@ -183,6 +183,52 @@ CLOSERS_EN = [
     "I have already recommended them to several friends and business associates."
 ]
 
+# Hindi templates
+OPENERS_HI = [
+    "{company} के साथ {keyword} के संबंध में हमारा अनुभव बहुत ही शानदार रहा।",
+    "{company} की सेवा और {keyword} में उनकी दक्षता वाकई प्रशंसनीय है।",
+    "यदि आप उत्कृष्ट {keyword} की तलाश में हैं, तो {company} सबसे बेहतरीन विकल्प है।",
+    "{company} की पूरी टीम ने {keyword} को लेकर हमारे हर लक्ष्य को समय पर पूरा किया।",
+    "{company} के साथ काम करना हमारे लिए बहुत ही सुखद और संतोषजनक अनुभव रहा।"
+]
+
+BODIES_HI = [
+    "शुरुआत से लेकर अंत तक पूरी प्रक्रिया बेहद पारदर्शी, समयबद्ध और पेशेवर रही।",
+    "गुणवत्ता, ग्राहक संतुष्टि और निरंतर संवाद के मामले में उन्होंने हमारे विश्वास को पूरा किया।",
+    "उनकी टीम हर विवरण पर बारीकी से ध्यान देती है और हमेशा मदद के लिए तत्पर रहती है।",
+    "सभी कार्य उच्चतम मानकों के अनुसार और बिना किसी परेशानी के पूरे किए गए।"
+]
+
+CLOSERS_HI = [
+    "हम सभी को {company} की पुरजोर अनुशंसा करते हैं। बेहतरीन कार्य!",
+    "शानदार सेवा! भविष्य में भी हम {company} के साथ ही जुड़ना चाहेंगे।",
+    "{company} की पूरी टीम को हार्दिक धन्यवाद और शुभकामनाएं।",
+    "उत्कृष्ट परिणाम और शत-प्रतिशत संतुष्टि! ज़रूर संपर्क करें।"
+]
+
+# Gujarati templates
+OPENERS_GU = [
+    "{company} સાથે અમારો {keyword} અંગેનો અનુભવ ખુબ જ ઉત્તમ અને સંતોષકારક રહ્યો.",
+    "{company} ની ટીમ અને {keyword} માં તેમનું કામ ખરેખર શ્રેષ્ઠ અને ભરોસાપાત્ર છે.",
+    "જો તમે ગુણવત્તાસભર {keyword} શોધી રહ્યા હોવ, તો {company} શ્રેષ્ઠ પસંદગી છે.",
+    "{company} એ અમારી જરૂરિયાત સમજીને {keyword} બાબતે ખુબ સુંદર પરિણામ આપ્યું.",
+    "{company} સાથે કામ કરવું ખૂબ જ સરળ અને પ્રોફેશનલ રહ્યું."
+]
+
+BODIES_GU = [
+    "સમયસર સેવા, સ્પષ્ટ વાતચીત અને શ્રેષ્ઠ ગુણવત્તા તેમના કામની વિશેષતા છે.",
+    "દરેક તબક્કે પારદર્શિતા જળવાઈ રહી અને ગ્રાહક સંતોષને સર્વોચ્ચ પ્રાથમિકતા આપી.",
+    "તેમનું ગ્રાહકલક્ષી વલણ અને ટીમનો ઉત્સાહ ખરેખર પ્રશંસનીય છે.",
+    "બધું કામ નક્કી કરેલા ધોરણો અને સમય મર્યાદામાં ઉત્કૃષ્ટ રીતે પૂર્ણ થયું."
+]
+
+CLOSERS_GU = [
+    "અમે {company} ની સેવાઓને દિલથી ભલામણ કરીએ છીએ. ઉત્તમ કાર્ય!",
+    "ફરીથી તેમની સાથે જોડાવાનો ચોક્કસ આનંદ થશે. ખૂબ ખૂબ આભાર {company}!",
+    "શ્રેષ્ઠ ગુણવત્તા અને પૂરેપૂરો સંતોષ! અદ્ભુત અનુભવ.",
+    "{company} ની સમગ્ર ટીમને ઉત્કૃષ્ટ કાર્ય બદલ અભિનંદન."
+]
+
 def generate_template_candidates(
     company_name: str,
     category: str,
@@ -197,15 +243,24 @@ def generate_template_candidates(
     **kwargs
 ) -> list[str]:
     """
-    Generate a large pool of unique, combinatorial review variations in English.
+    Generate a large pool of unique review variations in English, Hindi, or Gujarati.
     Produces 40+ distinct candidates by combining dynamic openers, bodies, and closers.
-    Tailors phrasing for restaurants vs general businesses.
     """
     results = []
     seen = set()
 
+    lang = (language or "en").lower().strip()
     is_restaurant = category and "restaurant" in category.lower()
-    if is_restaurant:
+
+    if lang in ("gu", "gujarati"):
+        openers = OPENERS_GU
+        bodies = BODIES_GU
+        closers = CLOSERS_GU
+    elif lang in ("hi", "hindi"):
+        openers = OPENERS_HI
+        bodies = BODIES_HI
+        closers = CLOSERS_HI
+    elif is_restaurant:
         openers = RESTAURANT_OPENERS_EN
         bodies = RESTAURANT_BODIES_EN
         closers = RESTAURANT_CLOSERS_EN
@@ -223,7 +278,14 @@ def generate_template_candidates(
     random.shuffle(sample_bodies)
     random.shuffle(sample_closers)
 
-    loc_str = f" in {location}" if location and random.random() > 0.5 else ""
+    loc_str = ""
+    if location and random.random() > 0.5:
+        if lang in ("hi", "hindi"):
+            loc_str = f" ({location})"
+        elif lang in ("gu", "gujarati"):
+            loc_str = f" ({location})"
+        else:
+            loc_str = f" in {location}"
 
     total_pool_needed = max(40, count * 8)
     for i in range(total_pool_needed):
@@ -238,9 +300,14 @@ def generate_template_candidates(
         if length == "short":
             full_review = f"{sentence1} {sentence3}"
         elif length == "long":
-            extra = f"Their dedication to {keyword} made all the difference for us."
+            if lang in ("hi", "hindi"):
+                extra = f"{keyword} के प्रति उनका समर्पण हमारे लिए बेहद मददगार साबित हुआ।"
+            elif lang in ("gu", "gujarati"):
+                extra = f"{keyword} માટેનું તેમનું સમર્પણ અમારા માટે ખૂબ ફાયદાકારક સાબિત થયું."
+            else:
+                extra = f"Their dedication to {keyword} made all the difference for us."
             full_review = f"{sentence1} {sentence2} {extra} {sentence3}"
-        else: # medium
+        else:  # medium
             full_review = f"{sentence1} {sentence2} {sentence3}"
 
         if full_review not in seen:

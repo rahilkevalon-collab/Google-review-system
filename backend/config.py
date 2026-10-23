@@ -24,3 +24,6 @@ class Config:
     # Rate Limiting & Cooldown (Seconds)
     RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
     COOLDOWN_SECONDS = int(os.getenv("COOLDOWN_SECONDS", "0"))
+    
+    # Google Places API for company location auto-detection
+    GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")

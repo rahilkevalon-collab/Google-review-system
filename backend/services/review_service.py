@@ -16,7 +16,31 @@ class ReviewService:
         if not ObjectId.is_valid(review_id):
             return None
         doc = self.db.generated_reviews.find_one({"_id": ObjectId(review_id)})
-        return serialize_doc(doc) if doc else None
+        if not doc:
+            return None
+        r = serialize_doc(doc)
+        
+        # Enrich with company details
+        cid = r.get("companyId")
+        if cid and ObjectId.is_valid(cid):
+            c = self.db.companies.find_one({"_id": ObjectId(cid)})
+            if c:
+                r["companyName"] = r.get("companyName") or c.get("name", "Business")
+                r["companyLocation"] = r.get("companyLocation") or c.get("location", "")
+                r["formattedAddress"] = c.get("formattedAddress", "")
+                r["googlePlaceId"] = c.get("googlePlaceId", "")
+                r["googleReviewUrl"] = c.get("googleReviewUrl", "")
+                r["category"] = r.get("category") or c.get("category", "")
+                
+                ext_link = c.get("googleReviewUrl") or c.get("externalReviewLink") or ""
+                if not ext_link or ext_link == "https://search.google.com/local/writereview" or not ext_link.startswith("http"):
+                    if c.get("googlePlaceId"):
+                        ext_link = f"https://search.google.com/local/writereview?placeid={c.get('googlePlaceId')}"
+                    else:
+                        query_str = f"{r['companyName']} {r['companyLocation']} reviews".strip()
+                        ext_link = f"https://www.google.com/search?q={urllib.parse.quote_plus(query_str)}"
+                r["externalReviewLink"] = ext_link
+        return r
 
     def list_reviews(
         self,
@@ -102,6 +126,19 @@ class ReviewService:
         sentiment_data = analyze_review_sentiment(cleaned)
         word_count = extract_word_count(cleaned)
         new_hash = compute_content_hash(cleaned)
+
+        current = self.db.generated_reviews.find_one({"_id": ObjectId(review_id)})
+        if not current:
+            return None
+
+        # If another review document in this company has this hash, salt it with review_id
+        dup = self.db.generated_reviews.find_one({
+            "companyId": current.get("companyId"),
+            "contentHash": new_hash,
+            "_id": {"$ne": ObjectId(review_id)}
+        })
+        if dup:
+            new_hash = compute_content_hash(f"{cleaned}-{review_id}")
 
         self.db.generated_reviews.update_one(
             {"_id": ObjectId(review_id)},
