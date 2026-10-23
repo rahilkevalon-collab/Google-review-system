@@ -1,0 +1,36 @@
+import re
+import hashlib
+import unicodedata
+
+def normalize_text(text: str) -> str:
+    """
+    Standardize text for duplicate detection and hashing:
+    - Unicode NFKD normalization
+    - Convert to lowercase
+    - Remove extra spaces, newlines, and tabs
+    - Strip punctuation
+    """
+    if not text:
+        return ""
+    # Normalize unicode characters
+    normalized = unicodedata.normalize("NFKD", text)
+    # Lowercase
+    lowered = normalized.lower()
+    # Strip URLs if any
+    no_urls = re.sub(r'https?://\S+|www\.\S+', '', lowered)
+    # Remove punctuation
+    no_punct = re.sub(r'[^\w\s]', ' ', no_urls)
+    # Collapse multiple whitespaces into a single space
+    cleaned = re.sub(r'\s+', ' ', no_punct).strip()
+    return cleaned
+
+def compute_content_hash(text: str) -> str:
+    """Compute deterministic SHA256 hash of normalized text."""
+    norm = normalize_text(text)
+    return hashlib.sha256(norm.encode("utf-8")).hexdigest()
+
+def extract_word_count(text: str) -> int:
+    """Count words in text."""
+    if not text:
+        return 0
+    return len(text.split())
