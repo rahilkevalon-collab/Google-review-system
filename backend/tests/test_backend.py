@@ -247,7 +247,7 @@ def test_api_rating_distribution_generation(client):
     assert len(four_star_reviews) == 1
     four_star_text = four_star_reviews[0]["reviewText"]
     assert any(term in four_star_text.lower() for term in [
-        "documentation", "response", "reporting", "kickoff", "sprint", "turnaround", "communication"
+        "documentation", "response", "reporting", "reports", "kickoff", "sprint", "turnaround", "communication", "handover", "polish"
     ])
 
 # 17. API Rating Distribution Error Handling
@@ -292,4 +292,26 @@ def test_category_specific_reviews(client):
     assert len(data["reviews"]) == 2
     for r in data["reviews"]:
         assert "Wood Fired Pizza" in r["reviewText"]
+
+# 20. Backend-Managed Rating Ratio (No Frontend Configuration)
+def test_api_backend_default_rating_ratio_without_frontend_payload(client):
+    """
+    Verify that when frontend sends NO rating distribution in the request payload,
+    the backend automatically enforces its configured default 60% 5-star / 40% 4-star ratio.
+    """
+    unique_company = f"Backend Ratio Co {time.time()}"
+    res = client.post("/api/generate-reviews", json={
+        "companyName": unique_company,
+        "category": "IT Services and Software Development",
+        "keyword": "Cloud Architecture",
+        "count": 3
+    })
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["success"] is True
+    assert len(data["reviews"]) == 3
+    ratings = [r["rating"] for r in data["reviews"]]
+    assert ratings == [5, 4, 5]
+    assert data["ratingBreakdown"] == {"5_star": 2, "4_star": 1}
+
 

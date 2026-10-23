@@ -203,15 +203,15 @@ export default function CompanySetup({ categories = [] }) {
       
       {/* Page Header */}
       <div className="text-center space-y-3 mb-8">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold backdrop-blur-md">
-          <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-semibold">
+          <Sparkles className="w-3.5 h-3.5 text-purple-600" />
           <span>Step 1 • Business Onboarding</span>
         </div>
 
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-          Generate <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-indigo-300 to-purple-500">Business Reviews</span>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          Generate <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800">Business Reviews</span>
         </h1>
-        <p className="text-sm text-slate-400 max-w-xl mx-auto font-normal">
+        <p className="text-sm text-slate-600 max-w-xl mx-auto font-normal">
           Configure your business profile, services, and target SEO keywords to synthesize authentic, varied customer review suggestions.
         </p>
 
@@ -220,80 +220,80 @@ export default function CompanySetup({ categories = [] }) {
           <button
             type="button"
             onClick={handleAutofillDemo}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-purple-950/60 border border-purple-500/30 text-xs font-medium text-purple-300 hover:text-purple-200 transition-all shadow-sm cursor-pointer group"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-purple-50/60 border border-slate-200 hover:border-purple-300 text-xs font-semibold text-slate-700 hover:text-purple-700 transition-all shadow-2xs cursor-pointer group"
           >
-            <Zap className="w-3.5 h-3.5 text-yellow-400 group-hover:scale-110 transition-transform" />
+            <Zap className="w-3.5 h-3.5 text-amber-500 group-hover:scale-110 transition-transform" />
             <span>Fill Demo Example (Kevalon Technology)</span>
           </button>
         </div>
       </div>
 
       {/* Main Setup Card */}
-      <div className="glass-panel rounded-3xl p-6 sm:p-9 border border-purple-500/20 shadow-2xl relative bg-slate-950/80 backdrop-blur-xl">
+      <div className="glass-panel rounded-3xl p-6 sm:p-9 border border-slate-200 shadow-xl shadow-slate-200/50 relative bg-white">
         
         <form onSubmit={handleSubmit} className="space-y-6">
           
           {/* Row 1: Company Name with Auto-Detection Dropdown */}
           <div className="relative" ref={placeDropdownRef}>
-            <label className="block text-xs font-bold uppercase tracking-wider text-purple-200/90 mb-2">
-              Company / Business Name <span className="text-red-400">*</span>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+              Company / Business Name <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <Building2 className="w-4 h-4 text-purple-400 absolute left-3.5 top-3.5" />
+              <Building2 className="w-4 h-4 text-purple-600 absolute left-3.5 top-3.5" />
               <input
                 type="text"
                 required
                 placeholder="e.g. Kevalon Technology"
                 value={formData.name}
                 onChange={handleNameChange}
-                className={`w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-900/90 border text-sm text-white placeholder:text-slate-500 focus:outline-none transition-all shadow-inner ${
+                className={`w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-50 border text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none transition-all shadow-2xs ${
                   errors.name
-                    ? 'border-red-500/80 focus:border-red-400 ring-2 ring-red-500/20'
-                    : 'border-slate-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
+                    ? 'border-red-400 focus:border-red-500 ring-2 ring-red-500/10'
+                    : 'border-slate-200 focus:border-purple-600 focus:ring-4 focus:ring-purple-500/10'
                 }`}
               />
               {searchingPlaces && (
-                <Loader2 className="w-4 h-4 text-purple-400 animate-spin absolute right-3.5 top-3.5" />
+                <Loader2 className="w-4 h-4 text-purple-600 animate-spin absolute right-3.5 top-3.5" />
               )}
             </div>
             {errors.name && (
-              <p className="text-xs text-red-400 mt-1.5 font-medium">{errors.name}</p>
+              <p className="text-xs text-red-500 mt-1.5 font-medium">{errors.name}</p>
             )}
 
             {/* Places Autocomplete Dropdown */}
             {showPlaceDropdown && placeSuggestions.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-slate-900 border border-purple-500/30 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl max-h-64 overflow-y-auto animate-in fade-in">
-                <div className="p-2.5 bg-purple-950/40 border-b border-purple-500/20 text-[11px] font-semibold text-purple-300 flex items-center justify-between">
+              <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto animate-in fade-in">
+                <div className="p-2.5 bg-purple-50/70 border-b border-purple-100 text-[11px] font-semibold text-purple-800 flex items-center justify-between">
                   <span>Matching Businesses (Select to auto-populate location):</span>
                   <button
                     type="button"
                     onClick={() => setShowPlaceDropdown(false)}
-                    className="text-slate-400 hover:text-white"
+                    className="text-slate-400 hover:text-slate-700 cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                <div className="divide-y divide-slate-800">
+                <div className="divide-y divide-slate-100">
                   {placeSuggestions.map((place, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => handleSelectPlace(place)}
-                      className="w-full text-left p-3 hover:bg-purple-900/20 flex items-start gap-2.5 transition-colors cursor-pointer group"
+                      className="w-full text-left p-3 hover:bg-purple-50/50 flex items-start gap-2.5 transition-colors cursor-pointer group"
                     >
-                      <MapPin className="w-4 h-4 text-purple-400 shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                      <MapPin className="w-4 h-4 text-purple-600 shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-xs font-bold text-white group-hover:text-purple-300 truncate">
+                          <p className="text-xs font-bold text-slate-900 group-hover:text-purple-700 truncate">
                             {place.name}
                           </p>
                           {place.isGoogleVerified && (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-100 text-purple-700 border border-purple-200">
                               Verified
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-slate-400 truncate">
+                        <p className="text-[11px] text-slate-500 truncate">
                           {place.formattedAddress || place.location}
                         </p>
                       </div>
@@ -309,21 +309,21 @@ export default function CompanySetup({ categories = [] }) {
             
             {/* Searchable Business Category */}
             <div className="relative" ref={categoryRef}>
-              <label className="block text-xs font-bold uppercase tracking-wider text-purple-200/90 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
                 Business Category
               </label>
               <button
                 type="button"
                 onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                className="w-full pl-4 pr-10 py-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-purple-500/50 text-sm text-left text-white focus:outline-none focus:border-purple-500 flex items-center justify-between transition-all cursor-pointer shadow-inner"
+                className="w-full pl-4 pr-10 py-3 rounded-2xl bg-slate-50 border border-slate-200 hover:border-slate-300 focus:bg-white text-sm text-left text-slate-900 focus:outline-none focus:border-purple-600 flex items-center justify-between transition-all cursor-pointer shadow-2xs"
               >
                 <span className="truncate">{formData.category}</span>
-                <ChevronDown className={`w-4 h-4 text-purple-400 transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-purple-600 transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {/* Dropdown Menu */}
               {isCategoryOpen && (
-                <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-slate-900 border border-purple-500/30 rounded-2xl shadow-2xl p-2 backdrop-blur-xl animate-in fade-in">
+                <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 animate-in fade-in">
                   <div className="relative mb-2">
                     <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
                     <input
@@ -331,7 +331,7 @@ export default function CompanySetup({ categories = [] }) {
                       placeholder="Search categories..."
                       value={categorySearch}
                       onChange={(e) => setCategorySearch(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-purple-500"
+                      className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-purple-600 focus:bg-white"
                     />
                   </div>
                   <div className="max-h-52 overflow-y-auto space-y-0.5">
@@ -349,7 +349,7 @@ export default function CompanySetup({ categories = [] }) {
                           className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer ${
                             isSelected
                               ? 'bg-purple-600 text-white font-bold'
-                              : 'text-slate-300 hover:bg-purple-950/50 hover:text-purple-200'
+                              : 'text-slate-700 hover:bg-purple-50 hover:text-purple-700'
                           }`}
                         >
                           <span className="truncate">{cat.name}</span>
@@ -364,11 +364,11 @@ export default function CompanySetup({ categories = [] }) {
 
             {/* Company Location */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-purple-200/90 mb-2">
-                Company Location <span className="text-slate-400 font-normal lowercase">(auto or manual)</span>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                Company Location <span className="text-slate-500 font-normal lowercase">(auto or manual)</span>
               </label>
               <div className="relative">
-                <MapPin className="w-4 h-4 text-purple-400 absolute left-3.5 top-3.5" />
+                <MapPin className="w-4 h-4 text-purple-600 absolute left-3.5 top-3.5" />
                 <input
                   type="text"
                   placeholder="e.g. Ahmedabad, India"
@@ -380,18 +380,18 @@ export default function CompanySetup({ categories = [] }) {
                       formattedAddress: e.target.value
                     }))
                   }
-                  className="w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-900/90 border border-slate-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 text-sm text-white placeholder:text-slate-500 focus:outline-none transition-all shadow-inner"
+                  className="w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-500/10 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
                 />
                 {formData.googlePlaceId && (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 absolute right-3.5 top-3.5" title="Google Place ID verified" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 absolute right-3.5 top-3.5" title="Google Place ID verified" />
                 )}
               </div>
               {formData.googlePlaceId ? (
-                <p className="text-[11px] text-emerald-400 mt-1 flex items-center gap-1 font-medium">
+                <p className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1 font-medium">
                   <CheckCircle2 className="w-3 h-3" /> Place ID verified for direct Google Review link
                 </p>
               ) : placesMessage ? (
-                <p className="text-[11px] text-slate-400 mt-1 font-medium">{placesMessage}</p>
+                <p className="text-[11px] text-slate-500 mt-1 font-medium">{placesMessage}</p>
               ) : null}
             </div>
 
@@ -400,21 +400,21 @@ export default function CompanySetup({ categories = [] }) {
           {/* Row 3: Services Offered (Comma-separated) */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-purple-200/90">
-                Services Offered <span className="text-slate-400 font-normal lowercase">(comma-separated)</span>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                Services Offered <span className="text-slate-500 font-normal lowercase">(comma-separated)</span>
               </label>
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-slate-500">
                 {parsedServices.length} {parsedServices.length === 1 ? 'service' : 'services'} detected
               </span>
             </div>
             <div className="relative">
-              <Briefcase className="w-4 h-4 text-purple-400 absolute left-3.5 top-3.5" />
+              <Briefcase className="w-4 h-4 text-purple-600 absolute left-3.5 top-3.5" />
               <input
                 type="text"
                 placeholder="e.g. Web Development, AI Solutions, Mobile App Development, SEO Services"
                 value={formData.services}
                 onChange={(e) => setFormData({ ...formData, services: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-900/90 border border-slate-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 text-sm text-white placeholder:text-slate-500 focus:outline-none transition-all shadow-inner"
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-500/10 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
               />
             </div>
             {parsedServices.length > 0 && (
@@ -422,9 +422,9 @@ export default function CompanySetup({ categories = [] }) {
                 {parsedServices.map((srv, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700/80 text-slate-300 text-xs font-medium"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium"
                   >
-                    <Check className="w-3 h-3 text-purple-400" />
+                    <Check className="w-3 h-3 text-purple-600" />
                     {srv}
                   </span>
                 ))}
@@ -435,21 +435,21 @@ export default function CompanySetup({ categories = [] }) {
           {/* Row 4: SEO Keywords (Comma-separated) */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-purple-200/90">
-                SEO Keywords <span className="text-slate-400 font-normal lowercase">(comma-separated)</span>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                SEO Keywords <span className="text-slate-500 font-normal lowercase">(comma-separated)</span>
               </label>
-              <span className="text-[11px] text-purple-300 font-medium">
+              <span className="text-[11px] text-purple-700 font-semibold">
                 {parsedKeywords.length} {parsedKeywords.length === 1 ? 'keyword chip' : 'keyword chips'} ready
               </span>
             </div>
             <div className="relative">
-              <Tag className="w-4 h-4 text-purple-400 absolute left-3.5 top-3.5" />
+              <Tag className="w-4 h-4 text-purple-600 absolute left-3.5 top-3.5" />
               <input
                 type="text"
                 placeholder="e.g. Web Development India, AI Solutions India, Software Development Company India"
                 value={formData.seoKeywords}
                 onChange={(e) => setFormData({ ...formData, seoKeywords: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-900/90 border border-slate-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 text-sm text-white placeholder:text-slate-500 focus:outline-none transition-all shadow-inner"
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-500/10 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
               />
             </div>
             {parsedKeywords.length > 0 && (
@@ -457,9 +457,9 @@ export default function CompanySetup({ categories = [] }) {
                 {parsedKeywords.map((kw, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-950/60 border border-purple-500/40 text-purple-200 text-xs font-bold"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold"
                   >
-                    <Tag className="w-3 h-3 text-purple-400" />
+                    <Tag className="w-3 h-3 text-purple-600" />
                     {kw}
                   </span>
                 ))}
@@ -469,7 +469,7 @@ export default function CompanySetup({ categories = [] }) {
 
           {/* Row 5: Preferred Review Language */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-purple-200/90 mb-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
               Preferred Review Language
             </label>
             <div className="grid grid-cols-3 gap-2.5">
@@ -486,15 +486,15 @@ export default function CompanySetup({ categories = [] }) {
                     onClick={() => setFormData({ ...formData, preferredLanguage: lang.code })}
                     className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-purple-600/30 border-purple-500 text-white shadow-md shadow-purple-600/20 ring-1 ring-purple-500'
-                        : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                        ? 'bg-purple-50 border-2 border-purple-600 text-purple-900 shadow-xs ring-2 ring-purple-500/10'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-purple-50/40 hover:border-purple-300'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-white">{lang.label}</span>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-purple-300" />}
+                      <span className="text-xs font-bold text-slate-900">{lang.label}</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-purple-600" />}
                     </div>
-                    <p className="text-[11px] text-slate-400 truncate">{lang.desc}</p>
+                    <p className="text-[11px] text-slate-500 truncate">{lang.desc}</p>
                   </button>
                 );
               })}
@@ -503,15 +503,15 @@ export default function CompanySetup({ categories = [] }) {
 
           {/* Row 6: Optional Company Description */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-purple-200/90 mb-2">
-              Company Description <span className="text-slate-400 font-normal lowercase">(optional)</span>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+              Company Description <span className="text-slate-500 font-normal lowercase">(optional)</span>
             </label>
             <textarea
               rows={3}
               placeholder="Provide context about your company, strengths, or specialties to enrich AI review suggestions..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-3 rounded-2xl bg-slate-900/90 border border-slate-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 text-sm text-white placeholder:text-slate-500 focus:outline-none transition-all shadow-inner resize-none"
+              className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-500/10 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs resize-none"
             />
           </div>
 
@@ -520,7 +520,7 @@ export default function CompanySetup({ categories = [] }) {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-base tracking-wide transition-all shadow-lg shadow-purple-600/30 active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-base tracking-wide transition-all shadow-lg shadow-purple-600/25 active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
             >
               {submitting ? (
                 <>
@@ -534,7 +534,7 @@ export default function CompanySetup({ categories = [] }) {
                 </>
               )}
             </button>
-            <p className="text-center text-[11px] text-slate-400 mt-2.5">
+            <p className="text-center text-[11px] text-slate-500 mt-2.5">
               Saves company profile to MongoDB and immediately opens the interactive keyword review generation studio.
             </p>
           </div>

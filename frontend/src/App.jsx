@@ -47,7 +47,7 @@ export default function App() {
   return (
     <ToastProvider>
       <BrowserRouter>
-        <div className="min-h-screen flex flex-col bg-[#070913] text-slate-100 radial-glow antialiased selection:bg-purple-600/30 selection:text-purple-200">
+        <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 radial-glow antialiased selection:bg-purple-100 selection:text-purple-900">
           
           {/* Top Navigation Bar */}
           <Navbar healthStatus={healthStatus} />
@@ -56,8 +56,8 @@ export default function App() {
           <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
             {initialLoading ? (
               <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-                <div className="w-10 h-10 rounded-full border-2 border-purple-500 border-t-transparent animate-spin"></div>
-                <p className="text-xs text-purple-300 font-medium tracking-wide">
+                <div className="w-10 h-10 rounded-full border-2 border-purple-600 border-t-transparent animate-spin"></div>
+                <p className="text-xs text-slate-500 font-medium tracking-wide">
                   Connecting to AI Review Engine...
                 </p>
               </div>
@@ -67,7 +67,7 @@ export default function App() {
                 <Route path="/" element={<CompanySetup categories={categories} />} />
                 <Route path="/setup" element={<CompanySetup categories={categories} />} />
 
-                {/* Page 2: Tapzy-Inspired Dark Review Generation UI */}
+                {/* Page 2: Review Generation Studio */}
                 <Route path="/reviews/:companyId" element={<Dashboard categories={categories} />} />
                 <Route path="/reviews" element={<Dashboard categories={categories} />} />
 
@@ -82,9 +82,9 @@ export default function App() {
           </main>
 
           {/* Sweet & Short Single-Line Footer */}
-          <footer className="border-t border-purple-500/15 bg-[#090c1c]/90 py-4 text-center text-xs text-slate-400">
-            <div className="flex items-center justify-center gap-2 font-medium text-slate-300">
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+          <footer className="border-t border-slate-200/80 bg-white py-4 text-center text-xs text-slate-500 shadow-2xs">
+            <div className="flex items-center justify-center gap-2 font-medium text-slate-600">
+              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
               <span>ReviewCraft AI • Intelligent SEO Business Review Generator</span>
             </div>
           </footer>

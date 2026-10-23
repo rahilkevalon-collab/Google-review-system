@@ -8,8 +8,13 @@ where submitted ratings are strictly preserved.
 
 from typing import Tuple, List, Dict, Any
 
-DEFAULT_FIVE_STAR_PCT = 60.0
-DEFAULT_FOUR_STAR_PCT = 40.0
+try:
+    from config import Config
+    DEFAULT_FIVE_STAR_PCT = float(getattr(Config, "DEFAULT_FIVE_STAR_PCT", 60.0))
+    DEFAULT_FOUR_STAR_PCT = float(getattr(Config, "DEFAULT_FOUR_STAR_PCT", 40.0))
+except Exception:
+    DEFAULT_FIVE_STAR_PCT = 60.0
+    DEFAULT_FOUR_STAR_PCT = 40.0
 
 SUPPORTED_PRESETS = [
     {"id": "60-40", "label": "60% 5-Star / 40% 4-Star (Balanced Demo)", "five_star": 60, "four_star": 40},

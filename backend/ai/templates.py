@@ -180,7 +180,7 @@ BODIES_4_EN = [
     "Solid execution and dependable output, though communication during initial sprint planning was a bit gradual.",
     "The work was completed to our satisfaction, with just minor room for a slightly faster turnaround on initial inquiry responses.",
     "The quality of work was reliable throughout, though weekly summary reports would have added even more clarity to the roadmap.",
-    "Core deliverables were dependable and cleanly executed; occasional handover notes could be slightly more comprehensive."
+    "Core deliverables were dependable and cleanly executed; occasional handover documentation could be slightly more comprehensive."
 ]
 
 CLOSERS_4_EN = [

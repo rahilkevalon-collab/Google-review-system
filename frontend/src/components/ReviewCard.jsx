@@ -81,7 +81,7 @@ export default function ReviewCard({ review }) {
   return (
     <div
       onClick={handleCardClick}
-      className="glass-card group p-5 rounded-2xl flex flex-col justify-between cursor-pointer relative overflow-hidden bg-[#10142a]/95 border border-purple-500/20 hover:border-purple-400/60 hover:shadow-2xl hover:shadow-purple-950/40 transition-all duration-200"
+      className="glass-card group p-5 rounded-2xl flex flex-col justify-between cursor-pointer relative overflow-hidden bg-white border border-slate-200 hover:border-purple-300 hover:shadow-xl hover:shadow-purple-500/5 transition-all duration-200"
       title="Click card to view details or edit suggestion"
     >
       {/* Top badges */}
@@ -89,13 +89,13 @@ export default function ReviewCard({ review }) {
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-1.5 flex-wrap">
             {review.companyName && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-900 border border-slate-700/80 text-white text-[11px] font-bold shadow-xs">
-                <Building className="w-3 h-3 text-purple-400" />
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-bold shadow-2xs">
+                <Building className="w-3 h-3 text-purple-600" />
                 {review.companyName}
               </span>
             )}
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-purple-950/70 text-purple-300 border border-purple-500/30 text-xs font-semibold">
-              <Tag className="w-3 h-3 text-purple-400" />
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold">
+              <Tag className="w-3 h-3 text-purple-600" />
               {review.keyword || (review.selectedKeywords && review.selectedKeywords[0]) || 'Featured'}
             </span>
           </div>
@@ -106,7 +106,7 @@ export default function ReviewCard({ review }) {
             const isDemo = review.isDemo !== false && review.ratingType !== 'real';
             return (
               <div 
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20 text-xs font-bold"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold"
                 title={isDemo ? "AI-generated synthetic demo suggestion - not a verified customer rating" : "Verified Customer Rating"}
               >
                 <div className="flex items-center gap-0.5">
@@ -116,12 +116,12 @@ export default function ReviewCard({ review }) {
                       className={`w-3 h-3 ${
                         starNum <= ratingVal 
                           ? 'fill-amber-400 text-amber-400' 
-                          : 'fill-slate-800/80 text-slate-700'
+                          : 'fill-slate-200 text-slate-300'
                       }`} 
                     />
                   ))}
                 </div>
-                <span className="text-[10px] text-amber-200 font-semibold ml-0.5">
+                <span className="text-[10px] text-amber-900 font-bold ml-0.5">
                   {ratingVal.toFixed(1)} {isDemo ? '(Demo)' : ''}
                 </span>
               </div>
@@ -131,17 +131,17 @@ export default function ReviewCard({ review }) {
 
         {/* Review Body (Italic, readable) */}
         <div className="my-3">
-          <p className="text-sm text-slate-200 leading-relaxed font-normal italic group-hover:text-white transition-colors">
+          <p className="text-sm text-slate-800 leading-relaxed font-normal italic group-hover:text-slate-900 transition-colors">
             "{review.reviewText}"
           </p>
         </div>
       </div>
 
       {/* Card Action Row */}
-      <div className="mt-4 pt-3.5 border-t border-purple-500/15 flex flex-wrap items-center justify-between gap-2">
+      <div className="mt-4 pt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
         
         {/* Edit / Details hint */}
-        <span className="text-[11px] text-slate-400 group-hover:text-purple-300 transition-colors font-medium flex items-center gap-1">
+        <span className="text-[11px] text-slate-400 group-hover:text-purple-600 transition-colors font-medium flex items-center gap-1">
           <Edit3 className="w-3 h-3" />
           Click card to edit
         </span>
@@ -156,7 +156,7 @@ export default function ReviewCard({ review }) {
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer ${
               copied
                 ? 'bg-emerald-600 text-white'
-                : 'bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white border border-purple-500/30 active:scale-95'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 active:scale-95'
             }`}
             title="Copy review text"
           >
@@ -167,7 +167,7 @@ export default function ReviewCard({ review }) {
               </>
             ) : (
               <>
-                <Copy className="w-3.5 h-3.5 text-purple-400" />
+                <Copy className="w-3.5 h-3.5 text-purple-600" />
                 <span>Copy Review</span>
               </>
             )}
@@ -180,9 +180,9 @@ export default function ReviewCard({ review }) {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md shadow-purple-600/20 active:scale-95 transition-all cursor-pointer"
             title="Copy review and open Google Review page"
           >
-            <Globe className="w-3.5 h-3.5 text-purple-200" />
+            <Globe className="w-3.5 h-3.5 text-white" />
             <span>Open Google</span>
-            <ExternalLink className="w-3 h-3 text-purple-200" />
+            <ExternalLink className="w-3 h-3 text-white/80" />
           </button>
 
         </div>
