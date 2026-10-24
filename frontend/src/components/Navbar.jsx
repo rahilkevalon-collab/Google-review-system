@@ -20,9 +20,6 @@ export default function Navbar({ healthStatus }) {
                 <span className="font-extrabold text-lg tracking-tight text-slate-900 group-hover:text-purple-600 transition-colors">
                   ReviewCraft
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
-                  AI SEO
-                </span>
               </div>
               <p className="text-[11px] text-slate-500 hidden sm:block font-medium">
                 Dynamic & Non-Repeating Business Reviews

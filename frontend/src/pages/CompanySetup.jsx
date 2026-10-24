@@ -209,11 +209,6 @@ export default function CompanySetup({ categories = [] }) {
       
       {/* Page Header */}
       <div className="text-center space-y-3 mb-8">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-semibold">
-          <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-          <span>Step 1 • Business Onboarding</span>
-        </div>
-
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
           Generate <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800">Business Reviews</span>
         </h1>
