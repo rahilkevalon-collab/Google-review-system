@@ -8,29 +8,56 @@
 (function () {
   console.log('[ReviewCraft] Google review content script initialized in frame:', window.location.href);
 
-  // Check if there is an active pending review to fill
-  chrome.storage.local.get(['pendingReview'], (res) => {
-    const pending = res.pendingReview;
-    if (!pending || !pending.text) {
-      return;
+  // 1. Check URL parameters for direct ReviewCraft payload (rc_r = rating, rc_t = review text)
+  let pending = null;
+  try {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.has('rc_t')) {
+      pending = {
+        text: searchParams.get('rc_t') || '',
+        rating: Number(searchParams.get('rc_r')) || 5,
+        timestamp: Date.now()
+      };
+      console.log('[ReviewCraft] Loaded review payload directly from URL query parameters:', pending);
+    } else if (window.location.hash && window.location.hash.includes('rc_t=')) {
+      const hashStr = window.location.hash.substring(1);
+      const hashParams = new URLSearchParams(hashStr.includes('&') ? hashStr.substring(hashStr.indexOf('&') + 1) : hashStr);
+      if (hashParams.has('rc_t')) {
+        pending = {
+          text: hashParams.get('rc_t') || '',
+          rating: Number(hashParams.get('rc_r')) || 5,
+          timestamp: Date.now()
+        };
+        console.log('[ReviewCraft] Loaded review payload from URL hash parameters:', pending);
+      }
     }
+  } catch (e) {
+    console.warn('[ReviewCraft] Error reading URL parameters:', e);
+  }
 
-    // Ignore if pending review is older than 3 minutes (180 seconds)
-    const ageMs = Date.now() - (pending.timestamp || 0);
-    if (ageMs > 180000) {
-      console.log('[ReviewCraft] Pending review expired (>3 mins). Skipping.');
-      chrome.storage.local.remove(['pendingReview']);
-      return;
-    }
-
-    console.log('[ReviewCraft] Found pending review for Google:', pending);
-
-    // If Google search bar accidentally has review text, clean it up
+  if (pending && pending.text) {
     cleanUpGoogleSearchBar(pending.text);
-
-    // Start waiting for the Review Modal to open
     startObserver(pending);
-  });
+  } else {
+    // 2. Fallback to chrome.storage.local
+    chrome.storage.local.get(['pendingReview'], (res) => {
+      const storagePending = res.pendingReview;
+      if (!storagePending || !storagePending.text) {
+        return;
+      }
+
+      const ageMs = Date.now() - (storagePending.timestamp || 0);
+      if (ageMs > 180000) {
+        console.log('[ReviewCraft] Storage pending review expired (>3 mins). Skipping.');
+        chrome.storage.local.remove(['pendingReview']);
+        return;
+      }
+
+      console.log('[ReviewCraft] Found storage pending review for Google:', storagePending);
+      cleanUpGoogleSearchBar(storagePending.text);
+      startObserver(storagePending);
+    });
+  }
 
   function cleanUpGoogleSearchBar(reviewText) {
     try {

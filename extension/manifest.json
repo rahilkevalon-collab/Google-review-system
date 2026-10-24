@@ -7,9 +7,7 @@
     "storage"
   ],
   "host_permissions": [
-    "http://localhost/*",
-    "http://127.0.0.1/*",
-    "*://*.google.com/*"
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"
@@ -17,8 +15,7 @@
   "content_scripts": [
     {
       "matches": [
-        "http://localhost/*",
-        "http://127.0.0.1/*"
+        "<all_urls>"
       ],
       "js": ["content-webapp.js"],
       "run_at": "document_start"
