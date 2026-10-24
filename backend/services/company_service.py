@@ -294,8 +294,11 @@ class CompanyService:
         elif ext_link and ext_link != "https://search.google.com/local/writereview" and ext_link.startswith("http"):
             review_url = ext_link
         else:
-            query = f"{name} {location} reviews".strip()
-            review_url = f"https://www.google.com/search?q={urllib.parse.quote_plus(query)}"
+            primary_city = location.split(",")[0].strip() if location else ""
+            query_tokens = [name, primary_city or location, "reviews"]
+            clean_q = " ".join([t for t in query_tokens if t]).replace(",", " ").strip()
+            clean_q = " ".join(clean_q.split())
+            review_url = f"https://www.google.com/search?q={urllib.parse.quote_plus(clean_q)}"
 
         doc = {
             "name": name,

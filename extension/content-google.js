@@ -1,8 +1,9 @@
 /**
  * ReviewCraft Chrome Extension - Google Review Auto-Filler Content Script
  * Runs on *://*.google.com/*
- * Automatically targets Google's Review Modal (never the main search bar),
- * fills the review text, and clicks the star rating.
+ * Automatically targets Google's Review Modal for ANY company:
+ * - If review modal isn't open yet, automatically finds and clicks the "Write a review" button or #lrd= link on Google.
+ * - Once review modal is open, populates the review text and clicks the target star rating.
  */
 
 (function () {
@@ -76,6 +77,7 @@
     const maxAttempts = 90; // ~31 seconds
     let textDone = false;
     let starDone = false;
+    let triggerAttemptCount = 0;
     const targetRating = Number(pending.rating) || 5;
     const reviewText = pending.text;
 
@@ -89,7 +91,13 @@
       // 1. Locate review dialog
       const dialog = findReviewDialog();
 
-      // 2. Populate text if not already done
+      // If the review dialog is NOT open yet, automatically find and click the "Write a review" button / #lrd link on the Google page!
+      if (!dialog && triggerAttemptCount < 20) {
+        triggerAttemptCount++;
+        tryOpenReviewDialog();
+      }
+
+      // 2. Populate text if dialog or textarea exists and not already done
       if (!textDone) {
         const textarea = findReviewTextarea(dialog);
         if (textarea) {
@@ -97,7 +105,7 @@
         }
       }
 
-      // 3. Click stars if not already done
+      // 3. Click stars if dialog or star element exists and not already done
       if (!starDone) {
         const starElement = findStarElement(dialog, targetRating);
         if (starElement) {
@@ -120,6 +128,67 @@
         } catch (e) {}
       }
     }, 350);
+  }
+
+  /**
+   * Automatically finds and triggers Google's "Write a review" button or link
+   * when opening a generic business Google Search or Google Maps page.
+   */
+  function tryOpenReviewDialog() {
+    try {
+      // Strategy 1: Look for any anchor tag with #lrd= containing ',3,' (direct review modal action code)
+      const allLinks = Array.from(document.querySelectorAll('a[href*="lrd="]'));
+      for (const a of allLinks) {
+        const href = a.getAttribute('href') || '';
+        if (href.includes(',3,') || href.includes(',3,,') || /review/i.test(a.innerText || '')) {
+          console.log('[ReviewCraft] Found LRD review link on page! Triggering review modal:', href);
+          const hashIdx = href.indexOf('#lrd=');
+          if (hashIdx !== -1) {
+            window.location.hash = href.substring(hashIdx);
+          }
+          a.click();
+          return true;
+        }
+      }
+
+      // Strategy 2: Look for button or clickable element with data-async-trigger="reviewDialog"
+      const asyncTriggers = document.querySelectorAll(
+        '[data-async-trigger="reviewDialog"], [data-async-trigger*="review" i], [data-async-context*="review" i]'
+      );
+      for (const el of asyncTriggers) {
+        if (isVisible(el)) {
+          console.log('[ReviewCraft] Found async review trigger button! Clicking...');
+          el.click();
+          return true;
+        }
+      }
+
+      // Strategy 3: Text match for "Write a review" / "Rate and review" across buttons and links
+      const clickables = Array.from(document.querySelectorAll('button, a, div[role="button"], span[role="button"]'));
+      for (const el of clickables) {
+        if (!isVisible(el)) continue;
+        const text = (el.innerText || el.getAttribute('aria-label') || '').trim();
+        if (
+          /^(write a review|rate and review|leave a review|add a review|રિવ્યુ લખો|રિવ્યુ આપો|रिव्यू लिखें)$/i.test(text) ||
+          (text.length < 35 && /write a review|rate and review/i.test(text))
+        ) {
+          console.log('[ReviewCraft] Found "Write a review" button! Clicking:', text);
+          el.click();
+          return true;
+        }
+      }
+
+      // Strategy 4: Google Maps Write a review button
+      const mapsReviewBtn = document.querySelector(
+        'button[aria-label*="Write a review" i], button[data-value="Write a review"], button[data-item-id="write-a-review"]'
+      );
+      if (mapsReviewBtn && isVisible(mapsReviewBtn)) {
+        console.log('[ReviewCraft] Found Google Maps review button! Clicking...');
+        mapsReviewBtn.click();
+        return true;
+      }
+    } catch (e) {}
+    return false;
   }
 
   function findReviewDialog() {

@@ -202,12 +202,15 @@ export default function CompanyModal({ isOpen, onClose, categories = [], onCompa
                 <Globe className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                 <input
                   type="url"
-                  placeholder="https://g.page/r/.../review"
+                  placeholder="https://g.page/r/.../review or https://search.google.com/local/writereview?placeid=..."
                   value={formData.externalReviewLink}
                   onChange={(e) => setFormData({ ...formData, externalReviewLink: e.target.value })}
                   className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-indigo-500 transition-colors shadow-2xs"
                 />
               </div>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Direct review link for 100% instant review modal popup (or leave blank to auto-detect on Google).
+              </p>
             </div>
           </div>
 
