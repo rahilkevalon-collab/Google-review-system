@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ReviewCraft Google Review Auto-Filler",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Seamlessly auto-pastes AI review text and selects star ratings directly in Google Review modals.",
   "permissions": [
     "storage"

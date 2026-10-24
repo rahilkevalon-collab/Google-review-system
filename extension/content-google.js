@@ -6,6 +6,8 @@
  */
 
 (function () {
+  if (!chrome.runtime?.id) return;
+
   console.log('[ReviewCraft] Google review content script initialized in frame:', window.location.href);
 
   // Actively remove any leftover notification pill from DOM if present
@@ -37,32 +39,39 @@
         console.log('[ReviewCraft] Loaded review payload from URL hash parameters:', pending);
       }
     }
-  } catch (e) {
-    console.warn('[ReviewCraft] Error reading URL parameters:', e);
-  }
+  } catch (e) {}
 
   if (pending && pending.text) {
     cleanUpGoogleSearchBar(pending.text);
     startObserver(pending);
   } else {
-    // 2. Fallback to chrome.storage.local
-    chrome.storage.local.get(['pendingReview'], (res) => {
-      const storagePending = res.pendingReview;
-      if (!storagePending || !storagePending.text) {
-        return;
-      }
+    // 2. Safe fallback to chrome.storage.local
+    try {
+      if (chrome.runtime?.id && chrome.storage?.local) {
+        chrome.storage.local.get(['pendingReview'], (res) => {
+          if (chrome.runtime.lastError || !res) return;
+          const storagePending = res.pendingReview;
+          if (!storagePending || !storagePending.text) return;
 
-      const ageMs = Date.now() - (storagePending.timestamp || 0);
-      if (ageMs > 180000) {
-        console.log('[ReviewCraft] Storage pending review expired (>3 mins). Skipping.');
-        chrome.storage.local.remove(['pendingReview']);
-        return;
-      }
+          const ageMs = Date.now() - (storagePending.timestamp || 0);
+          if (ageMs > 180000) {
+            console.log('[ReviewCraft] Storage pending review expired (>3 mins). Skipping.');
+            try {
+              if (chrome.runtime?.id && chrome.storage?.local) {
+                chrome.storage.local.remove(['pendingReview'], () => {
+                  if (chrome.runtime.lastError) {}
+                });
+              }
+            } catch (e) {}
+            return;
+          }
 
-      console.log('[ReviewCraft] Found storage pending review for Google:', storagePending);
-      cleanUpGoogleSearchBar(storagePending.text);
-      startObserver(storagePending);
-    });
+          console.log('[ReviewCraft] Found storage pending review for Google:', storagePending);
+          cleanUpGoogleSearchBar(storagePending.text);
+          startObserver(storagePending);
+        });
+      }
+    } catch (e) {}
   }
 
   function cleanUpGoogleSearchBar(reviewText) {
@@ -77,9 +86,7 @@
           }
         }
       }
-    } catch (e) {
-      console.warn('[ReviewCraft] Search bar cleanup error:', e);
-    }
+    } catch (e) {}
   }
 
   function startObserver(pending) {
@@ -94,14 +101,26 @@
         return;
       }
 
+      // Check if context still valid
+      if (!chrome.runtime?.id) {
+        clearInterval(intervalId);
+        return;
+      }
+
       const success = attemptFillReview(pending);
       if (success) {
         isFilled = true;
         clearInterval(intervalId);
         console.log('[ReviewCraft] Review text & stars successfully auto-filled into Google!');
 
-        // Clear pending review from storage
-        chrome.storage.local.remove(['pendingReview']);
+        // Safely clear pending review from storage
+        try {
+          if (chrome.runtime?.id && chrome.storage?.local) {
+            chrome.storage.local.remove(['pendingReview'], () => {
+              if (chrome.runtime.lastError) {}
+            });
+          }
+        } catch (e) {}
       }
     }, 350);
   }
@@ -246,7 +265,6 @@
 
       return true;
     } catch (e) {
-      console.warn('[ReviewCraft] Error filling text:', e);
       return false;
     }
   }
@@ -322,7 +340,6 @@
       console.log('[ReviewCraft] Clicked star rating element.');
       return true;
     } catch (e) {
-      console.warn('[ReviewCraft] Error clicking star element:', e);
       return false;
     }
   }
