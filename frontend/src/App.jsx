@@ -55,7 +55,7 @@ export default function App() {
   return (
     <ToastProvider>
       <BrowserRouter>
-        <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 radial-glow antialiased selection:bg-purple-100 selection:text-purple-900">
+        <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 radial-glow antialiased selection:bg-[#068dcb]/20 selection:text-[#034665]">
           
           {/* Top Navigation Bar */}
           <Navbar healthStatus={healthStatus} />
@@ -64,7 +64,7 @@ export default function App() {
           <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
             {initialLoading ? (
               <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-                <div className="w-10 h-10 rounded-full border-2 border-purple-600 border-t-transparent animate-spin"></div>
+                <div className="w-10 h-10 rounded-full border-2 border-[#068dcb] border-t-transparent animate-spin"></div>
                 <p className="text-xs text-slate-500 font-medium tracking-wide">
                   Connecting to AI Review Engine...
                 </p>
@@ -92,7 +92,7 @@ export default function App() {
           {/* Sweet & Short Single-Line Footer */}
           <footer className="border-t border-slate-200/80 bg-white py-4 text-center text-xs text-slate-500 shadow-2xs">
             <div className="flex items-center justify-center gap-2 font-medium text-slate-600">
-              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+              <Sparkles className="w-3.5 h-3.5 text-[#068dcb]" />
               <span>ReviewCraft AI • Intelligent SEO Business Review Generator</span>
             </div>
           </footer>

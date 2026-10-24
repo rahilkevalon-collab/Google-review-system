@@ -12,12 +12,12 @@ export default function Navbar({ healthStatus }) {
         {/* Brand Logo & Tagline */}
         <div className="flex items-center gap-5">
           <Link to="/setup" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 via-indigo-600 to-pink-500 flex items-center justify-center shadow-md shadow-purple-600/20 group-hover:scale-105 transition-transform">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-r from-[#034665] to-[#068dcb] flex items-center justify-center shadow-md shadow-[#068dcb]/25 group-hover:scale-105 transition-transform">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-lg tracking-tight text-slate-900 group-hover:text-purple-600 transition-colors">
+                <span className="font-extrabold text-lg tracking-tight text-slate-900 group-hover:text-[#068dcb] transition-colors">
                   ReviewCraft
                 </span>
               </div>
@@ -35,8 +35,8 @@ export default function Navbar({ healthStatus }) {
             to="/setup"
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs cursor-pointer ${
               location.pathname === '/' || location.pathname === '/setup'
-                ? 'bg-purple-50 text-purple-700 border border-purple-200 font-bold'
-                : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-600/20 active:scale-95'
+                ? 'bg-[#068dcb]/10 text-[#034665] border border-[#068dcb]/30 font-bold'
+                : 'bg-gradient-to-r from-[#034665] to-[#068dcb] hover:from-[#02354e] hover:to-[#057db4] text-white shadow-md shadow-[#068dcb]/25 active:scale-95'
             }`}
           >
             <PlusCircle className="w-3.5 h-3.5" />

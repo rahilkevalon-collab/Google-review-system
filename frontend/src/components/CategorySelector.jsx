@@ -50,8 +50,8 @@ export default function CategorySelector({ categories = [], selectedCategory, on
               onClick={() => onSelectCategory(cat.name)}
               className={`p-3 rounded-2xl flex flex-col items-center justify-center text-center transition-all duration-200 cursor-pointer border ${
                 isSelected
-                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/25 scale-[1.02] ring-2 ring-indigo-500/20'
-                  : 'bg-white border-slate-200 text-slate-700 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/20 shadow-2xs'
+                  ? 'bg-gradient-to-r from-[#034665] to-[#068dcb] border-[#034665] text-white shadow-md shadow-[#068dcb]/25 scale-[1.02] ring-2 ring-[#068dcb]/20'
+                  : 'bg-white border-slate-200 text-slate-700 hover:text-[#034665] hover:border-[#068dcb]/40 hover:bg-[#068dcb]/10 shadow-2xs'
               }`}
             >
               <div

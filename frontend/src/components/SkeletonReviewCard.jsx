@@ -6,7 +6,7 @@ export default function SkeletonReviewCard() {
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
           <div className="h-5 w-24 bg-slate-200 rounded-lg"></div>
-          <div className="h-5 w-16 bg-purple-100 rounded-md"></div>
+          <div className="h-5 w-16 bg-[#068dcb]/15 rounded-md"></div>
         </div>
         <div className="h-5 w-20 bg-amber-100 rounded-md"></div>
       </div>
@@ -19,7 +19,7 @@ export default function SkeletonReviewCard() {
         <div className="h-4 w-20 bg-slate-200 rounded"></div>
         <div className="flex gap-2">
           <div className="h-7 w-20 bg-slate-100 rounded-xl"></div>
-          <div className="h-7 w-24 bg-purple-200 rounded-xl"></div>
+          <div className="h-7 w-24 bg-[#068dcb]/25 rounded-xl"></div>
         </div>
       </div>
     </div>

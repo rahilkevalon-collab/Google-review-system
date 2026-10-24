@@ -2,9 +2,24 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 min-h-screen antialiased selection:bg-purple-100 selection:text-purple-900;
+    @apply bg-slate-50 text-slate-900 min-h-screen antialiased selection:bg-[#068dcb]/20 selection:text-[#034665];
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   }
+}
+
+/* Custom brand gradient utility classes (#034665 to #068dcb) */
+.bg-brand-gradient {
+  background: linear-gradient(135deg, #034665 0%, #068dcb 100%);
+}
+
+.bg-brand-gradient-hover:hover {
+  background: linear-gradient(135deg, #02354e 0%, #057db4 100%);
+}
+
+.text-brand-gradient {
+  background: linear-gradient(135deg, #034665 0%, #068dcb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 /* Premium Light Theme Card & Panel Styles */
@@ -22,15 +37,15 @@
 }
 
 .glass-card:hover {
-  border-color: rgba(147, 51, 234, 0.45);
-  box-shadow: 0 10px 25px -5px rgba(147, 51, 234, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+  border-color: rgba(6, 141, 203, 0.45);
+  box-shadow: 0 10px 25px -5px rgba(6, 141, 203, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
   transform: translateY(-2px);
 }
 
-/* Soft ambient background with subtle purple glow */
+/* Soft ambient background with subtle #068dcb glow */
 .radial-glow {
   background: 
-    radial-gradient(circle at 50% -10%, rgba(168, 85, 247, 0.07) 0%, rgba(248, 250, 252, 0) 70%),
+    radial-gradient(circle at 50% -10%, rgba(6, 141, 203, 0.08) 0%, rgba(248, 250, 252, 0) 70%),
     #f8fafc;
 }
 

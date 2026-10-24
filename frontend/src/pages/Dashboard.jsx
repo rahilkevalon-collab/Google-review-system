@@ -261,7 +261,7 @@ export default function Dashboard({ categories = [] }) {
   if (loadingCompany) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-        <div className="w-10 h-10 rounded-full border-2 border-purple-600 border-t-transparent animate-spin"></div>
+        <div className="w-10 h-10 rounded-full border-2 border-[#068dcb] border-t-transparent animate-spin"></div>
         <p className="text-xs text-slate-500 font-medium tracking-wide">
           Loading business profile & SEO keywords...
         </p>
@@ -281,7 +281,7 @@ export default function Dashboard({ categories = [] }) {
         </p>
         <Link
           to="/setup"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold shadow-md shadow-purple-600/20"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#034665] to-[#068dcb] hover:from-[#02354e] hover:to-[#057db4] text-white text-xs font-bold shadow-md shadow-[#068dcb]/25"
         >
           <span>Go to Setup Form</span>
         </Link>
@@ -295,9 +295,9 @@ export default function Dashboard({ categories = [] }) {
       {/* 2. Simplified Company Heading Section (Centered, Clean, No Badges or Buttons) */}
       <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-slate-200 bg-white shadow-md shadow-slate-200/40 text-center">
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-          Review <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800">{company.name}</span>
+          Review <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#034665] to-[#068dcb]">{company.name}</span>
         </h1>
-        <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-purple-700 pt-1.5">
+        <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#034665] pt-1.5">
           SELECT KEYWORDS & GENERATE REVIEW SUGGESTIONS
         </p>
       </div>
@@ -306,7 +306,7 @@ export default function Dashboard({ categories = [] }) {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-purple-600" />
+            <Layers className="w-3.5 h-3.5 text-[#068dcb]" />
             <span>Target SEO Keyword Chips</span>
             <span className="text-[10px] text-slate-500 normal-case font-normal">
               (Click to select one or multiple keywords)
@@ -314,7 +314,7 @@ export default function Dashboard({ categories = [] }) {
           </label>
         </div>
 
-        {/* Rounded Purple Chips Component */}
+        {/* Rounded Brand Gradient Chips Component */}
         <KeywordChips
           keywords={keywords}
           selectedKeywords={selectedKeywords}
@@ -329,7 +329,7 @@ export default function Dashboard({ categories = [] }) {
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <span>Customer Review Suggestions</span>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#068dcb]/10 text-[#034665] border border-[#068dcb]/25">
               3 Distinct Suggestions
             </span>
           </h2>
@@ -338,8 +338,8 @@ export default function Dashboard({ categories = [] }) {
 
       {/* Deduplication Status Notice (if any duplicates were rejected) */}
       {dedupNotice && (
-        <div className="p-3 rounded-2xl bg-purple-50 border border-purple-200 flex items-center gap-2 text-xs text-purple-800 animate-in fade-in">
-          <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
+        <div className="p-3 rounded-2xl bg-[#068dcb]/10 border border-[#068dcb]/25 flex items-center gap-2 text-xs text-[#034665] animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-[#068dcb] shrink-0" />
           <span>{dedupNotice}</span>
         </div>
       )}
@@ -369,8 +369,8 @@ export default function Dashboard({ categories = [] }) {
         </div>
       ) : (
         <div className="p-12 rounded-3xl text-center space-y-4 glass-panel border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
-          <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center mx-auto">
-            <Sparkles className="w-6 h-6" />
+          <div className="w-12 h-12 rounded-2xl bg-[#068dcb]/10 text-[#034665] border border-[#068dcb]/25 flex items-center justify-center mx-auto">
+            <Sparkles className="w-6 h-6 text-[#068dcb]" />
           </div>
           <h3 className="text-base font-bold text-slate-900">No Review Suggestions Available</h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
@@ -381,9 +381,9 @@ export default function Dashboard({ categories = [] }) {
 
       {/* AI Transparency & Ethical Disclaimer */}
       <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start sm:items-center gap-3 text-xs text-slate-600">
-        <Info className="w-4 h-4 text-purple-600 shrink-0 mt-0.5 sm:mt-0" />
+        <Info className="w-4 h-4 text-[#068dcb] shrink-0 mt-0.5 sm:mt-0" />
         <p className="leading-relaxed">
-          <strong className="text-purple-700 font-semibold">AI Review Draft Notice:</strong> All suggestions are AI-synthesized templates using your business details and selected keywords. Reviews must be reviewed, edited, and voluntarily submitted by real customers on Google.
+          <strong className="text-[#034665] font-semibold">AI Review Draft Notice:</strong> All suggestions are AI-synthesized templates using your business details and selected keywords. Reviews must be reviewed, edited, and voluntarily submitted by real customers on Google.
         </p>
       </div>
 

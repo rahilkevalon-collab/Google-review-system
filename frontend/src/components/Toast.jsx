@@ -35,14 +35,14 @@ export function ToastProvider({ children }) {
                 ? 'bg-white text-rose-900 border-rose-200 shadow-rose-600/10'
                 : toast.type === 'warning'
                 ? 'bg-white text-amber-900 border-amber-200 shadow-amber-600/10'
-                : 'bg-white text-purple-900 border-purple-200 shadow-purple-600/10'
+                : 'bg-white text-[#034665] border-[#068dcb]/30 shadow-[#068dcb]/15'
             }`}
           >
             <div className="flex items-center gap-2.5 mr-2">
               {toast.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
               {toast.type === 'error' && <XCircle className="w-4 h-4 text-rose-600 shrink-0" />}
               {toast.type === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />}
-              {toast.type === 'info' && <Info className="w-4 h-4 text-purple-600 shrink-0" />}
+              {toast.type === 'info' && <Info className="w-4 h-4 text-[#068dcb] shrink-0" />}
               <span className="leading-snug">{toast.message}</span>
             </div>
             <button

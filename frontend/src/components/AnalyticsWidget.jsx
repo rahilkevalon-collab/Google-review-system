@@ -18,8 +18,8 @@ export default function AnalyticsWidget({ analytics, onRefreshAnalytics }) {
       {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100">
-            <Activity className="w-4 h-4" />
+          <div className="p-1.5 rounded-lg bg-[#068dcb]/10 text-[#034665] border border-[#068dcb]/25">
+            <Activity className="w-4 h-4 text-[#068dcb]" />
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-900 tracking-tight">System Performance & Dedup Analytics</h3>
@@ -28,7 +28,7 @@ export default function AnalyticsWidget({ analytics, onRefreshAnalytics }) {
         </div>
         <button
           onClick={onRefreshAnalytics}
-          className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold px-2.5 py-1 rounded-lg hover:bg-indigo-50 transition-colors"
+          className="text-xs text-[#068dcb] hover:text-[#034665] font-semibold px-2.5 py-1 rounded-lg hover:bg-[#068dcb]/10 transition-colors cursor-pointer"
         >
           Refresh Stats
         </button>
@@ -41,7 +41,7 @@ export default function AnalyticsWidget({ analytics, onRefreshAnalytics }) {
         <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
           <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
             <span className="font-medium">Companies</span>
-            <Building className="w-3.5 h-3.5 text-indigo-600" />
+            <Building className="w-3.5 h-3.5 text-[#068dcb]" />
           </div>
           <div className="text-xl font-bold text-slate-900">{analytics.totalCompanies || 0}</div>
           <p className="text-[11px] text-slate-400 mt-0.5">Active profiles configured</p>
@@ -51,7 +51,7 @@ export default function AnalyticsWidget({ analytics, onRefreshAnalytics }) {
         <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
           <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
             <span className="font-medium">Suggestions</span>
-            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+            <Sparkles className="w-3.5 h-3.5 text-[#068dcb]" />
           </div>
           <div className="text-xl font-bold text-slate-900">{analytics.totalReviews || 0}</div>
           <p className="text-[11px] text-slate-400 mt-0.5">Stored distinct reviews</p>
@@ -87,7 +87,7 @@ export default function AnalyticsWidget({ analytics, onRefreshAnalytics }) {
         {/* Top Keywords */}
         <div className="space-y-2">
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-            <Tag className="w-3.5 h-3.5 text-indigo-600" />
+            <Tag className="w-3.5 h-3.5 text-[#068dcb]" />
             Top Targeted SEO Keywords
           </h4>
           <div className="flex flex-wrap gap-1.5">
@@ -98,7 +98,7 @@ export default function AnalyticsWidget({ analytics, onRefreshAnalytics }) {
                   className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700 flex items-center gap-1.5"
                 >
                   <span>{kw.keyword}</span>
-                  <span className="px-1.5 py-0.2 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold">
+                  <span className="px-1.5 py-0.2 rounded-full bg-[#068dcb]/15 text-[#034665] text-[10px] font-bold">
                     {kw.count}
                   </span>
                 </span>
@@ -112,7 +112,7 @@ export default function AnalyticsWidget({ analytics, onRefreshAnalytics }) {
         {/* Recent Generation Logs */}
         <div className="space-y-2">
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-indigo-600" />
+            <Clock className="w-3.5 h-3.5 text-[#068dcb]" />
             Recent Generation Audit Log
           </h4>
           <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">

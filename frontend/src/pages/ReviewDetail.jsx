@@ -161,7 +161,7 @@ export default function ReviewDetail() {
         <p className="text-sm text-slate-500">{error || 'This review suggestion does not exist.'}</p>
         <Link
           to="/setup"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold text-xs shadow-md shadow-purple-600/20"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#034665] to-[#068dcb] hover:from-[#02354e] hover:to-[#057db4] text-white font-semibold text-xs shadow-md shadow-[#068dcb]/25"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Business Setup</span>
@@ -183,9 +183,9 @@ export default function ReviewDetail() {
       <div>
         <Link
           to={returnCompanyId ? `/reviews/${returnCompanyId}` : '/setup'}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 hover:text-purple-700 transition-colors py-2 px-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 hover:text-[#034665] transition-colors py-2 px-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs"
         >
-          <ArrowLeft className="w-4 h-4 text-purple-600" />
+          <ArrowLeft className="w-4 h-4 text-[#068dcb]" />
           <span>Back to {companyName} Reviews</span>
         </Link>
       </div>
@@ -195,8 +195,8 @@ export default function ReviewDetail() {
         
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold flex items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5 text-purple-600" />
+            <span className="px-3 py-1 rounded-full bg-[#068dcb]/10 text-[#034665] border border-[#068dcb]/25 text-xs font-bold flex items-center gap-1.5">
+              <Tag className="w-3.5 h-3.5 text-[#068dcb]" />
               {review.keyword || (review.selectedKeywords && review.selectedKeywords[0]) || 'Featured'}
             </span>
             <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium capitalize">
@@ -206,7 +206,7 @@ export default function ReviewDetail() {
               {review.language || 'EN'}
             </span>
             {review.isUserEdited && (
-              <span className="px-2.5 py-1 rounded-lg bg-purple-100 text-purple-800 border border-purple-200 text-xs font-medium">
+              <span className="px-2.5 py-1 rounded-lg bg-[#068dcb]/15 text-[#034665] border border-[#068dcb]/30 text-xs font-medium">
                 User Edited
               </span>
             )}
@@ -240,8 +240,8 @@ export default function ReviewDetail() {
         </div>
 
         <div>
-          <div className="flex items-center gap-2 text-xs text-purple-700 mb-1 font-semibold flex-wrap">
-            <Building2 className="w-3.5 h-3.5 text-purple-600" />
+          <div className="flex items-center gap-2 text-xs text-[#034665] mb-1 font-semibold flex-wrap">
+            <Building2 className="w-3.5 h-3.5 text-[#068dcb]" />
             <span className="font-bold text-slate-900">{companyName}</span>
             {companyAddress && (
               <>
@@ -260,11 +260,11 @@ export default function ReviewDetail() {
 
         <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 pt-3 border-t border-slate-100">
           <span className="flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-purple-600" />
-            ID: <code className="text-purple-700 bg-purple-50 px-1 py-0.5 rounded font-mono text-[11px]">{review.id || effectiveId}</code>
+            <Calendar className="w-3.5 h-3.5 text-[#068dcb]" />
+            ID: <code className="text-[#034665] bg-[#068dcb]/10 px-1 py-0.5 rounded font-mono text-[11px]">{review.id || effectiveId}</code>
           </span>
           <span className="flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+            <Sparkles className="w-3.5 h-3.5 text-[#068dcb]" />
             Source: {review.source === 'google-gemini' ? 'Gemini AI Model' : 'Template Synthesis'}
           </span>
         </div>
@@ -290,7 +290,7 @@ export default function ReviewDetail() {
           value={reviewText}
           onChange={(e) => setReviewText(e.target.value)}
           placeholder="Review text..."
-          className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-500/10 transition-all leading-relaxed text-sm sm:text-base font-semibold font-sans shadow-2xs"
+          className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#068dcb] focus:ring-4 focus:ring-[#068dcb]/15 transition-all leading-relaxed text-sm sm:text-base font-semibold font-sans shadow-2xs"
         />
 
         {/* Primary Action Buttons */}
@@ -302,7 +302,7 @@ export default function ReviewDetail() {
             disabled={isSaving || reviewText === review.reviewText}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-semibold border border-slate-200 transition-all disabled:opacity-40 cursor-pointer active:scale-95 shadow-2xs"
           >
-            <Save className="w-3.5 h-3.5 text-purple-600" />
+            <Save className="w-3.5 h-3.5 text-[#068dcb]" />
             <span>{isSaving ? 'Saving...' : 'Save Edits'}</span>
           </button>
 
@@ -325,7 +325,7 @@ export default function ReviewDetail() {
                 </>
               ) : (
                 <>
-                  <Copy className="w-4 h-4 text-purple-600" />
+                  <Copy className="w-4 h-4 text-[#068dcb]" />
                   <span>Copy Review Text</span>
                 </>
               )}
@@ -335,7 +335,7 @@ export default function ReviewDetail() {
             <button
               type="button"
               onClick={handleOpenGoogle}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-purple-600/20 transition-all active:scale-95 cursor-pointer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#034665] to-[#068dcb] hover:from-[#02354e] hover:to-[#057db4] text-white text-xs font-bold shadow-md shadow-[#068dcb]/25 transition-all active:scale-95 cursor-pointer"
               title="Copy review and open Google Review page"
             >
               <Globe className="w-4 h-4 text-white" />
@@ -355,8 +355,8 @@ export default function ReviewDetail() {
       </div>
 
       {/* Suggestion Disclaimer Notice */}
-      <div className="p-4 rounded-2xl bg-purple-50 border border-purple-200 flex items-start gap-3 text-xs text-purple-900 shadow-2xs">
-        <Info className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+      <div className="p-4 rounded-2xl bg-[#068dcb]/10 border border-[#068dcb]/25 flex items-start gap-3 text-xs text-[#034665] shadow-2xs">
+        <Info className="w-4 h-4 text-[#068dcb] shrink-0 mt-0.5" />
         <p className="leading-relaxed">
           This draft suggestion was created with ReviewCraft's NLP synthesis engine and verified against duplicate suggestions using Scikit-Learn TF-IDF cosine similarity. Please customize the text to ensure it reflects your genuine customer experience.
         </p>

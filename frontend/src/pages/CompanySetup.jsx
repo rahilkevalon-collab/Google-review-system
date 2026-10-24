@@ -210,7 +210,7 @@ export default function CompanySetup({ categories = [] }) {
       {/* Page Header */}
       <div className="text-center space-y-3 mb-8">
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-          Generate <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800">Business Reviews</span>
+          Generate <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#034665] to-[#068dcb]">Business Reviews</span>
         </h1>
         <p className="text-sm text-slate-600 max-w-xl mx-auto font-normal">
           Configure your business profile, services, and keywords to generate authentic, high-quality customer reviews.
@@ -221,7 +221,7 @@ export default function CompanySetup({ categories = [] }) {
           <button
             type="button"
             onClick={handleAutofillDemo}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-purple-50/60 border border-slate-200 hover:border-purple-300 text-xs font-semibold text-slate-700 hover:text-purple-700 transition-all shadow-2xs cursor-pointer group"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-[#068dcb]/10 border border-slate-200 hover:border-[#068dcb]/40 text-xs font-semibold text-slate-700 hover:text-[#034665] transition-all shadow-2xs cursor-pointer group"
           >
             <Zap className="w-3.5 h-3.5 text-amber-500 group-hover:scale-110 transition-transform" />
             <span>Fill Demo Example (Kevalon Technology)</span>
@@ -240,7 +240,7 @@ export default function CompanySetup({ categories = [] }) {
               Company / Business Name <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <Building2 className="w-4 h-4 text-purple-600 absolute left-3.5 top-3.5" />
+              <Building2 className="w-4 h-4 text-[#068dcb] absolute left-3.5 top-3.5" />
               <input
                 type="text"
                 required
@@ -250,11 +250,11 @@ export default function CompanySetup({ categories = [] }) {
                 className={`w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-50 border text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none transition-all shadow-2xs ${
                   errors.name
                     ? 'border-red-400 focus:border-red-500 ring-2 ring-red-500/10'
-                    : 'border-slate-200 focus:border-purple-600 focus:ring-4 focus:ring-purple-500/10'
+                    : 'border-slate-200 focus:border-[#068dcb] focus:ring-4 focus:ring-[#068dcb]/15'
                 }`}
               />
               {searchingPlaces && (
-                <Loader2 className="w-4 h-4 text-purple-600 animate-spin absolute right-3.5 top-3.5" />
+                <Loader2 className="w-4 h-4 text-[#068dcb] animate-spin absolute right-3.5 top-3.5" />
               )}
             </div>
             {errors.name && (
@@ -264,7 +264,7 @@ export default function CompanySetup({ categories = [] }) {
             {/* Places Autocomplete Dropdown */}
             {showPlaceDropdown && placeSuggestions.length > 0 && (
               <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto animate-in fade-in">
-                <div className="p-2.5 bg-purple-50/70 border-b border-purple-100 text-[11px] font-semibold text-purple-800 flex items-center justify-between">
+                <div className="p-2.5 bg-[#068dcb]/10 border-b border-[#068dcb]/20 text-[11px] font-semibold text-[#034665] flex items-center justify-between">
                   <span>Matching Businesses (Select to auto-populate location):</span>
                   <button
                     type="button"
@@ -280,16 +280,16 @@ export default function CompanySetup({ categories = [] }) {
                       key={idx}
                       type="button"
                       onClick={() => handleSelectPlace(place)}
-                      className="w-full text-left p-3 hover:bg-purple-50/50 flex items-start gap-2.5 transition-colors cursor-pointer group"
+                      className="w-full text-left p-3 hover:bg-[#068dcb]/10 flex items-start gap-2.5 transition-colors cursor-pointer group"
                     >
-                      <MapPin className="w-4 h-4 text-purple-600 shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                      <MapPin className="w-4 h-4 text-[#068dcb] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-xs font-bold text-slate-900 group-hover:text-purple-700 truncate">
+                          <p className="text-xs font-bold text-slate-900 group-hover:text-[#034665] truncate">
                             {place.name}
                           </p>
                           {place.isGoogleVerified && (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-100 text-purple-700 border border-purple-200">
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#068dcb]/15 text-[#034665] border border-[#068dcb]/30">
                               Verified
                             </span>
                           )}
@@ -316,10 +316,10 @@ export default function CompanySetup({ categories = [] }) {
               <button
                 type="button"
                 onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                className="w-full pl-4 pr-10 py-3 rounded-2xl bg-slate-50 border border-slate-200 hover:border-slate-300 focus:bg-white text-sm text-left text-slate-900 focus:outline-none focus:border-purple-600 flex items-center justify-between transition-all cursor-pointer shadow-2xs"
+                className="w-full pl-4 pr-10 py-3 rounded-2xl bg-slate-50 border border-slate-200 hover:border-slate-300 focus:bg-white text-sm text-left text-slate-900 focus:outline-none focus:border-[#068dcb] flex items-center justify-between transition-all cursor-pointer shadow-2xs"
               >
                 <span className="truncate">{formData.category}</span>
-                <ChevronDown className={`w-4 h-4 text-purple-600 transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-[#068dcb] transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {/* Dropdown Menu */}
@@ -332,7 +332,7 @@ export default function CompanySetup({ categories = [] }) {
                       placeholder="Search categories..."
                       value={categorySearch}
                       onChange={(e) => setCategorySearch(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-purple-600 focus:bg-white"
+                      className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#068dcb] focus:bg-white"
                     />
                   </div>
                   <div className="max-h-52 overflow-y-auto space-y-0.5">
@@ -349,8 +349,8 @@ export default function CompanySetup({ categories = [] }) {
                           }}
                           className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer ${
                             isSelected
-                              ? 'bg-purple-600 text-white font-bold'
-                              : 'text-slate-700 hover:bg-purple-50 hover:text-purple-700'
+                              ? 'bg-gradient-to-r from-[#034665] to-[#068dcb] text-white font-bold shadow-xs'
+                              : 'text-slate-700 hover:bg-[#068dcb]/10 hover:text-[#034665]'
                           }`}
                         >
                           <span className="truncate">{cat.name}</span>
@@ -369,7 +369,7 @@ export default function CompanySetup({ categories = [] }) {
                 Company Location <span className="text-slate-500 font-normal lowercase">(auto or manual)</span>
               </label>
               <div className="relative">
-                <MapPin className="w-4 h-4 text-purple-600 absolute left-3.5 top-3.5" />
+                <MapPin className="w-4 h-4 text-[#068dcb] absolute left-3.5 top-3.5" />
                 <input
                   type="text"
                   placeholder="e.g. Ahmedabad, India"
@@ -381,7 +381,7 @@ export default function CompanySetup({ categories = [] }) {
                       formattedAddress: e.target.value
                     }))
                   }
-                  className="w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-500/10 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
+                  className="w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#068dcb] focus:ring-4 focus:ring-[#068dcb]/15 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
                 />
                 {formData.googlePlaceId && (
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 absolute right-3.5 top-3.5" title="Google Place ID verified" />
@@ -409,13 +409,13 @@ export default function CompanySetup({ categories = [] }) {
               </span>
             </div>
             <div className="relative">
-              <Briefcase className="w-4 h-4 text-purple-600 absolute left-3.5 top-3.5" />
+              <Briefcase className="w-4 h-4 text-[#068dcb] absolute left-3.5 top-3.5" />
               <input
                 type="text"
                 placeholder="e.g. Web Development, AI Solutions, Mobile App Development, SEO Services"
                 value={formData.services}
                 onChange={(e) => setFormData({ ...formData, services: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-500/10 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#068dcb] focus:ring-4 focus:ring-[#068dcb]/15 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
               />
             </div>
             {parsedServices.length > 0 && (
@@ -425,7 +425,7 @@ export default function CompanySetup({ categories = [] }) {
                     key={idx}
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium"
                   >
-                    <Check className="w-3 h-3 text-purple-600" />
+                    <Check className="w-3 h-3 text-[#068dcb]" />
                     {srv}
                   </span>
                 ))}
@@ -439,18 +439,18 @@ export default function CompanySetup({ categories = [] }) {
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                 SEO Keywords <span className="text-slate-500 font-normal lowercase">(comma-separated)</span>
               </label>
-              <span className="text-[11px] text-purple-700 font-semibold">
+              <span className="text-[11px] text-[#034665] font-semibold">
                 {parsedKeywords.length} {parsedKeywords.length === 1 ? 'keyword chip' : 'keyword chips'} ready
               </span>
             </div>
             <div className="relative">
-              <Tag className="w-4 h-4 text-purple-600 absolute left-3.5 top-3.5" />
+              <Tag className="w-4 h-4 text-[#068dcb] absolute left-3.5 top-3.5" />
               <input
                 type="text"
                 placeholder="e.g. Web Development India, AI Solutions India, Software Development Company India"
                 value={formData.seoKeywords}
                 onChange={(e) => setFormData({ ...formData, seoKeywords: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-500/10 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#068dcb] focus:ring-4 focus:ring-[#068dcb]/15 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
               />
             </div>
             {parsedKeywords.length > 0 && (
@@ -458,9 +458,9 @@ export default function CompanySetup({ categories = [] }) {
                 {parsedKeywords.map((kw, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#068dcb]/10 border border-[#068dcb]/25 text-[#034665] text-xs font-bold"
                   >
-                    <Tag className="w-3 h-3 text-purple-600" />
+                    <Tag className="w-3 h-3 text-[#068dcb]" />
                     {kw}
                   </span>
                 ))}
@@ -474,7 +474,7 @@ export default function CompanySetup({ categories = [] }) {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-base tracking-wide transition-all shadow-lg shadow-purple-600/25 active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-[#034665] to-[#068dcb] hover:from-[#02354e] hover:to-[#057db4] text-white font-extrabold text-base tracking-wide transition-all shadow-lg shadow-[#068dcb]/25 active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
             >
               {submitting ? (
                 <>
