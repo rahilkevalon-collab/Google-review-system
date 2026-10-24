@@ -36,6 +36,9 @@ export function getGoogleReviewUrl(item = {}) {
   // 4. Custom direct review URL (e.g. g.page/r/..., maps.app.goo.gl, etc.)
   // Strictly ignore bare google.com/search URLs (which have no review modal and trigger AI overviews)
   if (link && link.startsWith('http') && !link.includes('google.com/search') && !link.includes('writereview/')) {
+    if (link.includes('maps/search')) {
+      return link.replace(/\+reviews/gi, '').replace(/%20reviews/gi, '').replace(/reviews/gi, '');
+    }
     return link;
   }
 

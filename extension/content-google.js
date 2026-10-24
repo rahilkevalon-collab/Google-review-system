@@ -187,25 +187,35 @@
         }
       }
 
-      // Strategy 4: Google Maps Place Profile Write a review button
-      const mapsReviewBtn = Array.from(document.querySelectorAll('button, a, div[role="button"]')).find(el => {
-        if (!isVisible(el)) return false;
-        const al = (el.getAttribute('aria-label') || el.innerText || '').toLowerCase();
-        return al.includes('write a review') || al.includes('rate and review') || al.includes('રિવ્યુ લખો');
-      });
-      if (mapsReviewBtn) {
-        console.log('[ReviewCraft] Found Google Maps review button! Clicking...');
-        mapsReviewBtn.click();
-        return true;
-      }
+      // Strategy 4: If on Google Maps results list (multi-branch list like Amazon), auto-click the 1st place card!
+      if (window.location.href.includes('/maps')) {
+        const firstCard = document.querySelector('a.hfpxzc, div[role="feed"] a[href*="/maps/place/"], div[role="article"] a');
+        if (firstCard) {
+          console.log('[ReviewCraft] Auto-clicking first business listing in Google Maps results list...');
+          firstCard.focus();
+          firstCard.click();
+          firstCard.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+          firstCard.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+        }
 
-      // Strategy 5: If on Google Maps search results list, click the first place card to open it
-      if (window.location.href.includes('/maps/search/') || window.location.href.includes('/maps')) {
-        const firstPlaceItem = document.querySelector('div[role="feed"] a[href*="/maps/place/"], a.hfpxzc');
-        if (firstPlaceItem && isVisible(firstPlaceItem)) {
-          console.log('[ReviewCraft] Clicking first business listing in Google Maps results...');
-          firstPlaceItem.click();
+        // Strategy 5: Look for Google Maps Write a review button
+        const mapsReviewBtn = Array.from(document.querySelectorAll('button, a, div[role="button"]')).find(el => {
+          const al = (el.getAttribute('aria-label') || el.innerText || '').toLowerCase();
+          return al.includes('write a review') || al.includes('rate and review') || al.includes('રિવ્યુ લખો') || al.includes('રિવ્યુ આપો');
+        });
+        if (mapsReviewBtn) {
+          console.log('[ReviewCraft] Found Google Maps review button! Clicking...');
+          mapsReviewBtn.click();
           return true;
+        }
+
+        // Check for Reviews tab to reveal Write a review if collapsed
+        const reviewsTab = Array.from(document.querySelectorAll('button[role="tab"], div[role="tab"]')).find(el => {
+          const t = (el.innerText || el.getAttribute('aria-label') || '').toLowerCase();
+          return t.includes('reviews') && !t.includes('write');
+        });
+        if (reviewsTab) {
+          reviewsTab.click();
         }
       }
     } catch (e) {}
