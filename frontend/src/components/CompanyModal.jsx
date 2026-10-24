@@ -54,7 +54,7 @@ export default function CompanyModal({ isOpen, onClose, categories = [], onCompa
         description: formData.description.trim(),
         services: formData.services.trim(),
         location: formData.location.trim(),
-        preferredLanguage: formData.preferredLanguage,
+        preferredLanguage: 'en',
         externalReviewLink: formData.externalReviewLink.trim(),
         keywords: formData.keywords
       };
@@ -113,47 +113,30 @@ export default function CompanyModal({ isOpen, onClose, categories = [], onCompa
             />
           </div>
 
-          {/* Business Category & Language */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Business Category
-              </label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer shadow-2xs"
-              >
-                {[...categories]
-                  .sort((a, b) => {
-                    const aIsOther = (a.name || '').trim().toLowerCase() === 'other';
-                    const bIsOther = (b.name || '').trim().toLowerCase() === 'other';
-                    if (aIsOther && !bIsOther) return 1;
-                    if (!aIsOther && bIsOther) return -1;
-                    return 0;
-                  })
-                  .map((c) => (
-                    <option key={c.name} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Preferred Language
-              </label>
-              <select
-                value={formData.preferredLanguage}
-                onChange={(e) => setFormData({ ...formData, preferredLanguage: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer shadow-2xs"
-              >
-                <option value="en">English</option>
-                <option value="hi">Hindi (हिन्दी)</option>
-                <option value="gu">Gujarati (ગુજરાતી)</option>
-              </select>
-            </div>
+          {/* Business Category */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Business Category
+            </label>
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer shadow-2xs"
+            >
+              {[...categories]
+                .sort((a, b) => {
+                  const aIsOther = (a.name || '').trim().toLowerCase() === 'other';
+                  const bIsOther = (b.name || '').trim().toLowerCase() === 'other';
+                  if (aIsOther && !bIsOther) return 1;
+                  if (!aIsOther && bIsOther) return -1;
+                  return 0;
+                })
+                .map((c) => (
+                  <option key={c.name} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+            </select>
           </div>
 
           {/* Description */}

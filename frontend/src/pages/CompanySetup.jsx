@@ -171,7 +171,7 @@ export default function CompanySetup({ categories = [] }) {
         location: formData.location.trim(),
         formattedAddress: formData.formattedAddress.trim() || formData.location.trim(),
         googlePlaceId: formData.googlePlaceId.trim(),
-        preferredLanguage: formData.preferredLanguage || 'en',
+        preferredLanguage: 'en',
         description: formData.description.trim()
       };
 
@@ -473,41 +473,7 @@ export default function CompanySetup({ categories = [] }) {
             )}
           </div>
 
-          {/* Row 5: Preferred Review Language */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-              Preferred Review Language
-            </label>
-            <div className="grid grid-cols-3 gap-2.5">
-              {[
-                { code: 'en', label: 'English', desc: 'Natural English phrasing' },
-                { code: 'hi', label: 'Hindi (हिंदी)', desc: 'हिंदी समीक्षा प्रारूप' },
-                { code: 'gu', label: 'Gujarati (ગુજરાતી)', desc: 'ગુજરાતી રિવ્યુ ફોર્મેટ' },
-              ].map((lang) => {
-                const isSelected = formData.preferredLanguage === lang.code;
-                return (
-                  <button
-                    key={lang.code}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, preferredLanguage: lang.code })}
-                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-purple-50 border-2 border-purple-600 text-purple-900 shadow-xs ring-2 ring-purple-500/10'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-purple-50/40 hover:border-purple-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-slate-900">{lang.label}</span>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-purple-600" />}
-                    </div>
-                    <p className="text-[11px] text-slate-500 truncate">{lang.desc}</p>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Row 6: Optional Company Description */}
+          {/* Optional Company Description */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
               Company Description <span className="text-slate-500 font-normal lowercase">(optional)</span>
