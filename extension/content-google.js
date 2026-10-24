@@ -178,14 +178,26 @@
         }
       }
 
-      // Strategy 4: Google Maps Write a review button
-      const mapsReviewBtn = document.querySelector(
-        'button[aria-label*="Write a review" i], button[data-value="Write a review"], button[data-item-id="write-a-review"]'
-      );
-      if (mapsReviewBtn && isVisible(mapsReviewBtn)) {
+      // Strategy 4: Google Maps Place Profile Write a review button
+      const mapsReviewBtn = Array.from(document.querySelectorAll('button, a, div[role="button"]')).find(el => {
+        if (!isVisible(el)) return false;
+        const al = (el.getAttribute('aria-label') || el.innerText || '').toLowerCase();
+        return al.includes('write a review') || al.includes('rate and review') || al.includes('રિવ્યુ લખો');
+      });
+      if (mapsReviewBtn) {
         console.log('[ReviewCraft] Found Google Maps review button! Clicking...');
         mapsReviewBtn.click();
         return true;
+      }
+
+      // Strategy 5: If on Google Maps search results list, click the first place card to open it
+      if (window.location.href.includes('/maps/search/') || window.location.href.includes('/maps')) {
+        const firstPlaceItem = document.querySelector('div[role="feed"] a[href*="/maps/place/"], a.hfpxzc');
+        if (firstPlaceItem && isVisible(firstPlaceItem)) {
+          console.log('[ReviewCraft] Clicking first business listing in Google Maps results...');
+          firstPlaceItem.click();
+          return true;
+        }
       }
     } catch (e) {}
     return false;

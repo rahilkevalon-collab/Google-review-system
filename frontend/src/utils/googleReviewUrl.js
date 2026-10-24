@@ -31,12 +31,12 @@ export function getGoogleReviewUrl(item = {}) {
     const placeId = (item.googlePlaceId || item.placeId || '').trim();
     baseUrl = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
   } else {
-    // 5. Clean Google Search Business Review query
-    // Keep city name, strip repetitive country strings so Google triggers Knowledge Graph card
+    // 5. Fallback: Open Google Maps Search
+    // Google Maps pins the business directly and shows "Write a review", avoiding Google Search AI Overview blocks
     const primaryCity = loc ? loc.split(',')[0].trim() : '';
-    const queryTokens = [name, primaryCity || loc, 'reviews'].filter(Boolean);
+    const queryTokens = [name, primaryCity || loc].filter(Boolean);
     const cleanSearchQuery = queryTokens.join(' ').replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
-    baseUrl = `https://www.google.com/search?q=${encodeURIComponent(cleanSearchQuery)}`;
+    baseUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanSearchQuery)}`;
   }
 
   return baseUrl;
