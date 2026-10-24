@@ -291,6 +291,10 @@ class CompanyService:
             review_url = f"https://search.google.com/local/writereview?placeid={place_id}"
         elif "kevalon" in name.lower():
             review_url = "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,"
+        elif "amazon" in name.lower():
+            review_url = "https://www.google.com/search?q=Amazon+India+reviews#lrd=0x395e8b4dc3faaaab:0xcecd65884d1f6b7,3,,,"
+        elif "flora" in name.lower() and "fountain" in name.lower():
+            review_url = "https://www.google.com/search?q=Flora+Fountain+Ahmedabad+reviews#lrd=0x395e8484a0c86845:0x5e2ea710a76a5b6f,3,,,"
         elif ext_link and ext_link != "https://search.google.com/local/writereview" and ext_link.startswith("http"):
             review_url = ext_link
         else:

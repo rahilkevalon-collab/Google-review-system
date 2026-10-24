@@ -22,9 +22,16 @@ export function getGoogleReviewUrl(item = {}) {
     return link;
   }
 
-  // 2. Verified direct Google Search review modal for Kevalon
-  if (name.toLowerCase().includes('kevalon')) {
+  // 2. Verified direct Google Search review modal for known businesses (Bypasses Google Maps completely)
+  const lowerName = name.toLowerCase();
+  if (lowerName.includes('kevalon')) {
     return 'https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,';
+  }
+  if (lowerName.includes('amazon')) {
+    return 'https://www.google.com/search?q=Amazon+India+reviews#lrd=0x395e8b4dc3faaaab:0xcecd65884d1f6b7,3,,,';
+  }
+  if (lowerName.includes('flora') && lowerName.includes('fountain')) {
+    return 'https://www.google.com/search?q=Flora+Fountain+Ahmedabad+reviews#lrd=0x395e8484a0c86845:0x5e2ea710a76a5b6f,3,,,';
   }
 
   // 3. Fallback to Google Place ID write-review dialog
