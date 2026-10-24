@@ -139,19 +139,6 @@ export default function CompanyModal({ isOpen, onClose, categories = [], onCompa
             </select>
           </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              Business Description
-            </label>
-            <textarea
-              rows={2}
-              placeholder="Brief summary of your business mission and value proposition..."
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-indigo-500 transition-colors resize-none shadow-2xs"
-            />
-          </div>
 
           {/* Products & Services */}
           <div>

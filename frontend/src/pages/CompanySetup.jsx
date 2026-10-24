@@ -473,19 +473,6 @@ export default function CompanySetup({ categories = [] }) {
             )}
           </div>
 
-          {/* Optional Company Description */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-              Company Description <span className="text-slate-500 font-normal lowercase">(optional)</span>
-            </label>
-            <textarea
-              rows={3}
-              placeholder="Provide context about your company, strengths, or specialties to enrich AI review suggestions..."
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-500/10 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs resize-none"
-            />
-          </div>
 
           {/* Action CTA: Generate Reviews */}
           <div className="pt-3">
