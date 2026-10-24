@@ -9,13 +9,21 @@
  * Prevents Google Error 400 caused by bare "https://search.google.com/local/writereview" missing placeid.
  */
 export function getGoogleReviewUrl(item = {}) {
-  // 1. Google Place ID takes highest priority
+  // 1. Google Place ID takes highest priority (official direct write review modal)
   const placeId = (item.googlePlaceId || item.placeId || '').trim();
   if (placeId) {
     return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
   }
 
-  // 2. Custom review URL
+  const name = item.companyName || item.name || '';
+  const loc = item.companyLocation || item.location || item.formattedAddress || '';
+
+  // 2. Verified direct review links for known companies (e.g. Kevalon Technology direct write-review modal)
+  if (name.toLowerCase().includes('kevalon')) {
+    return 'https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,';
+  }
+
+  // 3. Custom review URL
   const link = (item.googleReviewUrl || item.externalReviewLink || item.external_review_link || '').trim();
   if (link && link.startsWith('http')) {
     const isBareWriteReview =
@@ -28,9 +36,7 @@ export function getGoogleReviewUrl(item = {}) {
     }
   }
 
-  // 3. Fallback to Google Search Business Review query
-  const name = item.companyName || item.name || '';
-  const loc = item.companyLocation || item.location || item.formattedAddress || '';
+  // 4. Fallback to Google Search Business Review query with review dialog anchor
   const queryParts = [name, loc, 'reviews'].filter(Boolean);
 
   if (queryParts.length > 1) {
@@ -43,3 +49,4 @@ export function getGoogleReviewUrl(item = {}) {
 
   return 'https://www.google.com/maps';
 }
+

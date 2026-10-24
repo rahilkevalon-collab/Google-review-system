@@ -13,7 +13,8 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Custom Software Development, Web & Mobile Apps, AI Solutions, Cloud Infrastructure",
         "location": "Ahmedabad, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://g.page/r/CS3urYTQ9A78EBI/review",
+        "googleReviewUrl": "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,",
+        "externalReviewLink": "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,",
         "keywords": [
             "Web Development",
             "Mobile App Development",
@@ -218,13 +219,28 @@ class CompanyService:
                     self.db.companies.insert_one(doc)
                     logger.info("Sample company seeded for category %s: %s", comp["category"], comp["name"])
                 else:
-                    # If company has empty or broken Google writereview link, upgrade to working link
+                    # If company has empty, broken, or search-only Google writereview link, upgrade to direct write-review link
                     curr_link = exists.get("externalReviewLink", "")
-                    if not curr_link or curr_link == "https://search.google.com/local/writereview":
+                    if "kevalon" in exists.get("name", "").lower():
+                        kevalon_direct = "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,"
+                        if curr_link != kevalon_direct:
+                            self.db.companies.update_one(
+                                {"_id": exists["_id"]},
+                                {"$set": {"externalReviewLink": kevalon_direct, "googleReviewUrl": kevalon_direct}}
+                            )
+                    elif not curr_link or curr_link == "https://search.google.com/local/writereview":
                         self.db.companies.update_one(
                             {"_id": exists["_id"]},
-                            {"$set": {"externalReviewLink": comp["externalReviewLink"]}}
+                            {"$set": {"externalReviewLink": comp["externalReviewLink"], "googleReviewUrl": comp.get("googleReviewUrl", comp["externalReviewLink"])}}
                         )
+            # Also upgrade any company with name Kevalon Technology regardless of category
+            self.db.companies.update_many(
+                {"name": {"$regex": "kevalon", "$options": "i"}},
+                {"$set": {
+                    "googleReviewUrl": "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,",
+                    "externalReviewLink": "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,"
+                }}
+            )
         except Exception as e:
             logger.warning("Error seeding companies: %s", str(e))
 
@@ -273,6 +289,8 @@ class CompanyService:
         ext_link = data.get("googleReviewUrl", "").strip() or data.get("externalReviewLink", "").strip()
         if place_id:
             review_url = f"https://search.google.com/local/writereview?placeid={place_id}"
+        elif "kevalon" in name.lower():
+            review_url = "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,"
         elif ext_link and ext_link != "https://search.google.com/local/writereview" and ext_link.startswith("http"):
             review_url = ext_link
         else:

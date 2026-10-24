@@ -233,10 +233,7 @@ export default function ReviewDetail() {
                     />
                   ))}
                 </div>
-                <span className="ml-1 text-amber-900">{ratingVal.toFixed(1)}</span>
-                <span className="text-[10px] text-amber-800/80 font-normal ml-0.5">
-                  {isDemo ? '(Demo Rating)' : '(Verified Rating)'}
-                </span>
+                <span className="ml-1 text-amber-900 font-bold">{ratingVal.toFixed(1)}</span>
               </div>
             );
           })()}

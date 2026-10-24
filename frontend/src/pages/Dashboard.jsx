@@ -197,7 +197,7 @@ export default function Dashboard({ categories = [] }) {
   // 3. Trigger initial generation when company and keywords are loaded
   useEffect(() => {
     if (company?.id && selectedKeywords.length > 0) {
-      generateReviews(selectedKeywords);
+      generateReviews(selectedKeywords, true);
     }
   }, [company?.id, selectedKeywords.join(',')]);
 
@@ -218,6 +218,7 @@ export default function Dashboard({ categories = [] }) {
     if (company?.id) {
       localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, JSON.stringify(next));
     }
+    generateReviews(next, true);
   };
 
   // 5. Add a new keyword chip
