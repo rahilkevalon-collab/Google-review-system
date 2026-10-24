@@ -58,7 +58,11 @@ export default function ReviewCard({ review }) {
     }, '*');
 
     addToast(`Review copied! Opening Google — ReviewCraft extension will auto-paste text & select ${ratingVal} stars.`, 'success', 4000);
-    window.open(googleUrl, '_blank', 'noopener,noreferrer');
+    
+    // Give extension content script and service worker a small window to persist payload
+    setTimeout(() => {
+      window.open(googleUrl, '_blank', 'noopener,noreferrer');
+    }, 120);
   };
 
   return (

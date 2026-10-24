@@ -6,8 +6,6 @@
  */
 
 (function () {
-  if (!chrome.runtime?.id) return;
-
   console.log('[ReviewCraft] Google review content script initialized in frame:', window.location.href);
 
   // Actively remove any leftover notification pill from DOM if present
@@ -16,69 +14,53 @@
     if (existingPill) existingPill.remove();
   } catch (e) {}
 
-  // 1. Check URL parameters for direct ReviewCraft payload (rc_r = rating, rc_t = review text)
   let pending = null;
-  try {
-    const searchParams = new URLSearchParams(window.location.search);
-    if (searchParams.has('rc_t')) {
-      pending = {
-        text: searchParams.get('rc_t') || '',
-        rating: Number(searchParams.get('rc_r')) || 5,
-        timestamp: Date.now()
-      };
-      console.log('[ReviewCraft] Loaded review payload directly from URL query parameters:', pending);
-    } else if (window.location.hash && window.location.hash.includes('rc_t=')) {
-      const hashStr = window.location.hash.substring(1);
-      const hashParams = new URLSearchParams(hashStr.includes('&') ? hashStr.substring(hashStr.indexOf('&') + 1) : hashStr);
-      if (hashParams.has('rc_t')) {
-        pending = {
-          text: hashParams.get('rc_t') || '',
-          rating: Number(hashParams.get('rc_r')) || 5,
-          timestamp: Date.now()
-        };
-        console.log('[ReviewCraft] Loaded review payload from URL hash parameters:', pending);
-      }
-    }
-  } catch (e) {}
+  let observerStarted = false;
 
-  if (pending && pending.text) {
-    cleanUpGoogleSearchBar(pending.text);
-    startObserver(pending);
-  } else {
-    // 2. Safe fallback to chrome.storage.local
+  // Function to inspect storage for pending review
+  function checkAndStart() {
+    if (observerStarted) return;
     try {
-      if (chrome.runtime?.id && chrome.storage?.local) {
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
         chrome.storage.local.get(['pendingReview'], (res) => {
-          if (chrome.runtime.lastError || !res) return;
+          if (chrome.runtime?.lastError || !res) return;
           const storagePending = res.pendingReview;
-          if (!storagePending || !storagePending.text) return;
-
-          const ageMs = Date.now() - (storagePending.timestamp || 0);
-          if (ageMs > 180000) {
-            console.log('[ReviewCraft] Storage pending review expired (>3 mins). Skipping.');
-            try {
-              if (chrome.runtime?.id && chrome.storage?.local) {
-                chrome.storage.local.remove(['pendingReview'], () => {
-                  if (chrome.runtime.lastError) {}
-                });
+          if (storagePending && storagePending.text) {
+            const ageMs = Date.now() - (storagePending.timestamp || 0);
+            if (ageMs <= 300000) { // Valid for 5 minutes
+              pending = storagePending;
+              if (!observerStarted) {
+                observerStarted = true;
+                console.log('[ReviewCraft] Found pending review to auto-fill:', pending);
+                cleanUpGoogleSearchBar(pending.text);
+                startObserver(pending);
               }
-            } catch (e) {}
-            return;
+            }
           }
-
-          console.log('[ReviewCraft] Found storage pending review for Google:', storagePending);
-          cleanUpGoogleSearchBar(storagePending.text);
-          startObserver(storagePending);
         });
       }
     } catch (e) {}
   }
 
+  // 1. Initial check
+  checkAndStart();
+
+  // 2. Poll storage in first 4 seconds in case storage write was still in flight
+  let pollAttempts = 0;
+  const pollInterval = setInterval(() => {
+    pollAttempts++;
+    if (observerStarted || pollAttempts > 16) {
+      clearInterval(pollInterval);
+      return;
+    }
+    checkAndStart();
+  }, 250);
+
   function cleanUpGoogleSearchBar(reviewText) {
     try {
       const searchInputs = document.querySelectorAll('textarea[name="q"], #APjFqb, .gLFyf');
       for (const input of searchInputs) {
-        if (input && input.value && input.value.length > 30) {
+        if (input && input.value && input.value.length > 25) {
           const sample = reviewText.substring(0, 20);
           if (input.value.includes(sample)) {
             console.log('[ReviewCraft] Cleaning up review text from main Google search bar.');
@@ -91,33 +73,48 @@
 
   function startObserver(pending) {
     let attempts = 0;
-    const maxAttempts = 75; // ~26 seconds max
-    let isFilled = false;
+    const maxAttempts = 90; // ~31 seconds
+    let textDone = false;
+    let starDone = false;
+    const targetRating = Number(pending.rating) || 5;
+    const reviewText = pending.text;
 
     const intervalId = setInterval(() => {
       attempts++;
-      if (isFilled || attempts > maxAttempts) {
+      if ((textDone && starDone) || attempts > maxAttempts) {
         clearInterval(intervalId);
         return;
       }
 
-      // Check if context still valid
-      if (!chrome.runtime?.id) {
-        clearInterval(intervalId);
-        return;
+      // 1. Locate review dialog
+      const dialog = findReviewDialog();
+
+      // 2. Populate text if not already done
+      if (!textDone) {
+        const textarea = findReviewTextarea(dialog);
+        if (textarea) {
+          textDone = populateText(textarea, reviewText);
+        }
       }
 
-      const success = attemptFillReview(pending);
-      if (success) {
-        isFilled = true;
+      // 3. Click stars if not already done
+      if (!starDone) {
+        const starElement = findStarElement(dialog, targetRating);
+        if (starElement) {
+          starDone = clickStarElement(starElement);
+        }
+      }
+
+      // Once completed successfully
+      if (textDone && starDone) {
         clearInterval(intervalId);
         console.log('[ReviewCraft] Review text & stars successfully auto-filled into Google!');
 
         // Safely clear pending review from storage
         try {
-          if (chrome.runtime?.id && chrome.storage?.local) {
+          if (chrome.storage && chrome.storage.local) {
             chrome.storage.local.remove(['pendingReview'], () => {
-              if (chrome.runtime.lastError) {}
+              if (chrome.runtime?.lastError) {}
             });
           }
         } catch (e) {}
@@ -125,42 +122,7 @@
     }, 350);
   }
 
-  function attemptFillReview(pending) {
-    const targetRating = Number(pending.rating) || 5;
-    const reviewText = pending.text;
-
-    // 1. Locate the Review Modal dialog
-    const dialog = findReviewDialog();
-
-    // 2. Locate the Review Textarea inside the dialog (never the search bar)
-    const textarea = findReviewTextarea(dialog);
-
-    // 3. Locate the Star Rating element inside the dialog
-    const starElement = findStarElement(dialog, targetRating);
-
-    // If modal elements aren't ready yet, keep waiting
-    if (!textarea && !starElement) {
-      return false;
-    }
-
-    let textSet = false;
-    let starSet = false;
-
-    // A. Fill Text
-    if (textarea) {
-      textSet = populateText(textarea, reviewText);
-    }
-
-    // B. Select Stars
-    if (starElement) {
-      starSet = clickStarElement(starElement);
-    }
-
-    return textSet && starSet;
-  }
-
   function findReviewDialog() {
-    // Look for dialog wrappers
     const dialogSelectors = [
       '[role="dialog"]',
       '[aria-modal="true"]',
@@ -173,7 +135,6 @@
       const candidates = document.querySelectorAll(sel);
       for (const d of candidates) {
         if (isVisible(d)) {
-          // Check that this is the review dialog (contains "experience" or "post" or "cancel")
           const txt = (d.innerText || '').toLowerCase();
           if (txt.includes('experience') || txt.includes('post') || txt.includes('photos and videos')) {
             return d;
@@ -182,7 +143,6 @@
       }
     }
 
-    // Fallback: look for container containing the placeholder or text
     const allDivs = document.querySelectorAll('div');
     for (const d of allDivs) {
       if (isVisible(d)) {
@@ -217,7 +177,6 @@
           ''
         ).toLowerCase();
 
-        // Check if placeholder matches Google's review textarea
         if (
           placeholder.includes('experience') || 
           placeholder.includes('share details') || 

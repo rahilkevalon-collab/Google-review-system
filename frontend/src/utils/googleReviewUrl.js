@@ -42,20 +42,6 @@ export function getGoogleReviewUrl(item = {}) {
     }
   }
 
-  // Append ReviewCraft Auto-Fill payload parameters for seamless zero-click browser auto-fill
-  if (text && baseUrl.includes('google.com')) {
-    try {
-      const urlObj = new URL(baseUrl);
-      urlObj.searchParams.set('rc_r', rating.toString());
-      urlObj.searchParams.set('rc_t', text);
-      return urlObj.toString();
-    } catch (e) {
-      // Fallback string concatenation if URL parsing fails
-      const sep = baseUrl.includes('?') ? '&' : '?';
-      return `${baseUrl}${sep}rc_r=${rating}&rc_t=${encodeURIComponent(text)}`;
-    }
-  }
-
   return baseUrl;
 }
 
