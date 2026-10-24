@@ -8,6 +8,12 @@
 (function () {
   console.log('[ReviewCraft] Google review content script initialized in frame:', window.location.href);
 
+  // Actively remove any leftover notification pill from DOM if present
+  try {
+    const existingPill = document.getElementById('reviewcraft-success-pill');
+    if (existingPill) existingPill.remove();
+  } catch (e) {}
+
   // 1. Check URL parameters for direct ReviewCraft payload (rc_r = rating, rc_t = review text)
   let pending = null;
   try {
