@@ -23,7 +23,7 @@ export default function AnalyticsWidget({ analytics, onRefreshAnalytics }) {
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-900 tracking-tight">System Performance & Dedup Analytics</h3>
-            <p className="text-xs text-slate-500 font-medium">Real-time statistics across MongoDB and Scikit-Learn TF-IDF engine</p>
+            <p className="text-xs text-slate-500 font-medium">Real-time performance metrics and review statistics</p>
           </div>
         </div>
         <button

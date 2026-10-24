@@ -277,7 +277,7 @@ export default function Dashboard({ categories = [] }) {
         </div>
         <h2 className="text-xl font-bold text-slate-900">Business Profile Not Found</h2>
         <p className="text-sm text-slate-500">
-          {companyError || "Could not retrieve the saved business details from MongoDB."}
+          {companyError || "Could not retrieve the saved business details. Please try again."}
         </p>
         <Link
           to="/setup"

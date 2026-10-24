@@ -132,7 +132,7 @@ export default function ReviewDetail() {
       const res = await api.patchReviewText(effectiveId, reviewText);
       if (res.success && res.review) {
         setReview(res.review);
-        addToast('Review updated and persisted to MongoDB!', 'success');
+        addToast('Review updated successfully!', 'success');
       }
     } catch (err) {
       addToast(err.message || 'Error updating review text.', 'error');

@@ -213,7 +213,7 @@ export default function CompanySetup({ categories = [] }) {
           Generate <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800">Business Reviews</span>
         </h1>
         <p className="text-sm text-slate-600 max-w-xl mx-auto font-normal">
-          Configure your business profile, services, and target SEO keywords to synthesize authentic, varied customer review suggestions.
+          Configure your business profile, services, and keywords to generate authentic, high-quality customer reviews.
         </p>
 
         {/* Quick Demo Fill Button */}
@@ -479,7 +479,7 @@ export default function CompanySetup({ categories = [] }) {
               {submitting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Saving Profile & Synthesizing Reviews...</span>
+                  <span>Saving Business Profile...</span>
                 </>
               ) : (
                 <>
@@ -489,7 +489,7 @@ export default function CompanySetup({ categories = [] }) {
               )}
             </button>
             <p className="text-center text-[11px] text-slate-500 mt-2.5">
-              Saves company profile to MongoDB and immediately opens the interactive keyword review generation studio.
+              Securely saves your business profile and opens your review management dashboard.
             </p>
           </div>
 
