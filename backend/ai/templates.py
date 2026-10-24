@@ -368,20 +368,13 @@ def generate_template_candidates(
     random.shuffle(sample_bodies)
     random.shuffle(sample_closers)
 
-    loc_str = ""
-    if location and random.random() > 0.4:
-        if lang in ("hi", "hindi", "gu", "gujarati"):
-            loc_str = f" ({location})"
-        else:
-            loc_str = f" in {location}"
-
     total_pool_needed = max(40, count * 8)
     for i in range(total_pool_needed):
         op = sample_openers[i % len(sample_openers)]
         bd = sample_bodies[(i * 3 + 1) % len(sample_bodies)]
         cl = sample_closers[(i * 7 + 2) % len(sample_closers)]
 
-        sentence1 = op.format(company=company_name, keyword=f"{keyword}{loc_str}")
+        sentence1 = op.format(company=company_name, keyword=keyword)
         sentence2 = bd.format(company=company_name, keyword=keyword)
         sentence3 = cl.format(company=company_name, keyword=keyword)
 
