@@ -93,9 +93,6 @@
         isFilled = true;
         clearInterval(intervalId);
         console.log('[ReviewCraft] Review text & stars successfully auto-filled into Google!');
-        
-        // Show success pill in Google's window
-        showFloatingSuccessBadge(pending.rating);
 
         // Clear pending review from storage
         chrome.storage.local.remove(['pendingReview']);
@@ -334,50 +331,5 @@
       el.offsetWidth > 0 &&
       el.offsetHeight > 0
     );
-  }
-
-  function showFloatingSuccessBadge(rating) {
-    try {
-      const existing = document.getElementById('reviewcraft-success-pill');
-      if (existing) existing.remove();
-
-      const pill = document.createElement('div');
-      pill.id = 'reviewcraft-success-pill';
-      pill.style.cssText = `
-        position: fixed;
-        bottom: 24px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 99999999;
-        background: #0f172a;
-        color: #ffffff;
-        padding: 12px 24px;
-        border-radius: 9999px;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        font-size: 13px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        animation: rcFadeIn 0.3s ease-out;
-      `;
-
-      pill.innerHTML = `
-        <span style="font-size: 16px;">✨</span>
-        <span>ReviewCraft Auto-Filled: Review text & ${rating} Stars populated!</span>
-      `;
-
-      document.body.appendChild(pill);
-
-      setTimeout(() => {
-        pill.style.transition = 'opacity 0.5s ease';
-        pill.style.opacity = '0';
-        setTimeout(() => pill.remove(), 500);
-      }, 5000);
-    } catch (e) {
-      console.warn('[ReviewCraft] Could not render floating badge:', e);
-    }
   }
 })();
