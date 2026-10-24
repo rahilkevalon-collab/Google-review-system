@@ -27,7 +27,10 @@ class CategoryService:
     def get_all_categories(self) -> list[dict]:
         self.seed_categories_if_empty()
         categories = list(self.db.categories.find().sort("name", 1))
-        return [serialize_doc(c) for c in categories]
+        serialized = [serialize_doc(c) for c in categories]
+        non_other = [c for c in serialized if c.get("name", "").strip().lower() != "other"]
+        other = [c for c in serialized if c.get("name", "").strip().lower() == "other"]
+        return non_other + other
 
     def get_keywords_by_category(self, category_identifier: str) -> list[str]:
         """Lookup keywords by category ID or name."""

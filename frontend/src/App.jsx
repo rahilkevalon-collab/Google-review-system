@@ -27,7 +27,15 @@ export default function App() {
         if (!isMounted) return;
 
         if (catRes.status === 'fulfilled' && catRes.value.success) {
-          setCategories(catRes.value.categories || []);
+          const rawCats = catRes.value.categories || [];
+          const sortedCats = [...rawCats].sort((a, b) => {
+            const aIsOther = (a.name || '').trim().toLowerCase() === 'other';
+            const bIsOther = (b.name || '').trim().toLowerCase() === 'other';
+            if (aIsOther && !bIsOther) return 1;
+            if (!aIsOther && bIsOther) return -1;
+            return 0;
+          });
+          setCategories(sortedCats);
         }
 
         if (healthRes.status === 'fulfilled') {

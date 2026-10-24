@@ -28,10 +28,18 @@ const ICON_MAP = {
 };
 
 export default function CategorySelector({ categories = [], selectedCategory, onSelectCategory }) {
+  const sortedCategories = [...categories].sort((a, b) => {
+    const aIsOther = (a.name || '').trim().toLowerCase() === 'other';
+    const bIsOther = (b.name || '').trim().toLowerCase() === 'other';
+    if (aIsOther && !bIsOther) return 1;
+    if (!aIsOther && bIsOther) return -1;
+    return 0;
+  });
+
   return (
     <div className="space-y-2.5">
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
-        {categories.map((cat) => {
+        {sortedCategories.map((cat) => {
           const isSelected = selectedCategory === cat.name;
           const IconComp = ICON_MAP[cat.name] || Layers;
 

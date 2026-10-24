@@ -124,11 +124,19 @@ export default function CompanyModal({ isOpen, onClose, categories = [], onCompa
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer shadow-2xs"
               >
-                {categories.map((c) => (
-                  <option key={c.name} value={c.name}>
-                    {c.name}
-                  </option>
-                ))}
+                {[...categories]
+                  .sort((a, b) => {
+                    const aIsOther = (a.name || '').trim().toLowerCase() === 'other';
+                    const bIsOther = (b.name || '').trim().toLowerCase() === 'other';
+                    if (aIsOther && !bIsOther) return 1;
+                    if (!aIsOther && bIsOther) return -1;
+                    return 0;
+                  })
+                  .map((c) => (
+                    <option key={c.name} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
               </select>
             </div>
 

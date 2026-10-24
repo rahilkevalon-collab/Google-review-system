@@ -193,10 +193,16 @@ export default function CompanySetup({ categories = [] }) {
     }
   };
 
-  // Filter categories
-  const filteredCategories = categories.filter((c) =>
-    c.name.toLowerCase().includes(categorySearch.toLowerCase())
-  );
+  // Filter categories and ensure 'Other' is always at the very end
+  const filteredCategories = categories
+    .filter((c) => c.name.toLowerCase().includes(categorySearch.toLowerCase()))
+    .sort((a, b) => {
+      const aIsOther = (a.name || '').trim().toLowerCase() === 'other';
+      const bIsOther = (b.name || '').trim().toLowerCase() === 'other';
+      if (aIsOther && !bIsOther) return 1;
+      if (!aIsOther && bIsOther) return -1;
+      return 0;
+    });
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 animate-in fade-in duration-300">
