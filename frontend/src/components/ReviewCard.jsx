@@ -38,14 +38,26 @@ export default function ReviewCard({ review }) {
   const handleOpenGoogle = async (e) => {
     e.stopPropagation();
     const googleUrl = getGoogleReviewUrl(review);
+    const ratingVal = Math.round(Number(review.rating)) || 5;
     
-    // Copy review text first so user can simply paste it on Google
+    // 1. Copy review text to clipboard (reliable fallback)
     await copyToClipboard();
     if (reviewId) {
       api.recordCopyEvent(reviewId).catch(() => {});
     }
 
-    addToast(`Review text copied to clipboard! Opening Google Review dialog...`, 'success', 4000);
+    // 2. Dispatch event for ReviewCraft Chrome Extension to auto-fill review text & stars on Google
+    window.postMessage({
+      type: 'REVIEW_CRAFT_AUTOFILL',
+      payload: {
+        text: review.reviewText,
+        rating: ratingVal,
+        companyName: review.companyName || '',
+        timestamp: Date.now()
+      }
+    }, '*');
+
+    addToast(`Review copied! Opening Google — ReviewCraft extension will auto-paste text & select ${ratingVal} stars.`, 'success', 4000);
     window.open(googleUrl, '_blank', 'noopener,noreferrer');
   };
 

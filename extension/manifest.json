@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "ReviewCraft Google Review Auto-Filler",
+  "version": "1.0.0",
+  "description": "Seamlessly auto-pastes AI review text and selects star ratings directly in Google Review modals.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "*://*.google.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": ["content-webapp.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "*://*.google.com/*"
+      ],
+      "js": ["content-google.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ReviewCraft Auto-Filler"
+  },
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
