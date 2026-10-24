@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Sparkles, Cpu, PlusCircle } from 'lucide-react';
+import { Sparkles, PlusCircle } from 'lucide-react';
 
 export default function Navbar({ healthStatus }) {
   const location = useLocation();
@@ -28,17 +28,8 @@ export default function Navbar({ healthStatus }) {
           </Link>
         </div>
 
-        {/* Right side actions & status */}
+        {/* Right side actions */}
         <div className="flex items-center gap-3">
-          {healthStatus && (
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100/90 border border-slate-200 text-xs text-slate-700 font-medium">
-              <Cpu className="w-3.5 h-3.5 text-purple-600" />
-              <span>
-                {healthStatus.aiProvider?.isAi ? 'Gemini AI Model' : 'Template Engine (Demo)'}
-              </span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50"></span>
-            </div>
-          )}
 
           <Link
             to="/setup"
