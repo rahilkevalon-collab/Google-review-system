@@ -121,44 +121,43 @@ class GeminiLLMProvider(BaseLLMProvider):
 
         lang_name = {"en": "English", "hi": "Hindi (Devanagari script)", "gu": "Gujarati (Gujarati script)"}.get(language, "English")
         length_guideline = {
-            "short": "1 concise sentence (approx 15-25 words)",
-            "medium": "2 to 3 well-crafted sentences (approx 35-65 words)",
-            "long": "4 to 5 detailed, story-like sentences (approx 75-120 words)"
-        }.get(length, "2-3 sentences")
+            "short": "1 single short, punchy sentence (approx 8-15 words)",
+            "medium": "1 to 2 short, crisp sentences (approx 14-25 words)",
+            "long": "2 to 3 concise sentences (approx 25-38 words)"
+        }.get(length, "1 to 2 short sentences (approx 14-25 words)")
 
         if int(target_rating) == 4:
             rating_instructions = f"""
 - Target Rating: 4 Stars (Out of 5)
-- Tone & Substance: The review must be genuinely positive and appreciative of {company_name}'s overall work on "{keyword}", but mention ONE mild, plausible constructive observation (such as initial response time, onboarding documentation detail, or milestone status reporting frequency).
-- Critical Guardrail: Do NOT invent major complaints, service outages, or hostile claims. Keep the feedback balanced, constructive, professional, and natural.
+- Tone & Substance: Genuine, positive human customer feedback praising {company_name} on "{keyword}", with ONE mild realistic human comment (such as "took a little longer than expected" or "response was slightly delayed"). Keep it casual, friendly, and authentic.
 """
         else:
             rating_instructions = f"""
 - Target Rating: 5 Stars (Out of 5)
-- Tone & Substance: Professional, specific, natural, and positive without exaggerated marketing hype or unnatural praise. Emphasize dependable execution, clear collaboration, and solid results on "{keyword}".
+- Tone & Substance: Enthusiastic, genuine customer feedback. Sound like a real person who visited or hired {company_name} and is genuinely happy with their "{keyword}". Mention friendly staff, quick service, or great quality.
 """
 
         prompt = f"""
-You are an expert review generation assistant. Generate {count + 2} diverse, authentic-sounding customer review suggestions for a business.
+You are a customer writing a genuine, natural Google Review for a business.
+Write like a REAL human customer on Google Maps — NOT an AI model, NOT a corporate marketer, and NOT a B2B business proposal.
 
 Business Details:
-- Company Name: {company_name}
-- Industry Category: {category}
-- Specific Target SEO Keyword: "{keyword}"
-- Description: {description or 'N/A'}
+- Business Name: {company_name}
+- Industry: {category}
+- Keyword to naturally mention: "{keyword}"
 - Products/Services: {services or 'N/A'}
 - Location: {location or 'N/A'}
 
-Review Specifications:
-- Language: {lang_name}
-- Tone: {tone.capitalize()}
-- Length: {length_guideline}
-{rating_instructions}
-- Keyword Integration: Naturally weave in the SEO keyword "{keyword}" without sounding forced, stuffed, or repetitive.
-- Variety: Ensure each candidate uses distinct openings and varied sentence structures.
+Crucial Rules for Real Human-Sounding Reviews:
+1. Short & Punchy: {length_guideline}. Real people write brief reviews on Google Maps. Do NOT write long paragraphs.
+2. Real Human Phrasing: Use everyday casual, authentic customer expressions like "Really great experience", "Super fast service", "Friendly and helpful staff", "Loved their work", "Fair prices", "Highly recommend!", "5 stars!".
+3. STRICTLY FORBIDDEN (AI / Corporate Buzzwords): NEVER use words like "We partnered with...", "met key milestones", "dependable execution", "disciplined approach", "delivered as scoped", "sound operational decision", "domain expertise", or formal corporate jargon.
+4. Natural Keyword Flow: Fit "{keyword}" naturally into the sentence without making it look forced or highlighted.
+5. Star Rating: {rating_instructions}
+6. Language: {lang_name}
 
 Output Format:
-Return ONLY a valid JSON array of strings containing the review suggestions. No markdown formatting, no code blocks, just raw JSON array:
+Return ONLY a valid JSON array of strings containing {count + 2} diverse, distinct review suggestions. No markdown formatting, no code blocks:
 ["Review suggestion 1...", "Review suggestion 2...", ...]
 """
 

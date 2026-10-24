@@ -35,9 +35,9 @@ def extract_word_count(text: str) -> int:
         return 0
     return len(text.split())
 
-def validate_and_trim_review_length(text: str, target_min: int = 25, target_max: int = 48) -> str:
+def validate_and_trim_review_length(text: str, target_min: int = 12, target_max: int = 28) -> str:
     """
-    Validates and formats review text so it targets 25-45 words and approximately 2-3 sentences.
+    Validates and formats review text so it targets realistic, human Google review length (approx 12-28 words).
     If text is excessively long (over target_max words), cleanly preserves full sentences within the word budget.
     """
     if not text:

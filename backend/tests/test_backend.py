@@ -419,7 +419,7 @@ def test_legacy_record_compatibility(client):
     # Cleanup
     db.generated_reviews.delete_one({"_id": ObjectId(doc_id)})
 
-# 25. Review Length Validation (Target 25-45 Words)
+# 25. Review Length Validation (Target 12-35 Words for authentic small human reviews)
 def test_review_length_validation(client):
     unique_company = f"Length Test Co {time.time()}"
     res = client.post("/api/generate-reviews", json={
@@ -432,7 +432,29 @@ def test_review_length_validation(client):
     reviews = res.get_json()["reviews"]
     for r in reviews:
         word_count = len(r["reviewText"].split())
-        assert 25 <= word_count <= 48, f"Word count {word_count} is out of target range: '{r['reviewText']}'"
+        assert 12 <= word_count <= 35, f"Word count {word_count} is out of target range: '{r['reviewText']}'"
+
+# 26. Randomized Keyword Distribution Across Cards
+def test_keyword_random_distribution_across_cards():
+    from ai.generator import distribute_keywords_to_batch
+    kws = ["Make-up", "Hairstyle", "Professional Artist"]
+    
+    # Each card must have exactly 1 clean keyword
+    dist = distribute_keywords_to_batch(kws, count=3)
+    assert len(dist) == 3
+    for card_kws in dist:
+        assert len(card_kws) == 1
+        assert card_kws[0] in kws
+    
+    # Over 50 batches, card 0 must NOT always be kws[0] ('Make-up')
+    card_0_kws = set()
+    for _ in range(50):
+        d = distribute_keywords_to_batch(kws, count=3)
+        card_0_kws.add(d[0][0])
+    
+    # All 3 keywords must appear at card 0 across randomized batches
+    assert card_0_kws == {"Make-up", "Hairstyle", "Professional Artist"}
+
 
 
 

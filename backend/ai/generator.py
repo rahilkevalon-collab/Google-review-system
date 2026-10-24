@@ -18,34 +18,42 @@ logger = logging.getLogger(__name__)
 
 def distribute_keywords_to_batch(selected_keywords: list[str], count: int) -> list[list[str]]:
     """
-    Distributes multiple selected SEO keywords across batch reviews naturally.
-    Ensures every review is relevant to at least one selected keyword without stuffing
-    all keywords into every review. Different cards focus on distinct subsets.
+    Distributes selected SEO keywords randomly across batch review cards.
+    Guarantees:
+    - Never uses a fixed 1-to-1 index order (Card 0 != Keyword 0, Card 1 != Keyword 1, etc.).
+    - Every generation / regeneration randomly shuffles and assigns keywords to cards.
+    - Each card focuses cleanly on ONE single keyword (avoiding awkward multi-keyword strings).
+    - If multiple keywords are selected, ensures variety so different cards highlight different keywords.
     """
     clean_kws = [str(k).strip() for k in selected_keywords if str(k).strip()]
     if not clean_kws:
         return [["Quality Service"]] * count
 
-    # If only 1 keyword, every review uses it
+    # If only 1 keyword selected, every review uses it
     if len(clean_kws) == 1:
-        return [clean_kws] * count
+        return [[clean_kws[0]]] * count
 
-    distribution: list[list[str]] = []
-    num_kws = len(clean_kws)
+    # Always shuffle the clean keywords freshly on each batch generation
+    shuffled_kws = list(clean_kws)
+    random.shuffle(shuffled_kws)
 
-    for i in range(count):
-        kw1 = clean_kws[i % num_kws]
-        # For batches with 3+ selected keywords, occasionally pair with a 2nd keyword on alternating cards
-        if num_kws > 2 and (i % 2 == 1):
-            kw2 = clean_kws[(i + 1) % num_kws]
-            if kw1 != kw2:
-                distribution.append([kw1, kw2])
-            else:
-                distribution.append([kw1])
-        else:
-            distribution.append([kw1])
+    # If count is less than or equal to available keywords, randomly sample distinct keywords
+    if count <= len(shuffled_kws):
+        chosen = random.sample(shuffled_kws, count)
+        random.shuffle(chosen)
+        return [[kw] for kw in chosen]
 
-    return distribution
+    # If count is greater than available keywords (e.g. 2 keywords selected for 5 cards):
+    # Ensure all selected keywords are represented, then fill remainder randomly
+    pool = list(shuffled_kws)
+    while len(pool) < count:
+        extra = list(clean_kws)
+        random.shuffle(extra)
+        pool.extend(extra)
+    pool = pool[:count]
+    random.shuffle(pool)
+
+    return [[kw] for kw in pool]
 
 class ReviewGeneratorService:
     def __init__(self):
@@ -165,6 +173,14 @@ class ReviewGeneratorService:
         current_threshold = threshold
         target_company_name = company_name.strip() if company_name and company_name.strip() else "Business"
 
+        # Determine dynamic word bounds for authentic, human-sized reviews
+        if length == "short":
+            target_min, target_max = 8, 16
+        elif length == "long":
+            target_min, target_max = 22, 38
+        else:  # medium / natural default
+            target_min, target_max = 12, 26
+
         for i in range(target_count):
             item_rating = ratings_for_batch[i]
             item_keywords = batch_keyword_distribution[i]
@@ -187,8 +203,8 @@ class ReviewGeneratorService:
 
             chosen_item = None
             for cand in candidates:
-                # Validate length and cleanly trim to 25-45 words
-                cand_trimmed = validate_and_trim_review_length(cand, target_min=25, target_max=48)
+                # Validate length and cleanly trim to authentic human review size
+                cand_trimmed = validate_and_trim_review_length(cand, target_min=target_min, target_max=target_max)
                 check_result = nlp_engine.check_candidate(
                     candidate_text=cand_trimmed,
                     existing_texts=working_pool,
@@ -207,7 +223,7 @@ class ReviewGeneratorService:
                     total_rejected_count += 1
 
             if not chosen_item and candidates:
-                cand_trimmed = validate_and_trim_review_length(candidates[0], target_min=25, target_max=48)
+                cand_trimmed = validate_and_trim_review_length(candidates[0], target_min=target_min, target_max=target_max)
                 chosen_item = {
                     "text": cand_trimmed,
                     "similarity": 0.5,
