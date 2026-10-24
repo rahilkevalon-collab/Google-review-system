@@ -2,12 +2,14 @@
  * ReviewCraft Chrome Extension - Google Review Auto-Filler Content Script
  * Runs on *://*.google.com/*
  * Automatically targets Google's Review Modal for ANY company:
- * - If review modal isn't open yet, automatically finds and clicks the "Write a review" button or #lrd= link on Google.
+ * - If review modal isn't open yet, automatically finds and clicks the "Write a review" button or #lrd= link on Google ONCE.
+ * - Prevents multiple clicks to avoid screen blinking/flickering.
  * - Once review modal is open, populates the review text and clicks the target star rating.
  */
 
 (function () {
-  console.log('[ReviewCraft] Google review content script initialized in frame:', window.location.href);
+  const isTopFrame = window.top === window;
+  console.log('[ReviewCraft] Google review content script initialized in frame (isTopFrame=' + isTopFrame + '):', window.location.href);
 
   // Actively remove any leftover notification pill from DOM if present
   try {
@@ -17,6 +19,9 @@
 
   let pending = null;
   let observerStarted = false;
+  let hasTriggeredOpen = false;
+  let hasClickedListingCard = false;
+  let hasClickedTab = false;
 
   // Function to inspect storage for pending review
   function checkAndStart() {
@@ -33,7 +38,9 @@
               if (!observerStarted) {
                 observerStarted = true;
                 console.log('[ReviewCraft] Found pending review to auto-fill:', pending);
-                cleanUpGoogleSearchBar(pending.text);
+                if (isTopFrame) {
+                  cleanUpGoogleSearchBar(pending.text);
+                }
                 startObserver(pending);
               }
             }
@@ -74,10 +81,9 @@
 
   function startObserver(pending) {
     let attempts = 0;
-    const maxAttempts = 90; // ~31 seconds
+    const maxAttempts = 100; // ~35 seconds
     let textDone = false;
     let starDone = false;
-    let triggerAttemptCount = 0;
     const targetRating = Number(pending.rating) || 5;
     const reviewText = pending.text;
 
@@ -91,14 +97,13 @@
       // 1. Locate review dialog
       const dialog = findReviewDialog();
 
-      // If the review dialog is NOT open yet, automatically find and click the "Write a review" button / #lrd link on the Google page!
-      if (!dialog && triggerAttemptCount < 20) {
-        triggerAttemptCount++;
+      // If review modal is NOT open or triggered yet, trigger it ONCE (Top frame only)
+      if (isTopFrame && !dialog && !hasTriggeredOpen) {
         tryOpenReviewDialog();
       }
 
-      // If on a regular Google search page and after ~2.5s no dialog or button exists (AI overview blocker), forward to Google Maps
-      if (!dialog && attempts > 7 && window.location.href.includes('/search') && !window.location.hash.includes('lrd=')) {
+      // If on a regular Google search page and after ~3s no dialog exists (AI overview blocker), forward to Google Maps
+      if (isTopFrame && !dialog && !hasTriggeredOpen && attempts > 8 && window.location.href.includes('/search') && !window.location.hash.includes('lrd=')) {
         console.log('[ReviewCraft] Search page has no review modal (AI Overview). Auto-forwarding to Google Maps...');
         clearInterval(intervalId);
         const comp = pending.companyName || '';
@@ -106,15 +111,7 @@
         return;
       }
 
-      // 2. Populate text if dialog or textarea exists and not already done
-      if (!textDone) {
-        const textarea = findReviewTextarea(dialog);
-        if (textarea) {
-          textDone = populateText(textarea, reviewText);
-        }
-      }
-
-      // 3. Click stars if dialog or star element exists and not already done
+      // 2. Look for star element and click it (Try stars first or in parallel)
       if (!starDone) {
         const starElement = findStarElement(dialog, targetRating);
         if (starElement) {
@@ -122,7 +119,15 @@
         }
       }
 
-      // Once completed successfully
+      // 3. Look for textarea and populate text
+      if (!textDone) {
+        const textarea = findReviewTextarea(dialog);
+        if (textarea) {
+          textDone = populateText(textarea, reviewText);
+        }
+      }
+
+      // 4. Once completed successfully
       if (textDone && starDone) {
         clearInterval(intervalId);
         console.log('[ReviewCraft] Review text & stars successfully auto-filled into Google!');
@@ -140,17 +145,50 @@
   }
 
   /**
+   * Checks whether a review dialog, modal overlay, or review iframe is already in the DOM.
+   */
+  function isReviewModalPresent() {
+    const modalSelectors = [
+      'div[role="dialog"]',
+      'dialog',
+      '[aria-modal="true"]',
+      'iframe[src*="review" i]',
+      'iframe[title*="review" i]',
+      'g-dialog',
+      '.modal-dialog',
+      'div.review-dialog'
+    ];
+    for (const sel of modalSelectors) {
+      const el = document.querySelector(sel);
+      if (el && isVisible(el)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Automatically finds and triggers Google's "Write a review" button or link
    * when opening a generic business Google Search or Google Maps page.
+   * Runs STRICTLY ONCE in the top frame to prevent screen blinking/flickering.
    */
   function tryOpenReviewDialog() {
+    // Only top frame should ever initiate opening actions
+    if (!isTopFrame) return false;
+
+    // If already triggered or if the modal is already present, DO NOT CLICK AGAIN
+    if (hasTriggeredOpen || isReviewModalPresent()) {
+      return false;
+    }
+
     try {
       // Strategy 1: Look for any anchor tag with #lrd= containing ',3,' (direct review modal action code)
       const allLinks = Array.from(document.querySelectorAll('a[href*="lrd="]'));
       for (const a of allLinks) {
         const href = a.getAttribute('href') || '';
         if (href.includes(',3,') || href.includes(',3,,') || /review/i.test(a.innerText || '')) {
-          console.log('[ReviewCraft] Found LRD review link on page! Triggering review modal:', href);
+          console.log('[ReviewCraft] Found LRD review link! Triggering modal once:', href);
+          hasTriggeredOpen = true;
           const hashIdx = href.indexOf('#lrd=');
           if (hashIdx !== -1) {
             window.location.hash = href.substring(hashIdx);
@@ -166,7 +204,8 @@
       );
       for (const el of asyncTriggers) {
         if (isVisible(el)) {
-          console.log('[ReviewCraft] Found async review trigger button! Clicking...');
+          console.log('[ReviewCraft] Found async review trigger button! Clicking once...');
+          hasTriggeredOpen = true;
           el.click();
           return true;
         }
@@ -181,50 +220,86 @@
           /^(write a review|rate and review|leave a review|add a review|રિવ્યુ લખો|રિવ્યુ આપો|रिव्यू लिखें)$/i.test(text) ||
           (text.length < 35 && /write a review|rate and review/i.test(text))
         ) {
-          console.log('[ReviewCraft] Found "Write a review" button! Clicking:', text);
+          console.log('[ReviewCraft] Found "Write a review" button! Clicking once:', text);
+          hasTriggeredOpen = true;
           el.click();
           return true;
         }
       }
 
-      // Strategy 4: If on Google Maps results list (multi-branch list like Amazon), auto-click the 1st place card!
+      // Strategy 4: If on Google Maps results list (multi-branch list like Amazon), auto-click the 1st place card ONCE
       if (window.location.href.includes('/maps')) {
-        const firstCard = document.querySelector('a.hfpxzc, div[role="feed"] a[href*="/maps/place/"], div[role="article"] a');
-        if (firstCard) {
-          console.log('[ReviewCraft] Auto-clicking first business listing in Google Maps results list...');
-          firstCard.focus();
-          firstCard.click();
-          firstCard.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-          firstCard.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+        if (!hasClickedListingCard) {
+          const firstCard = document.querySelector('a.hfpxzc, div[role="feed"] a[href*="/maps/place/"], div[role="article"] a');
+          if (firstCard && isVisible(firstCard)) {
+            hasClickedListingCard = true;
+            console.log('[ReviewCraft] Auto-clicking first business listing card in Google Maps...');
+            firstCard.focus();
+            firstCard.click();
+            firstCard.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+            firstCard.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+            return true;
+          }
         }
 
-        // Strategy 5: Look for Google Maps Write a review button
-        const mapsReviewBtn = Array.from(document.querySelectorAll('button, a, div[role="button"]')).find(el => {
-          const al = (el.getAttribute('aria-label') || el.innerText || '').toLowerCase();
-          return al.includes('write a review') || al.includes('rate and review') || al.includes('રિવ્યુ લખો') || al.includes('રિવ્યુ આપો');
-        });
-        if (mapsReviewBtn) {
-          console.log('[ReviewCraft] Found Google Maps review button! Clicking...');
-          mapsReviewBtn.click();
-          return true;
-        }
-
-        // Check for Reviews tab to reveal Write a review if collapsed
-        const reviewsTab = Array.from(document.querySelectorAll('button[role="tab"], div[role="tab"]')).find(el => {
-          const t = (el.innerText || el.getAttribute('aria-label') || '').toLowerCase();
-          return t.includes('reviews') && !t.includes('write');
-        });
-        if (reviewsTab) {
-          reviewsTab.click();
+        // Strategy 5: Look for Reviews tab to reveal Write a review if collapsed
+        if (!hasClickedTab) {
+          const reviewsTab = Array.from(document.querySelectorAll('button[role="tab"], div[role="tab"]')).find(el => {
+            if (!isVisible(el)) return false;
+            const t = (el.innerText || el.getAttribute('aria-label') || '').toLowerCase();
+            return t.includes('reviews') && !t.includes('write');
+          });
+          if (reviewsTab) {
+            hasClickedTab = true;
+            console.log('[ReviewCraft] Switching to Reviews tab on Google Maps...');
+            reviewsTab.click();
+            return true;
+          }
         }
       }
     } catch (e) {}
     return false;
   }
 
+  /**
+   * Retrieves all candidate root scopes (document, dialog, same-origin child iframes).
+   */
+  function getCandidateRoots(dialog) {
+    const roots = [];
+    if (dialog) roots.push(dialog);
+    roots.push(document);
+
+    const searchScope = dialog || document;
+    try {
+      const iframes = searchScope.querySelectorAll('iframe');
+      for (const f of iframes) {
+        try {
+          if (f.contentDocument && f.contentDocument.body) {
+            roots.push(f.contentDocument);
+          }
+        } catch (e) {
+          // Cross-origin: the iframe's own content-google.js script handles it directly
+        }
+      }
+    } catch (e) {}
+
+    return roots;
+  }
+
   function findReviewDialog() {
+    // If inside a child iframe, the document/body itself is the review dialog context
+    if (!isTopFrame) {
+      const body = document.body;
+      if (body && (document.querySelector('textarea, div[role="textbox"], [role="radio"]') ||
+          (document.body.innerText || '').toLowerCase().includes('post') ||
+          (document.body.innerText || '').toLowerCase().includes('review'))) {
+        return body;
+      }
+    }
+
     const dialogSelectors = [
-      '[role="dialog"]',
+      'div[role="dialog"]',
+      'dialog',
       '[aria-modal="true"]',
       'g-dialog',
       '.modal-dialog',
@@ -234,20 +309,51 @@
     for (const sel of dialogSelectors) {
       const candidates = document.querySelectorAll(sel);
       for (const d of candidates) {
-        if (isVisible(d)) {
-          const txt = (d.innerText || '').toLowerCase();
-          if (txt.includes('experience') || txt.includes('post') || txt.includes('photos and videos')) {
-            return d;
-          }
+        if (!isVisible(d)) continue;
+
+        // Check 1: Contains review textarea, textbox, or star radios
+        if (d.querySelector('textarea, div[role="textbox"], div[contenteditable="true"], [role="radio"], [role="radiogroup"]')) {
+          return d;
+        }
+
+        // Check 2: Contains an iframe (Google Maps review modal iframe container)
+        if (d.querySelector('iframe')) {
+          return d;
+        }
+
+        // Check 3: Text content matches review keywords
+        const txt = (d.innerText || '').toLowerCase();
+        if (
+          txt.includes('experience') ||
+          txt.includes('post') ||
+          txt.includes('photos and videos') ||
+          txt.includes('review') ||
+          txt.includes('rate') ||
+          txt.includes('અનુભવ') ||
+          txt.includes('પોસ્ટ') ||
+          txt.includes('રિવ્યુ') ||
+          txt.includes('अनुभव') ||
+          txt.includes('पोस्ट') ||
+          txt.includes('रिव्यू')
+        ) {
+          return d;
+        }
+
+        // Check 4: Prominent centered modal box (Google Maps review modal container)
+        const rect = d.getBoundingClientRect();
+        if (rect.width > 280 && rect.height > 200) {
+          return d;
         }
       }
     }
 
+    // Fallback: check all divs for specific phrases
     const allDivs = document.querySelectorAll('div');
     for (const d of allDivs) {
       if (isVisible(d)) {
-        const text = (d.innerText || '');
-        if (text.includes('Share details of your own experience') && text.includes('Post')) {
+        const text = (d.innerText || '').toLowerCase();
+        if ((text.includes('share details') || text.includes('experience')) && 
+            (text.includes('post') || text.includes('પોસ્ટ') || text.includes('पोस्ट'))) {
           return d;
         }
       }
@@ -257,34 +363,57 @@
   }
 
   function findReviewTextarea(dialog) {
-    const root = dialog || document;
-    const candidates = Array.from(root.querySelectorAll('textarea, div[role="textbox"], div[contenteditable="true"]'));
+    const roots = getCandidateRoots(dialog);
 
-    for (const el of candidates) {
-      // 100% EXCLUDE the Google Search bar
-      if (el.name === 'q' || el.id === 'APjFqb' || el.classList.contains('gLFyf')) {
-        continue;
-      }
-      if (el.getAttribute('aria-label') === 'Search' || el.getAttribute('title') === 'Search') {
-        continue;
-      }
+    const isSearchInput = (el) => {
+      if (!el) return true;
+      if (el.name === 'q' || el.id === 'APjFqb' || el.classList.contains('gLFyf')) return true;
+      const label = (el.getAttribute('aria-label') || el.getAttribute('title') || '').toLowerCase();
+      if (label === 'search' || label === 'શોધો' || label === 'खोजें') return true;
+      return false;
+    };
 
-      if (isVisible(el)) {
-        const placeholder = (
-          el.getAttribute('placeholder') || 
-          el.getAttribute('aria-label') || 
-          el.getAttribute('data-placeholder') || 
-          ''
-        ).toLowerCase();
-
+    for (const root of roots) {
+      // 1. Textarea elements
+      const textareas = Array.from(root.querySelectorAll('textarea')).filter(isVisible).filter(el => !isSearchInput(el));
+      for (const ta of textareas) {
+        const ph = (ta.getAttribute('placeholder') || ta.getAttribute('aria-label') || '').toLowerCase();
         if (
-          placeholder.includes('experience') || 
-          placeholder.includes('share details') || 
-          placeholder.includes('review') ||
-          (dialog && dialog.contains(el))
+          ph.includes('experience') ||
+          ph.includes('share') ||
+          ph.includes('review') ||
+          ph.includes('અનુભવ') ||
+          ph.includes('વિગત') ||
+          ph.includes('अनुभव') ||
+          dialog || root !== document
         ) {
-          return el;
+          return ta;
         }
+      }
+      if ((dialog || root !== document) && textareas.length > 0) {
+        return textareas[0];
+      }
+
+      // 2. Contenteditable or role="textbox" elements
+      const editables = Array.from(root.querySelectorAll('div[role="textbox"], div[contenteditable="true"], [contenteditable="true"]'))
+        .filter(isVisible)
+        .filter(el => !isSearchInput(el));
+
+      for (const ed of editables) {
+        const ph = (ed.getAttribute('placeholder') || ed.getAttribute('aria-label') || ed.getAttribute('data-placeholder') || '').toLowerCase();
+        if (
+          ph.includes('experience') ||
+          ph.includes('share') ||
+          ph.includes('review') ||
+          ph.includes('અનુભવ') ||
+          ph.includes('अनुभव') ||
+          dialog || root !== document
+        ) {
+          return ed;
+        }
+      }
+      if ((dialog || root !== document) && editables.length > 0) {
+        return editables[0];
       }
     }
 
@@ -297,7 +426,8 @@
       el.click();
 
       // 1. Native Property Setter for React/Angular/Closure forms
-      const proto = el.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+      const win = el.ownerDocument?.defaultView || window;
+      const proto = el.tagName === 'TEXTAREA' ? win.HTMLTextAreaElement.prototype : win.HTMLInputElement.prototype;
       const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
       if (nativeSetter) {
         nativeSetter.call(el, text);
@@ -305,16 +435,20 @@
         el.value = text;
       }
 
-      // 2. Dispatch events
+      // 2. Dispatch input events
       el.dispatchEvent(new Event('focus', { bubbles: true }));
       el.dispatchEvent(new Event('keydown', { bubbles: true, key: ' ' }));
       el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
       el.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
       el.dispatchEvent(new Event('keyup', { bubbles: true, key: ' ' }));
 
-      // 3. Document execCommand fallback
-      document.execCommand('selectAll', false, null);
-      document.execCommand('insertText', false, text);
+      // 3. Document execCommand in the element's own ownerDocument
+      try {
+        if (el.ownerDocument) {
+          el.ownerDocument.execCommand('selectAll', false, null);
+          el.ownerDocument.execCommand('insertText', false, text);
+        }
+      } catch (e) {}
 
       // 4. Contenteditable div fallback
       if (el.tagName !== 'TEXTAREA' && el.isContentEditable) {
@@ -322,6 +456,7 @@
         el.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, data: text }));
       }
 
+      console.log('[ReviewCraft] Successfully populated review text into input.');
       return true;
     } catch (e) {
       return false;
@@ -329,44 +464,63 @@
   }
 
   function findStarElement(dialog, targetRating) {
-    const root = dialog || document;
+    const roots = getCandidateRoots(dialog);
 
-    // 1. Look for radio items with aria-posinset (e.g. aria-posinset="5")
-    const posRadios = root.querySelectorAll(`[role="radio"][aria-posinset="${targetRating}"]`);
-    for (const r of posRadios) {
-      if (isVisible(r)) return r;
-    }
+    for (const root of roots) {
+      // 1. Look for radio items with aria-posinset (e.g. aria-posinset="5")
+      const posRadios = root.querySelectorAll(`[role="radio"][aria-posinset="${targetRating}"]`);
+      for (const r of posRadios) {
+        if (isVisible(r)) return r;
+      }
 
-    // 2. Look for role="radio" items
-    const allRadios = Array.from(root.querySelectorAll('[role="radio"]')).filter(isVisible);
-    if (allRadios.length >= 5) {
-      const idx = Math.max(0, Math.min(4, targetRating - 1));
-      return allRadios[idx];
-    }
+      // 2. Look for role="radiogroup" containing role="radio"
+      const radiogroups = root.querySelectorAll('[role="radiogroup"]');
+      for (const rg of radiogroups) {
+        const radios = Array.from(rg.querySelectorAll('[role="radio"]')).filter(isVisible);
+        if (radios.length >= 5) {
+          const idx = Math.max(0, Math.min(4, targetRating - 1));
+          return radios[idx];
+        }
+      }
 
-    // 3. Look for aria-label with star count
-    const ariaStars = Array.from(root.querySelectorAll('[aria-label*="star" i], [aria-label*="Star" i]')).filter(el => {
-      return isVisible(el) && el.tagName !== 'TEXTAREA';
-    });
-    if (ariaStars.length >= 5) {
-      const idx = Math.max(0, Math.min(4, targetRating - 1));
-      return ariaStars[idx];
-    }
+      // 3. Look for role="radio" items inside dialog or iframe
+      if (dialog || root !== document) {
+        const allRadios = Array.from(root.querySelectorAll('[role="radio"]')).filter(isVisible);
+        if (allRadios.length >= 5) {
+          const idx = Math.max(0, Math.min(4, targetRating - 1));
+          return allRadios[idx];
+        }
+      }
 
-    // 4. Search for the row of 5 star SVGs inside the review dialog
-    const allSvgs = Array.from(root.querySelectorAll('svg')).filter(isVisible);
-    const starSvgs = allSvgs.filter(svg => {
-      const paths = Array.from(svg.querySelectorAll('path'));
-      return paths.some(p => {
-        const d = p.getAttribute('d') || '';
-        return d.includes('17.27') || d.includes('9.24') || d.includes('21l') || d.includes('12 2');
-      });
-    });
+      // 4. Look for aria-label with star count inside dialog or iframe
+      const starQuery = dialog ? dialog : (root !== document ? root : null);
+      if (starQuery) {
+        const ariaStars = Array.from(starQuery.querySelectorAll('[aria-label*="star" i], [aria-label*="Star" i], [aria-label*="તારા" i], [aria-label*="सितारे" i]')).filter(el => {
+          return isVisible(el) && el.tagName !== 'TEXTAREA';
+        });
+        if (ariaStars.length >= 5) {
+          const idx = Math.max(0, Math.min(4, targetRating - 1));
+          return ariaStars[idx];
+        }
+      }
 
-    if (starSvgs.length >= 5) {
-      const idx = Math.max(0, Math.min(4, targetRating - 1));
-      const targetSvg = starSvgs[idx];
-      return targetSvg.closest('button, [role="radio"], div[tabindex], span[tabindex]') || targetSvg.parentElement || targetSvg;
+      // 5. Search for row of 5 star SVGs inside dialog or iframe
+      const svgContainer = dialog || (root !== document ? root : null);
+      if (svgContainer) {
+        const allSvgs = Array.from(svgContainer.querySelectorAll('svg')).filter(isVisible);
+        const starSvgs = allSvgs.filter(svg => {
+          const paths = Array.from(svg.querySelectorAll('path'));
+          return paths.some(p => {
+            const d = p.getAttribute('d') || '';
+            return d.includes('17.27') || d.includes('9.24') || d.includes('21l') || d.includes('12 2');
+          });
+        });
+        if (starSvgs.length >= 5) {
+          const idx = Math.max(0, Math.min(4, targetRating - 1));
+          const targetSvg = starSvgs[idx];
+          return targetSvg.closest('button, [role="radio"], div[tabindex], span[tabindex]') || targetSvg.parentElement || targetSvg;
+        }
+      }
     }
 
     return null;
@@ -383,7 +537,7 @@
       const opts = {
         bubbles: true,
         cancelable: true,
-        view: window,
+        view: el.ownerDocument?.defaultView || window,
         clientX: cx,
         clientY: cy
       };
@@ -405,13 +559,18 @@
 
   function isVisible(el) {
     if (!el) return false;
-    const style = window.getComputedStyle(el);
-    return (
-      style.display !== 'none' &&
-      style.visibility !== 'hidden' &&
-      style.opacity !== '0' &&
-      el.offsetWidth > 0 &&
-      el.offsetHeight > 0
-    );
+    try {
+      const win = el.ownerDocument?.defaultView || window;
+      const style = win.getComputedStyle(el);
+      return (
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        style.opacity !== '0' &&
+        el.offsetWidth > 0 &&
+        el.offsetHeight > 0
+      );
+    } catch (e) {
+      return false;
+    }
   }
 })();
