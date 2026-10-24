@@ -97,6 +97,15 @@
         tryOpenReviewDialog();
       }
 
+      // If on a regular Google search page and after ~2.5s no dialog or button exists (AI overview blocker), forward to Google Maps
+      if (!dialog && attempts > 7 && window.location.href.includes('/search') && !window.location.hash.includes('lrd=')) {
+        console.log('[ReviewCraft] Search page has no review modal (AI Overview). Auto-forwarding to Google Maps...');
+        clearInterval(intervalId);
+        const comp = pending.companyName || '';
+        window.location.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(comp)}`;
+        return;
+      }
+
       // 2. Populate text if dialog or textarea exists and not already done
       if (!textDone) {
         const textarea = findReviewTextarea(dialog);

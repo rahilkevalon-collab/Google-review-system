@@ -297,8 +297,7 @@ class CompanyService:
             primary_city = location.split(",")[0].strip() if location else ""
             query_tokens = [name, primary_city or location, "reviews"]
             clean_q = " ".join([t for t in query_tokens if t]).replace(",", " ").strip()
-            clean_q = " ".join(clean_q.split())
-            review_url = f"https://www.google.com/search?q={urllib.parse.quote_plus(clean_q)}"
+            review_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(clean_q)}"
 
         doc = {
             "name": name,

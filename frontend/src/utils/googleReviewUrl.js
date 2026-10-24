@@ -17,29 +17,33 @@ export function getGoogleReviewUrl(item = {}) {
 
   let baseUrl = '';
 
-  // 1. If explicit direct Google Search write-review URL exists (with #lrd=...): use it directly to bypass Google Maps
+  // 1. If explicit direct Google Search write-review URL exists (with #lrd=...): use it directly
   if (link && link.includes('#lrd=')) {
-    baseUrl = link;
-  } else if (name.toLowerCase().includes('kevalon')) {
-    // 2. Verified direct Google Search review modal (Bypasses Google Maps redirect completely)
-    baseUrl = 'https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,';
-  } else if (link && link.startsWith('http') && !link.includes('writereview')) {
-    // 3. Custom review URL
-    baseUrl = link;
-  } else if ((item.googlePlaceId || item.placeId || '').trim()) {
-    // 4. Fallback to Google Place ID write-review dialog
-    const placeId = (item.googlePlaceId || item.placeId || '').trim();
-    baseUrl = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
-  } else {
-    // 5. Fallback: Open Google Maps Search
-    // Google Maps pins the business directly and shows "Write a review", avoiding Google Search AI Overview blocks
-    const primaryCity = loc ? loc.split(',')[0].trim() : '';
-    const queryTokens = [name, primaryCity || loc].filter(Boolean);
-    const cleanSearchQuery = queryTokens.join(' ').replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
-    baseUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanSearchQuery)}`;
+    return link;
   }
 
-  return baseUrl;
+  // 2. Verified direct Google Search review modal for Kevalon
+  if (name.toLowerCase().includes('kevalon')) {
+    return 'https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,';
+  }
+
+  // 3. Fallback to Google Place ID write-review dialog
+  const placeId = (item.googlePlaceId || item.placeId || '').trim();
+  if (placeId) {
+    return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
+  }
+
+  // 4. Custom direct review URL (e.g. g.page/r/..., maps.app.goo.gl, etc.)
+  // Strictly ignore bare google.com/search URLs (which have no review modal and trigger AI overviews)
+  if (link && link.startsWith('http') && !link.includes('google.com/search') && !link.includes('writereview/')) {
+    return link;
+  }
+
+  // 5. Google Maps Search URL (Opens the exact business profile on Google Maps with Write a Review button, bypassing AI Overviews completely)
+  const primaryCity = loc ? loc.split(',')[0].trim() : '';
+  const queryTokens = [name, primaryCity || loc].filter(Boolean);
+  const cleanSearchQuery = queryTokens.join(' ').replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanSearchQuery)}`;
 }
 
 
