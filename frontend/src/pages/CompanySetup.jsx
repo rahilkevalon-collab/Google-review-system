@@ -89,12 +89,7 @@ export default function CompanySetup({ categories = [] }) {
   });
 
   // Automatically synthesized SEO keywords in the background (guaranteed strictly 3 to 7)
-  const [autoKeywords, setAutoKeywords] = useState([
-    'Web Development',
-    'AI Solutions',
-    'Mobile App Development',
-    'Custom Software Development'
-  ]);
+  const [autoKeywords, setAutoKeywords] = useState([]);
   const seoDebounceTimeout = useRef(null);
 
   const [errors, setErrors] = useState({});
@@ -206,10 +201,13 @@ export default function CompanySetup({ categories = [] }) {
       return;
     }
 
-    // Ensure strictly between 3 and 7 keywords
+    // Ensure strictly between 3 and 7 keywords matching exact company name, category, and services
     let finalKeywords = autoKeywords;
-    if (finalKeywords.length < 3) {
-      finalKeywords = synthesizeClientKeywords(formData.name, formData.category, formData.services, '', categories);
+    if (!finalKeywords || finalKeywords.length < 3 || formData.services) {
+      const synthesized = synthesizeClientKeywords(formData.name, formData.category, formData.services, '', categories);
+      if (synthesized && synthesized.length >= 3) {
+        finalKeywords = synthesized;
+      }
     }
     if (finalKeywords.length > 7) {
       finalKeywords = finalKeywords.slice(0, 7);

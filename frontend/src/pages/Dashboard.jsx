@@ -108,16 +108,37 @@ export default function Dashboard({ categories = [] }) {
           }
           setSelectedKeywords(initialSelected);
 
-          // Restore cached reviews and active review on page refresh
+          // Restore cached reviews or fetch directly from backend MongoDB
           try {
-            const cachedRevStr = localStorage.getItem(`reviewcraft_cached_reviews_${comp.id}`);
             let loadedRevs = [];
+            const cachedRevStr = localStorage.getItem(`reviewcraft_cached_reviews_${comp.id}`);
             if (cachedRevStr) {
-              const cachedRevs = JSON.parse(cachedRevStr);
-              if (Array.isArray(cachedRevs) && cachedRevs.length > 0) {
-                loadedRevs = cachedRevs;
-                setReviews(cachedRevs);
+              try {
+                const cachedRevs = JSON.parse(cachedRevStr);
+                if (Array.isArray(cachedRevs) && cachedRevs.length > 0) {
+                  loadedRevs = cachedRevs;
+                  setReviews(cachedRevs);
+                }
+              } catch (e) {}
+            }
+
+            // If no local cache, fetch persisted reviews from backend database
+            if (loadedRevs.length === 0) {
+              try {
+                const dbRevsRes = await api.getReviews({ companyId: comp.id, limit: 3 });
+                if (dbRevsRes.success && Array.isArray(dbRevsRes.reviews) && dbRevsRes.reviews.length > 0) {
+                  loadedRevs = dbRevsRes.reviews.slice(0, 3);
+                  setReviews(loadedRevs);
+                  localStorage.setItem(`reviewcraft_cached_reviews_${comp.id}`, JSON.stringify(loadedRevs));
+                }
+              } catch (e) {
+                console.warn('Could not fetch reviews from database:', e);
               }
+            }
+
+            // If still no reviews in database, immediately generate initial reviews for this company
+            if (loadedRevs.length === 0) {
+              generateReviews(initialSelected, true, comp);
             }
 
             let activeRev = null;
@@ -159,8 +180,9 @@ export default function Dashboard({ categories = [] }) {
   }, [routeCompanyId, navigate]);
 
   // 2. Generate Review Suggestions using Flask (Ratio handled entirely in backend)
-  const generateReviews = useCallback(async (keywordsToUse, forceFresh = false) => {
-    if (!company?.id) return;
+  const generateReviews = useCallback(async (keywordsToUse, forceFresh = false, companyOverride = null) => {
+    const targetComp = companyOverride || company;
+    if (!targetComp?.id) return;
 
     // Concurrency / rapid-click guard (throttle within 800ms)
     const now = Date.now();
@@ -182,14 +204,14 @@ export default function Dashboard({ categories = [] }) {
       // Backend automatically applies its configured rating distribution ratio (60% 5-star, 40% 4-star)
       // and natural keyword partitioning across review cards
       const payload = {
-        companyId: company.id,
-        companyName: company.name,
-        category: company.category,
+        companyId: targetComp.id,
+        companyName: targetComp.name,
+        category: targetComp.category,
         selectedKeywords: activeKeywords,
-        services: company.services,
-        description: company.description,
-        location: company.location || company.formattedAddress,
-        language: company.preferredLanguage || 'en',
+        services: targetComp.services,
+        description: targetComp.description,
+        location: targetComp.location || targetComp.formattedAddress,
+        language: targetComp.preferredLanguage || 'en',
         tone: 'natural',
         length: 'medium',
         count: 3
@@ -201,10 +223,10 @@ export default function Dashboard({ categories = [] }) {
         const topReviews = res.reviews.slice(0, 3);
         setReviews(topReviews);
         try {
-          localStorage.setItem(`reviewcraft_cached_reviews_${company.id}`, JSON.stringify(topReviews));
+          localStorage.setItem(`reviewcraft_cached_reviews_${targetComp.id}`, JSON.stringify(topReviews));
         } catch (e) {}
-        if (topReviews[0] && company) {
-          syncReviewToExtension(topReviews[0], company, 'auto_sync');
+        if (topReviews[0] && targetComp) {
+          syncReviewToExtension(topReviews[0], targetComp, 'auto_sync');
         }
         if (res.rejectedDuplicates > 0) {
           setDedupNotice(

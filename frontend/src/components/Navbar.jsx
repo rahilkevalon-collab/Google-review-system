@@ -1,10 +1,8 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Sparkles, PlusCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
 
-export default function Navbar({ healthStatus }) {
-  const location = useLocation();
-
+export default function Navbar() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-xl shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
@@ -25,22 +23,6 @@ export default function Navbar({ healthStatus }) {
                 Dynamic & Non-Repeating Business Reviews
               </p>
             </div>
-          </Link>
-        </div>
-
-        {/* Right side actions */}
-        <div className="flex items-center gap-3">
-
-          <Link
-            to="/setup"
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs cursor-pointer ${
-              location.pathname === '/' || location.pathname === '/setup'
-                ? 'bg-[#068dcb]/10 text-[#034665] border border-[#068dcb]/30 font-bold'
-                : 'bg-gradient-to-r from-[#034665] to-[#068dcb] hover:from-[#02354e] hover:to-[#057db4] text-white shadow-md shadow-[#068dcb]/25 active:scale-95'
-            }`}
-          >
-            <PlusCircle className="w-3.5 h-3.5" />
-            <span>New Setup</span>
           </Link>
         </div>
 

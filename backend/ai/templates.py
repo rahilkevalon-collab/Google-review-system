@@ -103,16 +103,16 @@ CATEGORY_BUSINESS_NAMES = {
 # AUTHENTIC HUMAN GOOGLE REVIEW TEMPLATES (Small, Genuine, Natural Phrasing)
 # ==============================================================================
 
-# English 5-Star General Business
+# General 5-Star English
 OPENERS_5_EN = [
     "Really great experience with {company}! Their work on {keyword} was super fast and high quality.",
     "Got {keyword} done from {company}. The team is very friendly, responsive, and did an amazing job.",
-    "Had a wonderful experience with {company}. Their work on {keyword} was top notch and delivered on time.",
+    "Had a wonderful experience with {company}. Their service for {keyword} was top notch and delivered on time.",
     "Best place for {keyword}! The team at {company} is very helpful, knowledgeable, and polite.",
     "Super happy with {company}'s service. Quick turnaround for our {keyword} and fair pricing.",
     "Excellent work by {company} on our {keyword}! Everything was completed cleanly and without any hassle.",
     "I've used {company} for {keyword} and they always provide prompt, honest, and reliable service.",
-    "Smooth and easy process with {company}. Quality work on {keyword} at a very reasonable rate.",
+    "Smooth and easy process with {company}. Dependable assistance on {keyword} at a very reasonable rate.",
     "Super impressed with {company}! Great quality on {keyword} and very supportive staff.",
     "Prompt and professional service. {company} did a fantastic job with our {keyword}.",
     "Awesome experience with {company}. They understood exactly what we needed for {keyword}."
@@ -128,7 +128,131 @@ CLOSERS_5_EN = [
     "Definitely coming back!"
 ]
 
-# Category-Specific 5-Star English Restaurant
+# General 4-Star English
+OPENERS_4_EN = [
+    "Good experience with {company} for {keyword}. Solid support and friendly team, just a slight delay in initial response time.",
+    "Happy with the outcome on {keyword}. {company} did a solid job, would just appreciate slightly quicker communication updates.",
+    "Nice work on {keyword} by {company}. Decent pricing and supportive staff, minor wait in initial turnaround.",
+    "Reliable service overall. {company} handled our {keyword} well, with just a little room for faster response and communication.",
+    "Solid 4-star experience with {company}! Good results for {keyword}, though initial response could be slightly faster.",
+    "Satisfied with {company}'s work on {keyword}. Professional team, just a minor delay in turnaround time."
+]
+
+CLOSERS_4_EN = [
+    "Overall a positive experience, would recommend.",
+    "Good value for money and solid service.",
+    "Happy with the results and will use them again.",
+    "Solid work from a dependable team."
+]
+
+# ==============================================================================
+# CATEGORY SPECIFIC TEMPLATES
+# ==============================================================================
+
+# 1. Healthcare / Clinic / Medical / Dental
+HEALTHCARE_OPENERS_5_EN = [
+    "Really great experience with {company}! The doctor and medical staff took wonderful care of me for {keyword}.",
+    "Highly impressed with {company}. Professional, compassionate doctors and top-notch {keyword}.",
+    "Clean facility, minimal wait time, and great medical care at {company} for {keyword}.",
+    "Best clinic for {keyword}! The medical team at {company} is very gentle, polite, and thorough.",
+    "Had a great consultation at {company}. The treatment regarding {keyword} was clearly explained and very effective.",
+    "Extremely satisfied with {company}. The doctors are skilled and handled my {keyword} with utmost care."
+]
+
+HEALTHCARE_CLOSERS_5_EN = [
+    "Highly recommended for medical care!",
+    "Very grateful to the entire team!",
+    "Definitely my trusted clinic from now on.",
+    "5 stars for compassionate, professional care!",
+    "Would gladly recommend to friends and family."
+]
+
+HEALTHCARE_OPENERS_4_EN = [
+    "Good experience at {company} for {keyword}. Caring doctors and effective treatment, just a small wait past my appointment time.",
+    "Very professional medical team at {company}. Great care regarding {keyword}, communication at the reception could be slightly faster.",
+    "Pleasant visit to {company}. Attentive medical care on {keyword}, with just a minor delay in the waiting lounge."
+]
+
+HEALTHCARE_CLOSERS_4_EN = [
+    "Overall a positive visit, would recommend.",
+    "Solid medical care from dependable doctors.",
+    "Happy with the consultation and treatment."
+]
+
+# 2. IT Services and Software Development
+IT_OPENERS_5_EN = [
+    "Excellent technical work by {company}! They delivered our {keyword} on time with great code quality.",
+    "Worked with {company} on {keyword} and they exceeded our expectations. Very responsive and skilled engineering team.",
+    "Top-notch IT partner! Smooth project execution for our {keyword} and prompt support throughout.",
+    "Super happy with {company}'s development team. Delivered robust {keyword} at a fair price.",
+    "Professional, communicative, and technically proficient. {company} did a fantastic job with our {keyword}."
+]
+
+IT_CLOSERS_5_EN = [
+    "Highly recommended tech partner!",
+    "Will definitely collaborate on future software projects.",
+    "5 stars for technical excellence!",
+    "Great team to work with!"
+]
+
+IT_OPENERS_4_EN = [
+    "Good experience with {company} for {keyword}. Solid development work, with just a minor delay in initial sprint planning.",
+    "Dependable tech team at {company}. Great execution on {keyword}, would just appreciate slightly quicker communication updates.",
+    "Satisfied with {company}'s work on our {keyword}. Capable engineers, just a slight delay in turnaround time."
+]
+
+IT_CLOSERS_4_EN = [
+    "Overall a positive collaboration, would recommend.",
+    "Solid software engineers and dependable results."
+]
+
+# 3. E-commerce
+ECOMMERCE_OPENERS_5_EN = [
+    "Loved shopping with {company}! Fast delivery and the {keyword} was in perfect condition.",
+    "Super happy with my order from {company}. The {keyword} exceeded expectations and arrived securely packaged.",
+    "Great online store! {company} delivered our {keyword} quickly with smooth checkout and updates.",
+    "Fantastic quality from {company}. The {keyword} is authentic and customer support was very helpful."
+]
+
+ECOMMERCE_CLOSERS_5_EN = [
+    "Will definitely order again!",
+    "5 stars for speedy delivery and great products!",
+    "Highly recommended online store!"
+]
+
+ECOMMERCE_OPENERS_4_EN = [
+    "Good shopping experience with {company}. Loved the {keyword}, delivery took just a day longer than estimated.",
+    "Nice quality items from {company}. The {keyword} is great, though tracking updates could be slightly quicker."
+]
+
+ECOMMERCE_CLOSERS_4_EN = [
+    "Overall good value for money, will shop again.",
+    "Dependable store with quality products."
+]
+
+# 4. Real Estate
+REALESTATE_OPENERS_5_EN = [
+    "Transparent and smooth experience with {company}. Highly knowledgeable team regarding {keyword}.",
+    "Very trustworthy property advisors at {company}. Helped us find the right {keyword} with zero hassle.",
+    "Great experience with {company}! Clear documentation and professional guidance for {keyword}."
+]
+
+REALESTATE_CLOSERS_5_EN = [
+    "Highly recommended for property buyers!",
+    "5 stars for honesty and professionalism."
+]
+
+REALESTATE_OPENERS_4_EN = [
+    "Good experience with {company} for {keyword}. Professional guidance, paperwork took just a little extra time.",
+    "Helpful property team at {company}. Clear advice on {keyword}, with just a slight delay in initial site visit scheduling."
+]
+
+REALESTATE_CLOSERS_4_EN = [
+    "Overall a solid experience with reliable advisors.",
+    "Satisfied with their guidance and support."
+]
+
+# 5. Restaurant and Food
 RESTAURANT_OPENERS_5_EN = [
     "Loved dining at {company}! The {keyword} was fresh, delicious, and served quickly.",
     "Amazing food and super friendly staff at {company}. The {keyword} is a must try!",
@@ -144,12 +268,24 @@ RESTAURANT_CLOSERS_5_EN = [
     "Great vibes and tasty food. 5 stars!"
 ]
 
-# Category-Specific 5-Star English Beauty and Salon
+RESTAURANT_OPENERS_4_EN = [
+    "Tasty food and good vibes at {company}. Loved their {keyword}, just had to wait a few minutes for a table.",
+    "Really nice dinner at {company}. Great {keyword} and courteous staff, service turnaround was just a bit slow during rush hour.",
+    "Good food and pleasant atmosphere at {company}. The {keyword} tasted great, though response for seating took a little time."
+]
+
+RESTAURANT_CLOSERS_4_EN = [
+    "Overall a good visit, definitely worth checking out.",
+    "Tasty food, will probably visit again on a weekday.",
+    "Solid 4-star dining spot."
+]
+
+# 6. Beauty and Salon
 BEAUTY_OPENERS_5_EN = [
-    "Really loved my visit to {company}! Their work on {keyword} was fantastic and staff was very polite.",
+    "Really loved my visit to {company}! Their service on {keyword} was fantastic and staff was very polite.",
     "Had an amazing experience at {company}. The {keyword} turned out beautiful and stylish!",
     "Super happy with {company}! Great service on {keyword} and very clean, relaxing environment.",
-    "Best salon experience! {company} did my {keyword} wonderfully and with great care.",
+    "Best styling experience! {company} did my {keyword} wonderfully and with great care.",
     "Extremely satisfied with {company}. The team is skilled and did my {keyword} perfectly."
 ]
 
@@ -161,11 +297,10 @@ BEAUTY_CLOSERS_5_EN = [
     "Will definitely be returning soon!"
 ]
 
-# Category-Specific 4-Star English Beauty and Salon
 BEAUTY_OPENERS_4_EN = [
-    "Good experience at {company} for {keyword}. Loved the result, just a slight delay in appointment start time and turnaround.",
-    "Nice service and skilled staff at {company}. Great {keyword}, though response time to booking could be slightly faster.",
-    "Pleasant visit to {company}. Quality work on {keyword}, with just a little room for faster communication."
+    "Good experience at {company} for {keyword}. Loved the result, just a slight delay in appointment start time.",
+    "Nice service and skilled staff at {company}. Great {keyword}, though booking response could be slightly faster.",
+    "Pleasant visit to {company}. Attentive service on {keyword}, with just a little room for faster communication."
 ]
 
 BEAUTY_CLOSERS_4_EN = [
@@ -174,37 +309,82 @@ BEAUTY_CLOSERS_4_EN = [
     "Happy with the results and will visit again."
 ]
 
-# ==============================================================================
-# 4-STAR TEMPLATES: Overall positive, with one mild, plausible improvement area
-# ==============================================================================
-
-OPENERS_4_EN = [
-    "Good experience with {company} for {keyword}. Quality work and friendly team, just a slight delay in initial response time.",
-    "Happy with the outcome on {keyword}. {company} did a solid job, would just appreciate slightly quicker communication updates.",
-    "Nice work on {keyword} by {company}. Decent pricing and supportive staff, minor wait in initial turnaround.",
-    "Reliable service overall. {company} handled our {keyword} well, with just a little room for faster response and communication.",
-    "Solid 4-star experience with {company}! Good quality {keyword}, though initial response could be slightly faster.",
-    "Satisfied with {company}'s work on {keyword}. Professional team, just a minor delay in turnaround time."
+# 7. Education
+EDUCATION_OPENERS_5_EN = [
+    "Wonderful learning experience at {company}! Supportive mentors and great curriculum for {keyword}.",
+    "Highly recommend {company} for {keyword}. Very knowledgeable faculty and practical approach.",
+    "Great academic environment at {company}! The guidance for {keyword} helped me understand concepts clearly."
 ]
 
-CLOSERS_4_EN = [
-    "Overall a positive experience, would recommend.",
-    "Good value for money and solid service.",
-    "Happy with the results and will use them again.",
-    "Solid work from a dependable team."
+EDUCATION_CLOSERS_5_EN = [
+    "Great institute for serious learners!",
+    "5 stars for excellent teaching quality!",
+    "Highly recommended!"
 ]
 
-# Category-Specific 4-Star Restaurant
-RESTAURANT_OPENERS_4_EN = [
-    "Tasty food and good vibes at {company}. Loved their {keyword}, just had to wait a few minutes for a table.",
-    "Really nice dinner at {company}. Great {keyword} and courteous staff, service turnaround was just a bit slow during rush hour.",
-    "Good food and pleasant atmosphere at {company}. The {keyword} tasted great, though response for seating took a little time."
+EDUCATION_OPENERS_4_EN = [
+    "Good learning experience at {company} for {keyword}. Great guidance, response from admin could be slightly faster."
 ]
 
-RESTAURANT_CLOSERS_4_EN = [
-    "Overall a good visit, definitely worth checking out.",
-    "Tasty food, will probably visit again on a weekday.",
-    "Solid 4-star dining spot."
+EDUCATION_CLOSERS_4_EN = [
+    "Overall very helpful and educational."
+]
+
+# 8. Travel and Hospitality
+TRAVEL_OPENERS_5_EN = [
+    "Memorable experience with {company}! Seamless arrangements and wonderful service for {keyword}.",
+    "Loved our trip with {company}. Excellent customer service and very smooth handling of {keyword}."
+]
+
+TRAVEL_CLOSERS_5_EN = [
+    "Will definitely book through them again!",
+    "5 stars for a wonderful vacation experience!"
+]
+
+TRAVEL_OPENERS_4_EN = [
+    "Good experience with {company} for {keyword}. Well-organized trip, with just a minor delay in itinerary confirmation."
+]
+
+TRAVEL_CLOSERS_4_EN = [
+    "Overall a lovely trip, recommended."
+]
+
+# 9. Retail
+RETAIL_OPENERS_5_EN = [
+    "Great shopping experience at {company}! Huge variety and courteous staff for {keyword}.",
+    "Friendly staff and fair prices at {company}. Found exact {keyword} without any hassle."
+]
+
+RETAIL_CLOSERS_5_EN = [
+    "Definitely coming back to shop here!",
+    "5 stars for great collection!"
+]
+
+RETAIL_OPENERS_4_EN = [
+    "Nice store with good collection at {company}. Found what I needed for {keyword}, billing line was just a bit slow."
+]
+
+RETAIL_CLOSERS_4_EN = [
+    "Overall good store with helpful staff."
+]
+
+# 10. Digital Marketing
+MARKETING_OPENERS_5_EN = [
+    "Superb marketing agency! {company} helped scale our {keyword} with real measurable results.",
+    "Professional digital strategists at {company}. Excellent ROI and deep expertise in {keyword}."
+]
+
+MARKETING_CLOSERS_5_EN = [
+    "Highly recommended growth agency!",
+    "5 stars for measurable results!"
+]
+
+MARKETING_OPENERS_4_EN = [
+    "Good results from {company} on our {keyword}. Solid campaign performance, weekly reporting could be slightly more frequent."
+]
+
+MARKETING_CLOSERS_4_EN = [
+    "Solid marketing team and good ROI."
 ]
 
 # ==============================================================================
@@ -289,51 +469,66 @@ def generate_template_candidates(
 ) -> list[str]:
     """
     Generate small, authentic, human-sounding customer review variations in English, Hindi, or Gujarati.
-    Produces realistic customer reviews tailored specifically to the target rating (4-star vs 5-star).
+    Produces realistic customer reviews tailored specifically to the business category and target rating (4-star vs 5-star).
     """
     results = []
     seen = set()
 
     lang = (language or "en").lower().strip()
-    is_restaurant = category and "restaurant" in category.lower()
-    is_beauty = category and any(b in category.lower() for b in ["beauty", "salon", "spa", "hair", "skin", "care"])
+    cat_lower = (category or "").lower().strip()
     is_four_star = int(target_rating) == 4
 
+    # Strict, disambiguated category detection
+    is_healthcare = any(h in cat_lower for h in ["health", "clinic", "dental", "dentist", "doctor", "medical", "hospital", "internal medicine"])
+    is_it_software = any(it in cat_lower for it in ["it services", "software", "development", "technology", "tech", "web dev", "app dev", "code"])
+    is_ecommerce = any(ec in cat_lower for ec in ["e-commerce", "ecommerce", "online shopping", "store", "goods"])
+    is_restaurant = any(r in cat_lower for r in ["restaurant", "food", "dining", "cafe", "bistro", "bakery", "thali"])
+    is_beauty = (any(b in cat_lower for b in ["beauty", "salon", "day spa", "haircut", "styling"]) and not is_healthcare)
+    is_realestate = any(re_kw in cat_lower for re_kw in ["real estate", "property", "realty", "builder", "housing"])
+    is_education = any(ed in cat_lower for ed in ["education", "academy", "school", "institute", "coaching", "learning"])
+    is_travel = any(tr in cat_lower for tr in ["travel", "hospitality", "hotel", "resort", "tour", "vacation"])
+    is_marketing = any(mk in cat_lower for mk in ["marketing", "digital marketing", "seo", "advertising", "social media"])
+    is_retail = any(rt in cat_lower for rt in ["retail", "superstore", "mart", "shop"])
+
     if lang in ("gu", "gujarati"):
-        if is_four_star:
-            openers = OPENERS_4_GU
-            closers = CLOSERS_4_GU
-        else:
-            openers = OPENERS_5_GU
-            closers = CLOSERS_5_GU
+        openers = OPENERS_4_GU if is_four_star else OPENERS_5_GU
+        closers = CLOSERS_4_GU if is_four_star else CLOSERS_5_GU
     elif lang in ("hi", "hindi"):
-        if is_four_star:
-            openers = OPENERS_4_HI
-            closers = CLOSERS_4_HI
-        else:
-            openers = OPENERS_5_HI
-            closers = CLOSERS_5_HI
-    elif is_beauty:
-        if is_four_star:
-            openers = BEAUTY_OPENERS_4_EN
-            closers = BEAUTY_CLOSERS_4_EN
-        else:
-            openers = BEAUTY_OPENERS_5_EN
-            closers = BEAUTY_CLOSERS_5_EN
+        openers = OPENERS_4_HI if is_four_star else OPENERS_5_HI
+        closers = CLOSERS_4_HI if is_four_star else CLOSERS_5_HI
+    elif is_healthcare:
+        openers = HEALTHCARE_OPENERS_4_EN if is_four_star else HEALTHCARE_OPENERS_5_EN
+        closers = HEALTHCARE_CLOSERS_4_EN if is_four_star else HEALTHCARE_CLOSERS_5_EN
+    elif is_it_software:
+        openers = IT_OPENERS_4_EN if is_four_star else IT_OPENERS_5_EN
+        closers = IT_CLOSERS_4_EN if is_four_star else IT_CLOSERS_5_EN
+    elif is_ecommerce:
+        openers = ECOMMERCE_OPENERS_4_EN if is_four_star else ECOMMERCE_OPENERS_5_EN
+        closers = ECOMMERCE_CLOSERS_4_EN if is_four_star else ECOMMERCE_CLOSERS_5_EN
     elif is_restaurant:
-        if is_four_star:
-            openers = RESTAURANT_OPENERS_4_EN
-            closers = RESTAURANT_CLOSERS_4_EN
-        else:
-            openers = RESTAURANT_OPENERS_5_EN
-            closers = RESTAURANT_CLOSERS_5_EN
+        openers = RESTAURANT_OPENERS_4_EN if is_four_star else RESTAURANT_OPENERS_5_EN
+        closers = RESTAURANT_CLOSERS_4_EN if is_four_star else RESTAURANT_CLOSERS_5_EN
+    elif is_realestate:
+        openers = REALESTATE_OPENERS_4_EN if is_four_star else REALESTATE_OPENERS_5_EN
+        closers = REALESTATE_CLOSERS_4_EN if is_four_star else REALESTATE_CLOSERS_5_EN
+    elif is_beauty:
+        openers = BEAUTY_OPENERS_4_EN if is_four_star else BEAUTY_OPENERS_5_EN
+        closers = BEAUTY_CLOSERS_4_EN if is_four_star else BEAUTY_CLOSERS_5_EN
+    elif is_education:
+        openers = EDUCATION_OPENERS_4_EN if is_four_star else EDUCATION_OPENERS_5_EN
+        closers = EDUCATION_CLOSERS_4_EN if is_four_star else EDUCATION_CLOSERS_5_EN
+    elif is_travel:
+        openers = TRAVEL_OPENERS_4_EN if is_four_star else TRAVEL_OPENERS_5_EN
+        closers = TRAVEL_CLOSERS_4_EN if is_four_star else TRAVEL_CLOSERS_5_EN
+    elif is_retail:
+        openers = RETAIL_OPENERS_4_EN if is_four_star else RETAIL_OPENERS_5_EN
+        closers = RETAIL_CLOSERS_4_EN if is_four_star else RETAIL_CLOSERS_5_EN
+    elif is_marketing:
+        openers = MARKETING_OPENERS_4_EN if is_four_star else MARKETING_OPENERS_5_EN
+        closers = MARKETING_CLOSERS_4_EN if is_four_star else MARKETING_CLOSERS_5_EN
     else:
-        if is_four_star:
-            openers = OPENERS_4_EN
-            closers = CLOSERS_4_EN
-        else:
-            openers = OPENERS_5_EN
-            closers = CLOSERS_5_EN
+        openers = OPENERS_4_EN if is_four_star else OPENERS_5_EN
+        closers = CLOSERS_4_EN if is_four_star else CLOSERS_5_EN
 
     sample_openers = list(openers)
     sample_closers = list(closers)
@@ -350,10 +545,8 @@ def generate_template_candidates(
         sentence2 = cl.format(company=company_name, keyword=keyword)
 
         if length == "short":
-            # 1 short, crisp sentence
             full_review = sentence1
         elif length == "long":
-            # 2 to 3 concise human sentences
             if is_four_star:
                 if lang in ("hi", "hindi"):
                     extra = "थोड़ा समय जरूर लगा, लेकिन परिणाम से हम खुश हैं।"
@@ -370,7 +563,6 @@ def generate_template_candidates(
                     extra = "Everything was handled smoothly and without any complications."
             full_review = f"{sentence1} {extra} {sentence2}"
         else:  # medium / natural default
-            # 1 natural opener + 1 punchy closer (approx 15-22 words)
             full_review = f"{sentence1} {sentence2}"
 
         if full_review not in seen:

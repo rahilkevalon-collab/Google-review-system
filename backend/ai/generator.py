@@ -139,20 +139,14 @@ class ReviewGeneratorService:
         if not clean_selected_kws:
             clean_selected_kws = ["Quality Service"]
 
-        if len(clean_selected_kws) > 1:
-            batch_keyword_distribution = []
-            for idx in range(target_count):
-                if len(clean_selected_kws) == 2:
-                    if idx % 2 == 0:
-                        batch_keyword_distribution.append([clean_selected_kws[0], clean_selected_kws[1]])
-                    else:
-                        batch_keyword_distribution.append([clean_selected_kws[1], clean_selected_kws[0]])
-                else:
-                    k1 = clean_selected_kws[idx % len(clean_selected_kws)]
-                    k2 = clean_selected_kws[(idx + 1) % len(clean_selected_kws)]
-                    batch_keyword_distribution.append([k1, k2])
-        else:
-            batch_keyword_distribution = distribute_keywords_to_batch(clean_selected_kws, target_count)
+        # Guarantee: ALL selected keywords are included in EVERY review card
+        batch_keyword_distribution = []
+        for idx in range(target_count):
+            if len(clean_selected_kws) <= 1:
+                batch_keyword_distribution.append(list(clean_selected_kws))
+            else:
+                rotated = clean_selected_kws[idx % len(clean_selected_kws):] + clean_selected_kws[:idx % len(clean_selected_kws)]
+                batch_keyword_distribution.append(rotated)
 
         # Load historical review pool for this company
         history_texts = self.get_history_texts(company_id)
@@ -194,13 +188,28 @@ class ReviewGeneratorService:
         else:  # medium / natural default
             target_min, target_max = 12, 26
 
+        def format_keywords_phrase(kws: list[str], lang: str = "en") -> str:
+            if not kws:
+                return "Quality Service"
+            if len(kws) == 1:
+                return kws[0]
+            if len(kws) == 2:
+                if lang in ("hi", "hindi"):
+                    return f"{kws[0]} और {kws[1]}"
+                elif lang in ("gu", "gujarati"):
+                    return f"{kws[0]} અને {kws[1]}"
+                return f"{kws[0]} and {kws[1]}"
+            # 3 or more keywords: include all in a natural phrase
+            if lang in ("hi", "hindi"):
+                return f"{', '.join(kws[:-1])} और {kws[-1]}"
+            elif lang in ("gu", "gujarati"):
+                return f"{', '.join(kws[:-1])} અને {kws[-1]}"
+            return f"{', '.join(kws[:-1])}, and {kws[-1]}"
+
         for i in range(target_count):
             item_rating = ratings_for_batch[i]
             item_keywords = batch_keyword_distribution[i]
-            if len(item_keywords) == 2:
-                item_keyword_str = f"{item_keywords[0]} and {item_keywords[1]}"
-            else:
-                item_keyword_str = ", ".join(item_keywords)
+            item_keyword_str = format_keywords_phrase(item_keywords, language)
             
             # Generate candidate pool specifically tailored for this rating and natural keywords
             candidates, src = llm_provider.generate_review_candidates(

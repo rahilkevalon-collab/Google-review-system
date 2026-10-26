@@ -333,14 +333,14 @@ def test_api_backend_default_rating_ratio_without_frontend_payload(client):
     assert sorted(ratings) == [4, 5, 5]
     assert data["ratingBreakdown"] == {"5_star": 2, "4_star": 1}
 
-# 22. Multiple Selected Keywords Natural Distribution
+# 22. Multiple Selected Keywords: All keywords must appear in every review
 def test_multiple_selected_keywords_natural_distribution(client):
     """
-    Verify that when multiple keywords are selected, reviews focus on distinct subsets
-    rather than stuffing all keywords into every review.
+    Verify that when multiple keywords are selected (e.g. 3 keywords),
+    ALL selected keywords are included in EVERY review card.
     """
     unique_company = f"Multi Keyword Co {time.time()}"
-    kws = ["Web Engineering", "Cloud Architecture", "DevOps Pipelines", "Microservices"]
+    kws = ["Web Engineering", "Cloud Architecture", "DevOps Pipelines"]
     res = client.post("/api/generate-reviews", json={
         "companyName": unique_company,
         "category": "IT Services and Software Development",
@@ -356,14 +356,11 @@ def test_multiple_selected_keywords_natural_distribution(client):
     for rev in reviews:
         card_kws = rev.get("selectedKeywords")
         assert isinstance(card_kws, list)
-        assert 1 <= len(card_kws) <= 2
-        # Ensure all assigned keywords belong to the selected list
-        for k in card_kws:
-            assert k in kws
-
-    # Check that distinct cards focus on different keywords
-    card_kws_set = [tuple(r.get("selectedKeywords")) for r in reviews]
-    assert len(set(card_kws_set)) > 1
+        assert len(card_kws) == 3
+        # Ensure ALL selected keywords are present in each review card
+        for k in kws:
+            assert k in card_kws
+            assert k in rev["reviewText"]
 
 # 23. Rating Persistence and Stability on Repeated Fetch
 def test_rating_persistence_and_stability_on_repeated_fetch(client):

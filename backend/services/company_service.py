@@ -397,6 +397,26 @@ class CompanyService:
         }
         res = self.db.companies.insert_one(doc)
         doc["_id"] = res.inserted_id
+
+        # Immediately auto-generate initial review suggestions so data is stored in MongoDB
+        try:
+            from ai.generator import generator_service
+            initial_kws = unique_kws[:2] if len(unique_kws) >= 2 else unique_kws
+            generator_service.generate_reviews(
+                company_id=str(res.inserted_id),
+                company_name=name,
+                category=doc["category"],
+                keyword=", ".join(initial_kws),
+                selected_keywords=initial_kws,
+                services=services_str,
+                location=location,
+                language=doc.get("preferredLanguage", "en"),
+                count=3
+            )
+            logger.info("Auto-generated initial reviews for new company %s (ID: %s)", name, str(res.inserted_id))
+        except Exception as ge:
+            logger.warning("Could not auto-generate initial reviews on company creation: %s", str(ge))
+
         return serialize_doc(doc)
 
     def search_places(self, query: str) -> dict:
