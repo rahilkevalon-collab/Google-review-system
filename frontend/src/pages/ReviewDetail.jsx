@@ -19,6 +19,7 @@ import {
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
 import { getGoogleReviewUrl } from '../utils/googleReviewUrl';
+import { syncReviewToExtension, triggerExtensionAutoFill } from '../utils/extensionSync';
 
 export default function ReviewDetail() {
   const { id, reviewId } = useParams();
@@ -46,6 +47,7 @@ export default function ReviewDetail() {
           const rev = res.review;
           setReview(rev);
           setReviewText(rev.reviewText || '');
+          syncReviewToExtension(rev, null, 'detail_view');
 
           // If companyId exists, fetch latest company details for address, placeId etc.
           if (rev.companyId) {
@@ -106,19 +108,22 @@ export default function ReviewDetail() {
   };
 
   const handleOpenGoogle = async () => {
-    // Copy review text first
     await copyToClipboard();
     api.recordCopyEvent(effectiveId).catch(() => {});
 
-    // Resolve URL with placeId or fallback
+    triggerExtensionAutoFill({ ...review, reviewText, text: reviewText }, company);
+
     const targetItem = {
       ...review,
+      reviewText,
       ...(company || {})
     };
     const googleUrl = getGoogleReviewUrl(targetItem);
 
-    addToast('Review text copied! Opening Google Reviews — please paste and submit your review.', 'info', 6000);
-    window.open(googleUrl, '_blank', 'noopener,noreferrer');
+    addToast('Review text copied! Opening Google Reviews — ReviewCraft extension will auto-paste text & rating.', 'success', 5000);
+    setTimeout(() => {
+      window.open(googleUrl, '_blank', 'noopener,noreferrer');
+    }, 100);
   };
 
   const handleSaveEdits = async () => {
@@ -132,6 +137,7 @@ export default function ReviewDetail() {
       const res = await api.patchReviewText(effectiveId, reviewText);
       if (res.success && res.review) {
         setReview(res.review);
+        syncReviewToExtension(res.review, company, 'detail_edit');
         addToast('Review updated successfully!', 'success');
       }
     } catch (err) {

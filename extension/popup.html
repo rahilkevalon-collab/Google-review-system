@@ -12,7 +12,7 @@
     }
     body {
       width: 320px;
-      padding: 18px;
+      padding: 16px;
       background: #ffffff;
       color: #0f172a;
     }
@@ -20,7 +20,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
     .icon {
       width: 32px;
@@ -35,7 +35,7 @@
       font-weight: bold;
     }
     .title {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 700;
       color: #0f172a;
     }
@@ -56,11 +56,19 @@
       font-weight: 600;
       margin-bottom: 12px;
     }
+    .badge.waiting {
+      background: #fffbeb;
+      color: #b45309;
+      border-color: #fde68a;
+    }
     .dot {
       width: 7px;
       height: 7px;
       border-radius: 50%;
       background: #10b981;
+    }
+    .badge.waiting .dot {
+      background: #f59e0b;
     }
     .card {
       background: #f8fafc;
@@ -70,16 +78,65 @@
       font-size: 12px;
       color: #334155;
       line-height: 1.5;
+      margin-bottom: 12px;
     }
-    .feature-list {
-      margin-top: 8px;
-      padding-left: 16px;
-    }
-    .feature-list li {
+    .business-name {
+      font-weight: 700;
+      color: #034665;
+      font-size: 13px;
       margin-bottom: 4px;
     }
+    .stars {
+      color: #f59e0b;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    .review-snippet {
+      font-style: italic;
+      color: #475569;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .meta {
+      font-size: 10px;
+      color: #94a3b8;
+    }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+    .btn {
+      flex: 1;
+      padding: 7px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: #034665;
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: #02354e;
+    }
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+      border-color: #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
     .footer {
-      margin-top: 14px;
+      margin-top: 12px;
       font-size: 10px;
       color: #94a3b8;
       text-align: center;
@@ -91,26 +148,36 @@
     <div class="icon">✨</div>
     <div>
       <div class="title">ReviewCraft AI</div>
-      <div class="subtitle">Google Review Auto-Filler</div>
+      <div class="subtitle">Auto-Sync & Auto-Filler v1.0.9</div>
     </div>
   </div>
 
-  <div class="badge">
+  <div id="status-badge" class="badge">
     <div class="dot"></div>
-    <span>Extension Active & Ready</span>
+    <span id="status-text">Active & Synchronized</span>
   </div>
 
-  <div class="card">
-    <strong>How it works:</strong>
-    <ol class="feature-list">
-      <li>Generate reviews in ReviewCraft.</li>
-      <li>Click <strong>Open Google</strong> on any review card.</li>
-      <li>This extension automatically enters your review text and clicks the stars in Google!</li>
-    </ol>
+  <div class="card" id="review-card">
+    <div id="no-review" style="display: none; color: #64748b; text-align: center; padding: 6px 0;">
+      No review selected yet. Open ReviewCraft to generate reviews.
+    </div>
+    <div id="has-review">
+      <div class="business-name" id="card-company">Business Profile</div>
+      <div class="stars" id="card-stars">★★★★★</div>
+      <div class="review-snippet" id="card-text">"Review text preview..."</div>
+      <div class="meta" id="card-meta">Synced just now</div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button id="btn-open-webapp" class="btn btn-primary">Open ReviewCraft</button>
+    <button id="btn-clear" class="btn btn-secondary">Clear</button>
   </div>
 
   <div class="footer">
-    ReviewCraft v1.0 • Intelligent SEO Review Assistant
+    Auto-pastes text & clicks stars on Google Review dialogs
   </div>
+
+  <script src="popup.js"></script>
 </body>
 </html>

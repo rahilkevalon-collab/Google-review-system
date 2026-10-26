@@ -22,7 +22,8 @@
 
 4. ફાઈલ સિલેક્ટર ખુલશે, તેમાં નીચે આપેલ ફોલ્ડર સિલેક્ટ કરો:
    ```text
-   E:\Review system\extension
+   [તમારું પ્રોજેક્ટ ફોલ્ડર]\Google-review-system-main\extension
+   દા.ત. C:\Users\dhrum\OneDrive\Desktop\Review _predection_system\Google-review-system-main\extension
    ```
    અને **"Select Folder"** બટન દબાવો.
 

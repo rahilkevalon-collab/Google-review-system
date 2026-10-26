@@ -9,6 +9,7 @@ import {
 import { api } from '../services/api';
 import { useToast } from './Toast';
 import { getGoogleReviewUrl } from '../utils/googleReviewUrl';
+import { syncReviewToExtension, triggerExtensionAutoFill } from '../utils/extensionSync';
 
 export default function ReviewCard({ review }) {
   const { addToast } = useToast();
@@ -47,26 +48,23 @@ export default function ReviewCard({ review }) {
     }
 
     // 2. Dispatch event for ReviewCraft Chrome Extension to auto-fill review text & stars on Google
-    window.postMessage({
-      type: 'REVIEW_CRAFT_AUTOFILL',
-      payload: {
-        text: review.reviewText,
-        rating: ratingVal,
-        companyName: review.companyName || '',
-        timestamp: Date.now()
-      }
-    }, '*');
+    triggerExtensionAutoFill(review);
 
     addToast(`Review copied! Opening Google — ReviewCraft extension will auto-paste text & select ${ratingVal} stars.`, 'success', 4000);
     
-    // Give extension content script and service worker a small window to persist payload
     setTimeout(() => {
       window.open(googleUrl, '_blank', 'noopener,noreferrer');
-    }, 120);
+    }, 100);
+  };
+
+  const handleCardInteraction = () => {
+    syncReviewToExtension(review, null, 'card_select');
   };
 
   return (
     <div
+      onMouseEnter={handleCardInteraction}
+      onClick={handleCardInteraction}
       className="glass-card group p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden bg-white border border-slate-200 hover:border-[#068dcb]/40 hover:shadow-xl hover:shadow-[#068dcb]/10 transition-all duration-200 font-sans"
     >
       {/* Top badges */}

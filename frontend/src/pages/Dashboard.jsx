@@ -15,6 +15,7 @@ import KeywordChips from '../components/KeywordChips';
 import ReviewCard from '../components/ReviewCard';
 import SkeletonReviewCard from '../components/SkeletonReviewCard';
 import { getGoogleReviewUrl } from '../utils/googleReviewUrl';
+import { syncReviewToExtension } from '../utils/extensionSync';
 
 export default function Dashboard({ categories = [] }) {
   const { companyId: routeCompanyId } = useParams();
@@ -161,7 +162,11 @@ export default function Dashboard({ categories = [] }) {
       const res = await api.generateReviews(payload);
 
       if (res.success && Array.isArray(res.reviews) && res.reviews.length > 0) {
-        setReviews(res.reviews.slice(0, 3));
+        const topReviews = res.reviews.slice(0, 3);
+        setReviews(topReviews);
+        if (topReviews[0] && company) {
+          syncReviewToExtension(topReviews[0], company, 'auto_sync');
+        }
         if (res.rejectedDuplicates > 0) {
           setDedupNotice(
             `TF-IDF deduplication verified 3 distinct suggestions (${res.rejectedDuplicates} similar variant${res.rejectedDuplicates > 1 ? 's' : ''} filtered).`
@@ -174,7 +179,11 @@ export default function Dashboard({ categories = [] }) {
           limit: 3
         });
         if (fallbackRes.success && fallbackRes.reviews && fallbackRes.reviews.length > 0) {
-          setReviews(fallbackRes.reviews.slice(0, 3));
+          const topFallback = fallbackRes.reviews.slice(0, 3);
+          setReviews(topFallback);
+          if (topFallback[0] && company) {
+            syncReviewToExtension(topFallback[0], company, 'auto_sync');
+          }
         }
       }
     } catch (err) {
