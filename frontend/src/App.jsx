@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { api } from './services/api';
 import { ToastProvider } from './components/Toast';
-import Navbar from './components/Navbar';
 import CompanySetup from './pages/CompanySetup';
 import Dashboard from './pages/Dashboard';
 import ReviewDetail from './pages/ReviewDetail';
@@ -57,9 +56,6 @@ export default function App() {
       <BrowserRouter>
         <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 radial-glow antialiased selection:bg-[#068dcb]/20 selection:text-[#034665]">
           
-          {/* Top Navigation Bar */}
-          <Navbar healthStatus={healthStatus} />
-
           {/* Main Content Viewport */}
           <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
             {initialLoading ? (

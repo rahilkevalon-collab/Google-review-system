@@ -4,11 +4,9 @@ import {
   Sparkles, 
   MapPin, 
   Globe, 
-  Layers,
   CheckCircle2,
   AlertCircle,
-  Info,
-  RefreshCw
+  Info
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
@@ -374,17 +372,7 @@ export default function Dashboard({ categories = [] }) {
       </div>
 
       {/* SEO Keywords Chips Section */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-[#068dcb]" />
-            <span>Target SEO Keyword Chips</span>
-            <span className="text-[10px] text-slate-500 normal-case font-normal">
-              (Click to select one or multiple keywords)
-            </span>
-          </label>
-        </div>
-
+      <div>
         {/* Rounded Brand Gradient Chips Component */}
         <KeywordChips
           keywords={keywords}
@@ -393,29 +381,6 @@ export default function Dashboard({ categories = [] }) {
           onAddKeyword={handleAddKeyword}
           onRemoveKeyword={handleRemoveKeyword}
         />
-      </div>
-
-      {/* 3. Review Results Section Header with Refresh Action */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <span>Customer Review Suggestions</span>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#068dcb]/10 text-[#034665] border border-[#068dcb]/25">
-              3 Distinct Suggestions
-            </span>
-          </h2>
-        </div>
-
-        {/* Generate / Refresh Brand New Non-Repeating Reviews Button */}
-        <button
-          onClick={() => generateReviews(selectedKeywords, true)}
-          disabled={loadingReviews || isGenerating}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-[#034665] to-[#068dcb] hover:from-[#02354e] hover:to-[#057db4] shadow-md shadow-[#068dcb]/20 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
-          title="Synthesize 3 new non-repeating review suggestions"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loadingReviews || isGenerating ? 'animate-spin' : ''}`} />
-          <span>{loadingReviews || isGenerating ? 'Synthesizing...' : 'Get New Reviews'}</span>
-        </button>
       </div>
 
       {/* Deduplication Status Notice (if any duplicates were rejected) */}
