@@ -1,19 +1,19 @@
 /**
  * ReviewCraft Chrome Extension - Background Service Worker (Manifest V3)
- * Coordinates review payloads between ReviewCraft Web App and Google Review modals.
+ * Handles lifecycle, message coordination, and storage persistence.
  * 
- * Complies with Manifest V3 service worker lifecycle:
- * - Registers top-level synchronous listeners
- * - Avoids volatile in-memory global state
- * - Persists all review state in chrome.storage.local
+ * Complies with Manifest V3 service worker rules:
+ * - Top-level synchronous listener registration
+ * - Restores state from chrome.storage.local on restart
+ * - Asynchronous message handling returns true correctly
  */
 
 chrome.runtime.onInstalled.addListener((details) => {
-  console.log('[ReviewCraft SW] Extension installed or updated:', details.reason);
+  console.log('[ReviewCraft SW] Extension installed/updated:', details.reason);
   chrome.storage.local.get(['pendingReview'], (res) => {
     if (!res.pendingReview) {
       chrome.storage.local.set({
-        extensionVersion: '1.0.9',
+        extensionVersion: '1.1.3',
         initializedAt: Date.now()
       });
     }
@@ -35,20 +35,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return false;
       }
 
+      const version = Number(payload.version) || Number(payload.timestamp) || Date.now();
       const reviewRecord = {
-        companyId: payload.companyId || '',
-        companyName: payload.companyName || '',
-        companyLocation: payload.companyLocation || '',
-        googlePlaceId: payload.googlePlaceId || '',
-        googleReviewUrl: payload.googleReviewUrl || '',
-        reviewId: payload.reviewId || '',
+        companyId: String(payload.companyId || ''),
+        companyName: String(payload.companyName || '').trim(),
+        companyLocation: String(payload.companyLocation || '').trim(),
+        googlePlaceId: String(payload.googlePlaceId || '').trim(),
+        googleReviewUrl: String(payload.googleReviewUrl || '').trim(),
+        reviewId: String(payload.reviewId || `rev_${version}`),
         text: String(payload.text).trim(),
-        rating: Math.round(Number(payload.rating)) || 5,
-        keyword: payload.keyword || '',
-        timestamp: payload.timestamp || Date.now(),
-        source: payload.source || 'manual',
-        status: payload.status || 'ready',
-        applied: false
+        rating: Math.max(1, Math.min(5, Math.round(Number(payload.rating)) || 5)),
+        keyword: String(payload.keyword || '').trim(),
+        timestamp: version,
+        version: version,
+        source: String(payload.source || 'manual'),
+        status: String(payload.status || 'ready'),
+        applied: false,
+        updatedAt: Date.now()
       };
 
       chrome.storage.local.set({
@@ -59,11 +62,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (chrome.runtime?.lastError) {
           sendResponse({ success: false, error: chrome.runtime.lastError.message });
         } else {
-          console.log('[ReviewCraft SW] Set pending review in storage:', reviewRecord.companyName);
+          console.log('[ReviewCraft SW] Updated pending review in storage:', reviewRecord.companyName, 'v=' + version);
           sendResponse({ success: true, data: reviewRecord });
         }
       });
-      return true; // Keep message channel open for async callback
+      return true; // Keep channel open for async response
     }
 
     if (message.action === 'GET_PENDING_REVIEW') {
@@ -93,10 +96,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             pendingReview: updated,
             lastAppliedReview: updated
           }, () => {
-            sendResponse({ success: true });
+            sendResponse({ success: true, data: updated });
           });
         } else {
-          sendResponse({ success: false });
+          sendResponse({ success: false, reason: 'No pending review to mark applied' });
         }
       });
       return true;
@@ -106,7 +109,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.storage.local.get(['pendingReview', 'lastSyncTimestamp', 'lastAppliedReview'], (res) => {
         sendResponse({
           success: true,
-          version: '1.0.9',
+          version: '1.1.3',
           pendingReview: res.pendingReview || null,
           lastSyncTimestamp: res.lastSyncTimestamp || null,
           lastAppliedReview: res.lastAppliedReview || null
@@ -115,10 +118,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
     }
 
-    sendResponse({ success: false, error: 'Unknown action' });
+    sendResponse({ success: false, error: 'Unknown action: ' + message.action });
     return false;
   } catch (err) {
-    console.error('[ReviewCraft SW] Listener error:', err);
+    console.error('[ReviewCraft SW] Error handling message:', err);
     sendResponse({ success: false, error: err.message });
     return false;
   }

@@ -18,6 +18,29 @@ def search_companies():
     res = company_service.search_places(query)
     return jsonify(res), 200
 
+@company_bp.route("/companies/generate-seo-keywords", methods=["POST", "GET"])
+def generate_seo_keywords_endpoint():
+    """
+    Automatically synthesizes 3 to 7 high-intent SEO keywords based on
+    company name, business category, services, and location.
+    """
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+    else:
+        data = request.args
+
+    name = data.get("name", "").strip()
+    category = data.get("category", "Other").strip()
+    services = data.get("services", "").strip()
+    location = data.get("location", "").strip()
+
+    keywords = company_service.generate_seo_keywords(name, category, services, location)
+    return jsonify({
+        "success": True,
+        "seoKeywords": keywords,
+        "count": len(keywords)
+    }), 200
+
 @company_bp.route("/companies/<company_id>", methods=["GET"])
 def get_company(company_id):
     company = company_service.get_company_by_id(company_id)

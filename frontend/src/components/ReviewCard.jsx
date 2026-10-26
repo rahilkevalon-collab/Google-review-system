@@ -1,20 +1,20 @@
 import React from 'react';
 import { 
   ExternalLink, 
-  Tag, 
   Star,
   Globe,
-  Building
+  Building,
+  CheckCircle
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from './Toast';
 import { getGoogleReviewUrl } from '../utils/googleReviewUrl';
 import { syncReviewToExtension, triggerExtensionAutoFill } from '../utils/extensionSync';
 
-export default function ReviewCard({ review }) {
+export default function ReviewCard({ review, company = {}, isActive = false, onSelect }) {
   const { addToast } = useToast();
   const reviewId = review?.id || review?._id;
-  const ratingVal = Math.round(Number(review.rating)) || 5;
+  const ratingVal = Math.max(1, Math.min(5, Math.round(Number(review.rating)) || 5));
 
   const copyToClipboard = async () => {
     try {
@@ -39,8 +39,19 @@ export default function ReviewCard({ review }) {
   const handleOpenGoogle = async (e) => {
     e.stopPropagation();
     const googleUrl = getGoogleReviewUrl(review);
-    const ratingVal = Math.round(Number(review.rating)) || 5;
     
+    // Persist as the active selected review in localStorage
+    try {
+      localStorage.setItem('reviewcraft_active_selected_review', JSON.stringify(review));
+      if (company?.id) {
+        localStorage.setItem(`reviewcraft_active_selected_review_${company.id}`, JSON.stringify(review));
+      }
+    } catch (err) {}
+
+    if (onSelect) {
+      onSelect(review);
+    }
+
     // 1. Copy review text to clipboard (reliable fallback)
     await copyToClipboard();
     if (reviewId) {
@@ -48,7 +59,7 @@ export default function ReviewCard({ review }) {
     }
 
     // 2. Dispatch event for ReviewCraft Chrome Extension to auto-fill review text & stars on Google
-    triggerExtensionAutoFill(review);
+    triggerExtensionAutoFill(review, company);
 
     addToast(`Review copied! Opening Google — ReviewCraft extension will auto-paste text & select ${ratingVal} stars.`, 'success', 4000);
     
@@ -58,14 +69,27 @@ export default function ReviewCard({ review }) {
   };
 
   const handleCardInteraction = () => {
-    syncReviewToExtension(review, null, 'card_select');
+    try {
+      localStorage.setItem('reviewcraft_active_selected_review', JSON.stringify(review));
+      if (company?.id) {
+        localStorage.setItem(`reviewcraft_active_selected_review_${company.id}`, JSON.stringify(review));
+      }
+    } catch (err) {}
+
+    if (onSelect) {
+      onSelect(review);
+    }
+    syncReviewToExtension(review, company, 'card_select');
   };
 
   return (
     <div
-      onMouseEnter={handleCardInteraction}
       onClick={handleCardInteraction}
-      className="glass-card group p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden bg-white border border-slate-200 hover:border-[#068dcb]/40 hover:shadow-xl hover:shadow-[#068dcb]/10 transition-all duration-200 font-sans"
+      className={`glass-card group p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden bg-white border transition-all duration-200 font-sans cursor-pointer ${
+        isActive 
+          ? 'border-[#068dcb] ring-2 ring-[#068dcb]/25 shadow-lg shadow-[#068dcb]/10' 
+          : 'border-slate-200 hover:border-[#068dcb]/40 hover:shadow-xl hover:shadow-[#068dcb]/10'
+      }`}
     >
       {/* Top badges */}
       <div>
@@ -77,26 +101,16 @@ export default function ReviewCard({ review }) {
                 {review.companyName}
               </span>
             )}
-            {/* Display relevant keyword labels for this specific review card */}
-            {Array.isArray(review.selectedKeywords) && review.selectedKeywords.length > 0 ? (
-              review.selectedKeywords.map((kw, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#068dcb]/10 text-[#034665] border border-[#068dcb]/25 text-xs font-semibold"
-                >
-                  <Tag className="w-3 h-3 text-[#068dcb]" />
-                  {kw}
-                </span>
-              ))
-            ) : (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#068dcb]/10 text-[#034665] border border-[#068dcb]/25 text-xs font-semibold">
-                <Tag className="w-3 h-3 text-[#068dcb]" />
-                {review.keyword || 'Featured'}
+
+            {isActive && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#068dcb] text-white text-[10px] font-bold shadow-xs">
+                <CheckCircle className="w-3 h-3 text-white" />
+                Active for Google
               </span>
             )}
           </div>
 
-          {/* Rating stars without Demo label */}
+          {/* Rating stars */}
           <div 
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold"
             title={`${ratingVal}.0 Star Review`}
@@ -119,7 +133,7 @@ export default function ReviewCard({ review }) {
           </div>
         </div>
 
-        {/* Review Body (Clean sans-serif, bold/semibold font-weight 600, no italic) */}
+        {/* Review Body */}
         <div className="my-3">
           <p className="text-sm sm:text-[15px] text-slate-800 leading-relaxed font-semibold group-hover:text-slate-900 transition-colors">
             "{review.reviewText}"
@@ -127,18 +141,14 @@ export default function ReviewCard({ review }) {
         </div>
       </div>
 
-      {/* Card Action Row: Clean 1-click Open Google button */}
-      <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between gap-3">
-        <span className="text-[11px] text-slate-400 font-medium">
-          Auto-copy & launch
-        </span>
-
+      {/* Card Action Row (Auto-copy text removed, opens Google directly & auto-fills) */}
+      <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-end">
         {/* Open Google Reviews Button */}
         <button
           type="button"
           onClick={handleOpenGoogle}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-xs bg-gradient-to-r from-[#034665] to-[#068dcb] hover:from-[#02354e] hover:to-[#057db4] text-white shadow-md shadow-[#068dcb]/25 active:scale-95 transition-all cursor-pointer"
-          title="Copy review text and open Google Review dialog"
+          title="Open Google Review dialog and auto-fill"
         >
           <Globe className="w-3.5 h-3.5 text-white" />
           <span>Open Google</span>
@@ -148,5 +158,3 @@ export default function ReviewCard({ review }) {
     </div>
   );
 }
-
-

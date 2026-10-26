@@ -1,24 +1,77 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Building2, 
-  MapPin, 
-  Sparkles, 
-  Tag, 
   Briefcase, 
-  Globe, 
   Search, 
   Check, 
   ChevronDown, 
-  X, 
-  Info, 
   ArrowRight,
   Loader2,
-  CheckCircle2,
   Zap
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
+
+/**
+ * Client-side SEO keyword synthesizer guaranteeing 3 to 7 high-intent keywords.
+ */
+function synthesizeClientKeywords(name, category, services, location = '', categoriesList = []) {
+  const candidates = [];
+  const seen = new Set();
+
+  function add(kw) {
+    if (!kw) return;
+    const clean = kw.trim();
+    if (clean.length >= 3 && !seen.has(clean.toLowerCase())) {
+      seen.add(clean.toLowerCase());
+      candidates.push(clean);
+    }
+  }
+
+  // 1. Services offered
+  if (services) {
+    const raw = services.replace(/;/g, ',').split(',');
+    for (const s of raw) {
+      add(s);
+    }
+  }
+
+  // 2. Geo-targeting with city (if available)
+  const primaryCity = location ? location.split(',')[0].trim() : '';
+  if (primaryCity && candidates.length > 0) {
+    const topServices = candidates.slice(0, 2);
+    for (const srv of topServices) {
+      if (!srv.toLowerCase().includes(primaryCity.toLowerCase())) {
+        add(`${srv} ${primaryCity}`);
+      }
+    }
+  }
+
+  // 3. Category-specific SEO terms
+  const catObj = categoriesList.find((c) => (c.name || '').toLowerCase() === (category || '').toLowerCase());
+  if (catObj && Array.isArray(catObj.keywords)) {
+    for (const ckw of catObj.keywords) {
+      if (candidates.length >= 7) break;
+      add(ckw);
+    }
+  }
+
+  // 4. Default high-intent business terms
+  const fallbacks = [
+    `${category || 'Business'} Services`,
+    'Quality Service',
+    'Customer Support',
+    'Reliable Solutions',
+    'Top Rated Service'
+  ];
+  for (const fb of fallbacks) {
+    if (candidates.length >= 3) break;
+    add(fb);
+  }
+
+  return candidates.slice(0, 7);
+}
 
 export default function CompanySetup({ categories = [] }) {
   const navigate = useNavigate();
@@ -28,13 +81,21 @@ export default function CompanySetup({ categories = [] }) {
     name: '',
     category: 'IT Services and Software Development',
     services: '',
-    seoKeywords: '',
     location: '',
     formattedAddress: '',
     googlePlaceId: '',
     preferredLanguage: 'en',
     description: ''
   });
+
+  // Automatically synthesized SEO keywords in the background (guaranteed strictly 3 to 7)
+  const [autoKeywords, setAutoKeywords] = useState([
+    'Web Development',
+    'AI Solutions',
+    'Mobile App Development',
+    'Custom Software Development'
+  ]);
+  const seoDebounceTimeout = useRef(null);
 
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -44,29 +105,47 @@ export default function CompanySetup({ categories = [] }) {
   const [categorySearch, setCategorySearch] = useState('');
   const categoryRef = useRef(null);
 
-  // Location Autocomplete state
-  const [placeSuggestions, setPlaceSuggestions] = useState([]);
-  const [searchingPlaces, setSearchingPlaces] = useState(false);
-  const [showPlaceDropdown, setShowPlaceDropdown] = useState(false);
-  const [placesMessage, setPlacesMessage] = useState('');
-  const placeLookupTimeout = useRef(null);
-  const placeDropdownRef = useRef(null);
-
-  // Close dropdowns on outside click
+  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event) {
       if (categoryRef.current && !categoryRef.current.contains(event.target)) {
         setIsCategoryOpen(false);
-      }
-      if (placeDropdownRef.current && !placeDropdownRef.current.contains(event.target)) {
-        setShowPlaceDropdown(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debounced Place Lookup when Company Name changes
+  // Automatic SEO Keyword Synthesizer (runs silently in the background)
+  const triggerAutoSeoGeneration = useCallback((name, category, services) => {
+    if (seoDebounceTimeout.current) {
+      clearTimeout(seoDebounceTimeout.current);
+    }
+
+    seoDebounceTimeout.current = setTimeout(async () => {
+      try {
+        const res = await api.generateSeoKeywords({
+          name: (name || '').trim(),
+          category: (category || '').trim(),
+          services: (services || '').trim(),
+          location: ''
+        });
+
+        if (res.success && Array.isArray(res.seoKeywords) && res.seoKeywords.length >= 3) {
+          setAutoKeywords(res.seoKeywords.slice(0, 7));
+        } else {
+          // Fallback to instant client synthesizer
+          const fallbackKws = synthesizeClientKeywords(name, category, services, '', categories);
+          setAutoKeywords(fallbackKws);
+        }
+      } catch (e) {
+        const fallbackKws = synthesizeClientKeywords(name, category, services, '', categories);
+        setAutoKeywords(fallbackKws);
+      }
+    }, 400);
+  }, [categories]);
+
+  // Company Name change handler
   const handleNameChange = (e) => {
     const val = e.target.value;
     setFormData((prev) => ({ ...prev, name: val }));
@@ -74,77 +153,43 @@ export default function CompanySetup({ categories = [] }) {
       setErrors((prev) => ({ ...prev, name: '' }));
     }
 
-    if (placeLookupTimeout.current) {
-      clearTimeout(placeLookupTimeout.current);
-    }
-
-    if (!val.trim() || val.trim().length < 2) {
-      setPlaceSuggestions([]);
-      setShowPlaceDropdown(false);
-      return;
-    }
-
-    placeLookupTimeout.current = setTimeout(async () => {
-      setSearchingPlaces(true);
-      try {
-        const res = await api.searchCompanies(val.trim());
-        if (res.success && res.results && res.results.length > 0) {
-          setPlaceSuggestions(res.results);
-          setShowPlaceDropdown(true);
-          setPlacesMessage(res.message || '');
-        } else {
-          setPlaceSuggestions([]);
-          setPlacesMessage(res.message || 'No direct matches found. You can enter location manually below.');
-        }
-      } catch (err) {
-        console.warn('Place lookup error:', err);
-      } finally {
-        setSearchingPlaces(false);
-      }
-    }, 450);
-  };
-
-  // Select place from autocomplete
-  const handleSelectPlace = (place) => {
-    setFormData((prev) => ({
-      ...prev,
-      name: place.name || prev.name,
-      location: place.location || place.formattedAddress || prev.location,
-      formattedAddress: place.formattedAddress || place.location || '',
-      googlePlaceId: place.googlePlaceId || ''
-    }));
-    setShowPlaceDropdown(false);
-    addToast(`Verified location set to "${place.formattedAddress || place.name}"`, 'success');
+    // Auto-update SEO keywords silently in the background
+    triggerAutoSeoGeneration(val, formData.category, formData.services);
   };
 
   // Quick Demo Autofill
   const handleAutofillDemo = () => {
-    setFormData({
+    const demoData = {
       name: 'Kevalon Technology',
       category: 'IT Services and Software Development',
       services: 'Web Development, AI Solutions, Mobile App Development, SEO Services',
-      seoKeywords: 'Web Development India, AI Solutions India, Software Development Company India, Digital Marketing India',
       location: 'Ahmedabad, Gujarat, India',
       formattedAddress: 'Ahmedabad, Gujarat, India',
       googlePlaceId: '',
       preferredLanguage: 'en',
       description: 'Next-generation software engineering firm specializing in modern web, mobile apps, and enterprise AI automation.'
-    });
+    };
+    setFormData(demoData);
     setErrors({});
+    
+    // Auto-generate keywords for demo
+    const demoKws = synthesizeClientKeywords(
+      demoData.name,
+      demoData.category,
+      demoData.services,
+      demoData.location,
+      categories
+    );
+    setAutoKeywords(demoKws);
     addToast('Loaded Kevalon Technology demo profile!', 'info');
   };
 
-  // Parse comma-separated preview chips
-  const parseChips = (csvString) => {
-    if (!csvString) return [];
-    return csvString
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-  };
-
-  const parsedServices = parseChips(formData.services);
-  const parsedKeywords = parseChips(formData.seoKeywords);
+  // Parse services chips for preview under services input
+  const parsedServices = formData.services
+    .replace(/;/g, ',')
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 
   // Form Validation & Submission
   const handleSubmit = async (e) => {
@@ -161,16 +206,25 @@ export default function CompanySetup({ categories = [] }) {
       return;
     }
 
+    // Ensure strictly between 3 and 7 keywords
+    let finalKeywords = autoKeywords;
+    if (finalKeywords.length < 3) {
+      finalKeywords = synthesizeClientKeywords(formData.name, formData.category, formData.services, '', categories);
+    }
+    if (finalKeywords.length > 7) {
+      finalKeywords = finalKeywords.slice(0, 7);
+    }
+
     setSubmitting(true);
     try {
       const payload = {
         name: formData.name.trim(),
         category: formData.category,
         services: formData.services.trim(),
-        seoKeywords: parsedKeywords.length > 0 ? parsedKeywords : ['Quality Service', 'Customer Support'],
-        location: formData.location.trim(),
-        formattedAddress: formData.formattedAddress.trim() || formData.location.trim(),
-        googlePlaceId: formData.googlePlaceId.trim(),
+        seoKeywords: finalKeywords,
+        location: (formData.location || '').trim(),
+        formattedAddress: (formData.formattedAddress || formData.location || '').trim(),
+        googlePlaceId: (formData.googlePlaceId || '').trim(),
         preferredLanguage: 'en',
         description: formData.description.trim()
       };
@@ -182,7 +236,11 @@ export default function CompanySetup({ categories = [] }) {
         localStorage.setItem('reviewcraft_category', res.company.category);
         localStorage.setItem('reviewcraft_keyword', (res.company.seoKeywords && res.company.seoKeywords[0]) || 'Quality Service');
 
-        // Navigate directly to Page 2 review generation for this company
+        // Clear previous active review selection so new company starts fresh
+        localStorage.removeItem('reviewcraft_active_selected_review');
+        localStorage.removeItem(`reviewcraft_active_selected_review_${res.company.id}`);
+
+        // Navigate directly to Page 2 review generation studio
         navigate(`/reviews/${res.company.id}`);
       }
     } catch (err) {
@@ -210,10 +268,10 @@ export default function CompanySetup({ categories = [] }) {
       {/* Page Header */}
       <div className="text-center space-y-3 mb-8">
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-          Generate <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#034665] to-[#068dcb]">Business Reviews</span>
+          Setup Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#034665] to-[#068dcb]">Business Profile</span>
         </h1>
         <p className="text-sm text-slate-600 max-w-xl mx-auto font-normal">
-          Configure your business profile, services, and keywords to generate authentic, high-quality customer reviews.
+          Enter your business name, category, and services. SEO keywords are automatically synthesized to generate authentic Google reviews.
         </p>
 
         {/* Quick Demo Fill Button */}
@@ -234,8 +292,8 @@ export default function CompanySetup({ categories = [] }) {
         
         <form onSubmit={handleSubmit} className="space-y-6">
           
-          {/* Row 1: Company Name with Auto-Detection Dropdown */}
-          <div className="relative" ref={placeDropdownRef}>
+          {/* Row 1: Company Name */}
+          <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
               Company / Business Name <span className="text-red-500">*</span>
             </label>
@@ -248,154 +306,70 @@ export default function CompanySetup({ categories = [] }) {
                 value={formData.name}
                 onChange={handleNameChange}
                 className={`w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-50 border text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none transition-all shadow-2xs ${
-                  errors.name
-                    ? 'border-red-400 focus:border-red-500 ring-2 ring-red-500/10'
-                    : 'border-slate-200 focus:border-[#068dcb] focus:ring-4 focus:ring-[#068dcb]/15'
+                  errors.name ? 'border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-100' : 'border-slate-200 focus:border-[#068dcb] focus:ring-4 focus:ring-[#068dcb]/15'
                 }`}
               />
-              {searchingPlaces && (
-                <Loader2 className="w-4 h-4 text-[#068dcb] animate-spin absolute right-3.5 top-3.5" />
-              )}
             </div>
+
             {errors.name && (
               <p className="text-xs text-red-500 mt-1.5 font-medium">{errors.name}</p>
             )}
+          </div>
 
-            {/* Places Autocomplete Dropdown */}
-            {showPlaceDropdown && placeSuggestions.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto animate-in fade-in">
-                <div className="p-2.5 bg-[#068dcb]/10 border-b border-[#068dcb]/20 text-[11px] font-semibold text-[#034665] flex items-center justify-between">
-                  <span>Matching Businesses (Select to auto-populate location):</span>
-                  <button
-                    type="button"
-                    onClick={() => setShowPlaceDropdown(false)}
-                    className="text-slate-400 hover:text-slate-700 cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+          {/* Row 2: Business Category (Searchable Dropdown) */}
+          <div className="relative" ref={categoryRef}>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+              Business Category
+            </label>
+            <button
+              type="button"
+              onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+              className="w-full pl-4 pr-10 py-3 rounded-2xl bg-slate-50 border border-slate-200 hover:border-slate-300 focus:bg-white text-sm text-left text-slate-900 focus:outline-none focus:border-[#068dcb] flex items-center justify-between transition-all cursor-pointer shadow-2xs"
+            >
+              <span className="truncate">{formData.category}</span>
+              <ChevronDown className={`w-4 h-4 text-[#068dcb] transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Dropdown Menu */}
+            {isCategoryOpen && (
+              <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 animate-in fade-in">
+                <div className="relative mb-2">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    placeholder="Search categories..."
+                    value={categorySearch}
+                    onChange={(e) => setCategorySearch(e.target.value)}
+                    className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#068dcb] focus:bg-white"
+                  />
                 </div>
-                <div className="divide-y divide-slate-100">
-                  {placeSuggestions.map((place, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleSelectPlace(place)}
-                      className="w-full text-left p-3 hover:bg-[#068dcb]/10 flex items-start gap-2.5 transition-colors cursor-pointer group"
-                    >
-                      <MapPin className="w-4 h-4 text-[#068dcb] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-bold text-slate-900 group-hover:text-[#034665] truncate">
-                            {place.name}
-                          </p>
-                          {place.isGoogleVerified && (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#068dcb]/15 text-[#034665] border border-[#068dcb]/30">
-                              Verified
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-slate-500 truncate">
-                          {place.formattedAddress || place.location}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
+                <div className="max-h-52 overflow-y-auto space-y-0.5">
+                  {filteredCategories.map((cat) => {
+                    const isSelected = formData.category === cat.name;
+                    return (
+                      <button
+                        key={cat.name}
+                        type="button"
+                        onClick={() => {
+                          setFormData((prev) => ({ ...prev, category: cat.name }));
+                          setIsCategoryOpen(false);
+                          setCategorySearch('');
+                          triggerAutoSeoGeneration(formData.name, cat.name, formData.services);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'bg-gradient-to-r from-[#034665] to-[#068dcb] text-white font-bold shadow-xs'
+                            : 'text-slate-700 hover:bg-[#068dcb]/10 hover:text-[#034665]'
+                        }`}
+                      >
+                        <span className="truncate">{cat.name}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Row 2: Category (Searchable Dropdown) & Location */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            
-            {/* Searchable Business Category */}
-            <div className="relative" ref={categoryRef}>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-                Business Category
-              </label>
-              <button
-                type="button"
-                onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                className="w-full pl-4 pr-10 py-3 rounded-2xl bg-slate-50 border border-slate-200 hover:border-slate-300 focus:bg-white text-sm text-left text-slate-900 focus:outline-none focus:border-[#068dcb] flex items-center justify-between transition-all cursor-pointer shadow-2xs"
-              >
-                <span className="truncate">{formData.category}</span>
-                <ChevronDown className={`w-4 h-4 text-[#068dcb] transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* Dropdown Menu */}
-              {isCategoryOpen && (
-                <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 animate-in fade-in">
-                  <div className="relative mb-2">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      placeholder="Search categories..."
-                      value={categorySearch}
-                      onChange={(e) => setCategorySearch(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#068dcb] focus:bg-white"
-                    />
-                  </div>
-                  <div className="max-h-52 overflow-y-auto space-y-0.5">
-                    {filteredCategories.map((cat) => {
-                      const isSelected = formData.category === cat.name;
-                      return (
-                        <button
-                          key={cat.name}
-                          type="button"
-                          onClick={() => {
-                            setFormData((prev) => ({ ...prev, category: cat.name }));
-                            setIsCategoryOpen(false);
-                            setCategorySearch('');
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer ${
-                            isSelected
-                              ? 'bg-gradient-to-r from-[#034665] to-[#068dcb] text-white font-bold shadow-xs'
-                              : 'text-slate-700 hover:bg-[#068dcb]/10 hover:text-[#034665]'
-                          }`}
-                        >
-                          <span className="truncate">{cat.name}</span>
-                          {isSelected && <Check className="w-3.5 h-3.5" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Company Location */}
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-                Company Location <span className="text-slate-500 font-normal lowercase">(auto or manual)</span>
-              </label>
-              <div className="relative">
-                <MapPin className="w-4 h-4 text-[#068dcb] absolute left-3.5 top-3.5" />
-                <input
-                  type="text"
-                  placeholder="e.g. Ahmedabad, India"
-                  value={formData.location}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      location: e.target.value,
-                      formattedAddress: e.target.value
-                    }))
-                  }
-                  className="w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#068dcb] focus:ring-4 focus:ring-[#068dcb]/15 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
-                />
-                {formData.googlePlaceId && (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 absolute right-3.5 top-3.5" title="Google Place ID verified" />
-                )}
-              </div>
-              {formData.googlePlaceId ? (
-                <p className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1 font-medium">
-                  <CheckCircle2 className="w-3 h-3" /> Place ID verified for direct Google Review link
-                </p>
-              ) : placesMessage ? (
-                <p className="text-[11px] text-slate-500 mt-1 font-medium">{placesMessage}</p>
-              ) : null}
-            </div>
-
           </div>
 
           {/* Row 3: Services Offered (Comma-separated) */}
@@ -414,7 +388,11 @@ export default function CompanySetup({ categories = [] }) {
                 type="text"
                 placeholder="e.g. Web Development, AI Solutions, Mobile App Development, SEO Services"
                 value={formData.services}
-                onChange={(e) => setFormData({ ...formData, services: e.target.value })}
+                onChange={(e) => {
+                  const srv = e.target.value;
+                  setFormData((prev) => ({ ...prev, services: srv }));
+                  triggerAutoSeoGeneration(formData.name, formData.category, srv);
+                }}
                 className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#068dcb] focus:ring-4 focus:ring-[#068dcb]/15 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
               />
             </div>
@@ -433,43 +411,7 @@ export default function CompanySetup({ categories = [] }) {
             )}
           </div>
 
-          {/* Row 4: SEO Keywords (Comma-separated) */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                SEO Keywords <span className="text-slate-500 font-normal lowercase">(comma-separated)</span>
-              </label>
-              <span className="text-[11px] text-[#034665] font-semibold">
-                {parsedKeywords.length} {parsedKeywords.length === 1 ? 'keyword chip' : 'keyword chips'} ready
-              </span>
-            </div>
-            <div className="relative">
-              <Tag className="w-4 h-4 text-[#068dcb] absolute left-3.5 top-3.5" />
-              <input
-                type="text"
-                placeholder="e.g. Web Development India, AI Solutions India, Software Development Company India"
-                value={formData.seoKeywords}
-                onChange={(e) => setFormData({ ...formData, seoKeywords: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#068dcb] focus:ring-4 focus:ring-[#068dcb]/15 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
-              />
-            </div>
-            {parsedKeywords.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2.5">
-                {parsedKeywords.map((kw, idx) => (
-                  <span
-                    key={idx}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#068dcb]/10 border border-[#068dcb]/25 text-[#034665] text-xs font-bold"
-                  >
-                    <Tag className="w-3 h-3 text-[#068dcb]" />
-                    {kw}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-
-          {/* Action CTA: Generate Reviews */}
+          {/* Action CTA: Save & Generate Reviews */}
           <div className="pt-3">
             <button
               type="submit"
@@ -483,13 +425,13 @@ export default function CompanySetup({ categories = [] }) {
                 </>
               ) : (
                 <>
-                  <span>Generate Reviews</span>
+                  <span>Save & Generate Reviews</span>
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
             </button>
             <p className="text-center text-[11px] text-slate-500 mt-2.5">
-              Securely saves your business profile and opens your review management dashboard.
+              Securely saves your business profile in database and generates reviews from your SEO keywords.
             </p>
           </div>
 

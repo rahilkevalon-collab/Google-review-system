@@ -255,6 +255,65 @@ class CompanyService:
         doc = self.db.companies.find_one({"_id": ObjectId(company_id)})
         return serialize_doc(doc) if doc else None
 
+    def generate_seo_keywords(self, name: str, category: str, services: str, location: str = "") -> list[str]:
+        """
+        Automatically generates high-intent, natural SEO keywords for a business
+        based on company name, business category, services, and location.
+        GUARANTEES: Minimum 3 and Maximum 7 keywords.
+        """
+        from services.category_service import category_service
+        candidates = []
+        seen = set()
+
+        def add(kw: str):
+            clean = " ".join(str(kw).strip().split())
+            if len(clean) >= 3 and clean.lower() not in seen:
+                seen.add(clean.lower())
+                candidates.append(clean)
+
+        # 1. Services offered
+        if services:
+            raw_srvs = [s.strip() for s in services.replace(";", ",").split(",") if s.strip()]
+            for s in raw_srvs:
+                add(s)
+
+        # 2. Extract city/region from location and pair with top services
+        primary_city = location.split(",")[0].strip() if location else ""
+        if primary_city and candidates:
+            top_services = list(candidates[:2])
+            for srv in top_services:
+                if primary_city.lower() not in srv.lower():
+                    add(f"{srv} {primary_city}")
+
+        # 3. Pull category-specific high-performing SEO keywords
+        cat_keywords = category_service.get_keywords_by_category(category)
+        if cat_keywords:
+            for ckw in cat_keywords:
+                if len(candidates) >= 7:
+                    break
+                add(ckw)
+
+        # 4. Fallback pool if still fewer than 3
+        fallbacks = [
+            f"{category} Services",
+            "Quality Service",
+            "Customer Support",
+            "Reliable Solutions"
+        ]
+        for fb in fallbacks:
+            if len(candidates) >= 3:
+                break
+            add(fb)
+
+        # 5. Guarantee at least 3 keywords
+        if len(candidates) < 3:
+            for extra in ["Top Rated", "Reliable Support", "Verified Quality"]:
+                add(extra)
+                if len(candidates) >= 3:
+                    break
+
+        return candidates[:7]
+
     def create_company(self, data: dict) -> dict:
         import urllib.parse
         now = datetime.now(timezone.utc)
@@ -265,7 +324,16 @@ class CompanyService:
         location = data.get("location", "").strip()
         formatted_address = data.get("formattedAddress", "").strip() or location
         place_id = data.get("googlePlaceId", "").strip()
-        
+
+        # Services parsing (comma-separated string or list)
+        raw_services = data.get("services", "")
+        if isinstance(raw_services, list):
+            services_str = ", ".join([str(s).strip() for s in raw_services if str(s).strip()])
+        else:
+            services_str = str(raw_services).strip()
+
+        category_val = data.get("category", "Other")
+
         # SEO Keywords parsing (supports list or comma-separated string)
         raw_kws = data.get("seoKeywords") or data.get("keywords") or []
         if isinstance(raw_kws, str):
@@ -278,12 +346,20 @@ class CompanyService:
         # Deduplicate while preserving order
         unique_kws = list(dict.fromkeys(seo_keywords))
 
-        # Services parsing (comma-separated string or list)
-        raw_services = data.get("services", "")
-        if isinstance(raw_services, list):
-            services_str = ", ".join([str(s).strip() for s in raw_services if str(s).strip()])
-        else:
-            services_str = str(raw_services).strip()
+        # Automatically generate SEO keywords if user did not provide them or fewer than 3
+        if len(unique_kws) < 3:
+            auto_kws = self.generate_seo_keywords(name, category_val, services_str, location)
+            for ak in auto_kws:
+                if ak not in unique_kws:
+                    unique_kws.append(ak)
+                if len(unique_kws) >= 7:
+                    break
+
+        # Strictly enforce min 3, max 7
+        if len(unique_kws) > 7:
+            unique_kws = unique_kws[:7]
+        elif len(unique_kws) < 3:
+            unique_kws = self.generate_seo_keywords(name, category_val, services_str, location)
 
         # Compute Google Review destination URL
         ext_link = data.get("googleReviewUrl", "").strip() or data.get("externalReviewLink", "").strip()

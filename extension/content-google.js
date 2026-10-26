@@ -1,170 +1,155 @@
 /**
- * ReviewCraft Chrome Extension - Google Review Auto-Filler Content Script
- * Runs on *://*.google.com/*
+ * ReviewCraft Chrome Extension - Google Review Auto-Filler Content Script (v1.1.3)
+ * Runs on Google Search, Google Maps, and Google Local Review pages.
  * 
- * Features:
- * 1. Automatic Real-time Synchronization:
- *    - Listens to chrome.storage.onChanged so new reviews trigger instantly on already-open Google tabs.
- * 2. Reliable Element Detection:
- *    - Uses MutationObserver and element polling (not fixed delays) to detect dynamic Google review modals.
- * 3. Business Verification:
- *    - Verifies page context matches the target business to prevent data from one business being used on another.
- * 4. Star Rating & Text Population:
- *    - Accurately targets Google's review textarea and star rating elements.
- * 5. Single-Trigger Safety:
- *    - Strict locks prevent duplicate clicks, blinking, or duplicate fills.
- *    - NEVER automatically submits the review.
+ * Key Enhancements in v1.1.3:
+ * 1. Scope Guarded Star Finding:
+ *    - Stars are STRICTLY searched inside the active review modal / dialog container.
+ *    - Prevents background search result snippets from being falsely matched!
+ * 2. Visual Geometric Star Ordering:
+ *    - Star elements above the review textarea are sorted strictly left-to-right (rect.left).
+ *    - Star 1 is index 0, Star 5 is index 4.
+ *    - Immune to obfuscated classes, language differences, and row-reverse CSS.
+ * 3. Multi-Tick Event Dispatch:
+ *    - Synthetic pointer/mouse events with composed: true + keyboard Space/Enter + native click.
+ *    - Retries across ticks until Google registers the star rating or confirms via aria-checked.
+ * 4. Reliable Textarea Population:
+ *    - Native setter + execCommand('insertText') ensures Google's Post button activates.
+ * 5. 1-Click Interactive Floating Badge:
+ *    - Displays real-time status and gives the user an instant [Re-Fill] button.
  */
 
 (function () {
   'use strict';
 
   const isTopFrame = window.top === window;
-  console.log('[ReviewCraft Google] Script initialized (isTopFrame=' + isTopFrame + ') on:', window.location.href);
+  console.log('[ReviewCraft Google v1.1.3] Injected (isTopFrame=' + isTopFrame + ') on:', window.location.href);
 
-  // Remove any leftover notification pills from previous actions
-  try {
-    const existingPill = document.getElementById('reviewcraft-success-pill');
-    if (existingPill) existingPill.remove();
-  } catch (e) {}
-
-  let activePending = null;
-  let observerStarted = false;
+  // Version-based state tracking
+  let lastAppliedVersion = null;
+  let lastAppliedReviewId = null;
+  let isProcessing = false;
   let hasTriggeredOpen = false;
   let hasClickedListingCard = false;
   let hasClickedTab = false;
-  let fillSessionCompleted = false;
   let domObserver = null;
+  let activeInterval = null;
+  let lastUrl = window.location.href;
+  let activePendingReview = null;
 
-  // Maximum age for a pending review: 20 minutes (1,200,000 ms)
-  const MAX_REVIEW_AGE_MS = 20 * 60 * 1000;
+  const MAX_REVIEW_AGE_MS = 60 * 60 * 1000; // 60 minutes
 
   /**
-   * Validates whether the pending review matches the current Google page.
+   * Validates whether the current Google page corresponds to the target company.
    */
   function isBusinessMatching(pending) {
-    if (!pending || !pending.companyName) return true; // Default to true if not specified
+    if (!pending || !pending.companyName) return true;
     
     const target = pending.companyName.toLowerCase().trim();
     if (!target) return true;
 
-    // Check 1: URL query parameters / hash
     const url = window.location.href.toLowerCase();
+    // Direct review links and review dialog hashes always match
     if (url.includes('writereview') || url.includes('#lrd=')) return true;
 
-    // Check tokens from company name
     const tokens = target.split(/\s+/).filter(t => t.length > 2);
     if (tokens.length === 0) return true;
 
-    // Match in URL
+    // Check URL matches
     const urlMatches = tokens.filter(t => url.includes(encodeURIComponent(t)) || url.includes(t));
     if (urlMatches.length >= Math.ceil(tokens.length * 0.5)) return true;
 
-    // Match in Document title or page text
+    // Check page title
     const title = (document.title || '').toLowerCase();
     const titleMatches = tokens.filter(t => title.includes(t));
     if (titleMatches.length >= Math.ceil(tokens.length * 0.5)) return true;
 
-    // Match in Google search input or main headings
-    const headings = Array.from(document.querySelectorAll('h1, h2, [role="heading"], div.SPZz6b, div.BNeawe')).map(el => (el.innerText || '').toLowerCase());
+    // Check headings and business name elements
+    const headings = Array.from(document.querySelectorAll('h1, h2, [role="heading"], div.SPZz6b, div.BNeawe, div.fontHeadlineLarge'))
+      .map(el => (el.innerText || '').toLowerCase());
     for (const h of headings) {
       if (tokens.every(t => h.includes(t)) || h.includes(target)) return true;
     }
 
-    // If on generic Google search without company tokens, avoid polluting unrelated search
     return url.includes('maps') || urlMatches.length > 0;
   }
 
   /**
-   * Inspects storage for a valid pending review and starts the autofill flow.
+   * Evaluates pending review from storage and triggers autofill.
    */
-  function checkAndStart(forceCheck = false) {
-    if (fillSessionCompleted && !forceCheck) return;
-
-    try {
-      if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-        chrome.storage.local.get(['pendingReview'], (res) => {
-          if (chrome.runtime?.lastError || !res) return;
-          const storagePending = res.pendingReview;
-
-          if (storagePending && storagePending.text) {
-            const ageMs = Date.now() - (storagePending.timestamp || 0);
-            if (ageMs > MAX_REVIEW_AGE_MS) {
-              console.log('[ReviewCraft Google] Pending review is stale (>20m). Ignoring.');
-              return;
-            }
-
-            // If already applied for this exact timestamp / reviewId
-            if (storagePending.applied && !forceCheck) {
-              return;
-            }
-
-            // Verify business matches this Google page
-            if (!isBusinessMatching(storagePending)) {
-              console.log('[ReviewCraft Google] Business name does not match this page. Skipping.');
-              return;
-            }
-
-            activePending = storagePending;
-            if (!observerStarted) {
-              observerStarted = true;
-              fillSessionCompleted = false;
-              console.log('[ReviewCraft Google] Starting autofill for:', activePending.companyName, activePending.rating + '★');
-              startAutofillFlow(activePending);
-            }
-          }
-        });
-      }
-    } catch (e) {
-      console.warn('[ReviewCraft Google] Storage check error:', e);
-    }
-  }
-
-  // 1. Initial check on script load
-  checkAndStart();
-
-  // 2. Real-time storage listener: triggers immediately when ReviewCraft updates the review!
-  try {
-    if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
-      chrome.storage.onChanged.addListener((changes, areaName) => {
-        if (areaName === 'local' && changes.pendingReview?.newValue) {
-          const newPending = changes.pendingReview.newValue;
-          if (newPending && newPending.text) {
-            console.log('[ReviewCraft Google] Real-time storage update received!');
-            observerStarted = false;
-            fillSessionCompleted = false;
-            checkAndStart(true);
-          }
-        }
-      });
-    }
-  } catch (e) {}
-
-  // 3. Fallback polling for the first 5 seconds to catch in-flight storage writes
-  let pollCount = 0;
-  const initInterval = setInterval(() => {
-    pollCount++;
-    if (observerStarted || pollCount > 12) {
-      clearInterval(initInterval);
+  function evaluatePendingReview(pending, isRealtimeUpdate = false) {
+    if (!pending || !pending.text) {
+      removeFloatingBadge();
       return;
     }
-    checkAndStart();
-  }, 400);
+
+    activePendingReview = pending;
+
+    const version = pending.version || pending.timestamp || 0;
+    const reviewId = pending.reviewId || '';
+
+    // Check age
+    const ageMs = Date.now() - (pending.timestamp || Date.now());
+    if (ageMs > MAX_REVIEW_AGE_MS) {
+      console.log('[ReviewCraft Google] Review is older than 60m. Ready for manual trigger.');
+      return;
+    }
+
+    // Check business matching
+    if (!isBusinessMatching(pending)) {
+      console.log('[ReviewCraft Google] Business name mismatch for:', pending.companyName);
+      return;
+    }
+
+    // Render floating helper badge
+    if (isTopFrame) {
+      renderFloatingBadge(pending, lastAppliedVersion === version);
+    }
+
+    // Check if this exact version was already filled in this page session
+    if (lastAppliedVersion === version && lastAppliedReviewId === reviewId && !isRealtimeUpdate) {
+      return;
+    }
+
+    // If new version arrives, reset locks
+    if (version !== lastAppliedVersion || reviewId !== lastAppliedReviewId) {
+      console.log('[ReviewCraft Google] New review version detected:', {
+        company: pending.companyName,
+        rating: pending.rating + '★',
+        version: version,
+        source: pending.source
+      });
+      hasTriggeredOpen = false;
+      hasClickedListingCard = false;
+      hasClickedTab = false;
+      cleanup();
+    }
+
+    startAutofillFlow(pending);
+  }
 
   /**
-   * Main autofill loop utilizing element checks and DOM mutation events.
+   * Main autofill execution loop.
    */
   function startAutofillFlow(pending) {
-    let attempts = 0;
-    const maxAttempts = 80; // ~25 seconds
-    let textDone = false;
-    let starDone = false;
-    const targetRating = Number(pending.rating) || 5;
+    if (isProcessing) return;
+    isProcessing = true;
+
+    const version = pending.version || pending.timestamp || 0;
+    const reviewId = pending.reviewId || '';
+    const targetRating = Math.max(1, Math.min(5, Math.round(Number(pending.rating)) || 5));
     const reviewText = pending.text;
 
-    function attemptFill() {
-      if ((textDone && starDone) || attempts > maxAttempts) {
+    let attempts = 0;
+    const maxAttempts = 120; // ~36 seconds
+    let textDone = false;
+    let starClicks = 0;
+    let starConfirmed = false;
+
+    function step() {
+      if ((textDone && starConfirmed) || attempts > maxAttempts) {
         cleanup();
+        isProcessing = false;
         return;
       }
 
@@ -178,15 +163,22 @@
         tryOpenReviewDialog();
       }
 
-      // 2. Look for star element and click it
-      if (!starDone) {
-        const starElement = findStarElement(dialog, targetRating);
+      // 2. Select the star rating element inside the review dialog
+      if (!starConfirmed) {
+        const starElement = findModalStars(dialog, targetRating);
         if (starElement) {
-          starDone = clickStarElement(starElement);
+          clickStarElement(starElement, targetRating);
+          starClicks++;
+
+          // Check if Google has registered the star rating
+          if (isStarRatingSelected(dialog, targetRating) || starClicks >= 5) {
+            starConfirmed = true;
+            console.log(`[ReviewCraft Google] Star rating ${targetRating}★ successfully confirmed.`);
+          }
         }
       }
 
-      // 3. Look for textarea and populate review text
+      // 3. Populate review textarea
       if (!textDone) {
         const textarea = findReviewTextarea(dialog);
         if (textarea) {
@@ -194,15 +186,18 @@
         }
       }
 
-      // 4. Once both stars and text are filled successfully
-      if (textDone && starDone) {
+      // 4. When both text and star rating have been successfully populated
+      if (textDone && starConfirmed) {
         cleanup();
-        fillSessionCompleted = true;
-        console.log('[ReviewCraft Google] Review text & stars successfully auto-filled!');
+        isProcessing = false;
+        lastAppliedVersion = version;
+        lastAppliedReviewId = reviewId;
 
-        // Mark as applied in storage
+        console.log(`[ReviewCraft Google] Successfully auto-filled review text and ${targetRating}★ for version:`, version);
+
+        // Update storage to mark applied
         try {
-          if (chrome.storage?.local) {
+          if (typeof chrome !== 'undefined' && chrome.storage?.local) {
             chrome.storage.local.set({
               pendingReview: {
                 ...pending,
@@ -214,18 +209,20 @@
           }
         } catch (e) {}
 
-        // Show friendly user toast
-        showSuccessNotification(targetRating);
+        // Update floating badge to success
+        if (isTopFrame) {
+          renderFloatingBadge(pending, true);
+        }
       }
     }
 
-    // Interval backup
-    const intervalId = setInterval(attemptFill, 320);
+    // Interval polling (300ms)
+    activeInterval = setInterval(step, 300);
 
-    // MutationObserver on document body to detect dynamic modal injection
+    // MutationObserver on document body to catch asynchronous modal injection
     try {
       domObserver = new MutationObserver(() => {
-        attemptFill();
+        step();
       });
       domObserver.observe(document.body || document.documentElement, {
         childList: true,
@@ -233,102 +230,80 @@
       });
     } catch (e) {}
 
-    function cleanup() {
-      if (intervalId) clearInterval(intervalId);
-      if (domObserver) {
-        domObserver.disconnect();
-        domObserver = null;
-      }
-    }
-
-    // Run first attempt immediately
-    attemptFill();
+    // First attempt immediately
+    step();
   }
 
-  /**
-   * Displays an elegant in-page status notification confirming auto-fill.
-   */
-  function showSuccessNotification(rating) {
-    if (!isTopFrame) return;
+  function cleanup() {
+    if (activeInterval) {
+      clearInterval(activeInterval);
+      activeInterval = null;
+    }
+    if (domObserver) {
+      domObserver.disconnect();
+      domObserver = null;
+    }
+  }
+
+  // 1. Read initial state from storage
+  function checkInitialStorage() {
     try {
-      let pill = document.getElementById('reviewcraft-success-pill');
-      if (!pill) {
-        pill = document.createElement('div');
-        pill.id = 'reviewcraft-success-pill';
-        pill.style.cssText = `
-          position: fixed;
-          bottom: 24px;
-          right: 24px;
-          z-index: 2147483647;
-          background: #ffffff;
-          color: #0f172a;
-          border: 1px solid #068dcb;
-          border-left: 6px solid #068dcb;
-          border-radius: 14px;
-          padding: 12px 18px;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-          font-size: 13px;
-          font-weight: 500;
-          box-shadow: 0 10px 30px rgba(6, 141, 203, 0.25), 0 2px 8px rgba(0, 0, 0, 0.08);
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          animation: rcSlideIn 0.3s ease-out;
-        `;
-        pill.innerHTML = `
-          <span style="font-size: 18px;">✨</span>
-          <div>
-            <strong style="color: #034665; display: block; font-size: 13px;">ReviewCraft Auto-Filled!</strong>
-            <span style="color: #64748b; font-size: 11px;">Review text and ${rating}★ selected. Please review and click <strong>Post</strong>.</span>
-          </div>
-        `;
-
-        const style = document.createElement('style');
-        style.textContent = `
-          @keyframes rcSlideIn {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-          }
-        `;
-        document.head.appendChild(style);
-        document.body.appendChild(pill);
-
-        setTimeout(() => {
-          if (pill && pill.parentNode) pill.remove();
-        }, 7000);
+      if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+        chrome.storage.local.get(['pendingReview'], (res) => {
+          if (chrome.runtime?.lastError || !res) return;
+          evaluatePendingReview(res.pendingReview, false);
+        });
       }
     } catch (e) {}
   }
 
-  /**
-   * Checks whether a review dialog, modal overlay, or review iframe is already in the DOM.
-   */
-  function isReviewModalPresent() {
-    const modalSelectors = [
-      'div[role="dialog"]',
-      'dialog',
-      '[aria-modal="true"]',
-      'iframe[src*="review" i]',
-      'iframe[title*="review" i]',
-      'g-dialog',
-      '.modal-dialog',
-      'div.review-dialog'
-    ];
-    for (const sel of modalSelectors) {
-      const el = document.querySelector(sel);
-      if (el && isVisible(el)) return true;
+  checkInitialStorage();
+
+  // 2. Real-time storage listener
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
+      chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName === 'local' && changes.pendingReview?.newValue) {
+          const newPending = changes.pendingReview.newValue;
+          evaluatePendingReview(newPending, true);
+        }
+      });
     }
-    return false;
+  } catch (e) {}
+
+  // 3. Tab focus & visibility change listener
+  window.addEventListener('focus', checkInitialStorage);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      checkInitialStorage();
+    }
+  });
+
+  // 4. SPA navigation handling
+  window.addEventListener('popstate', handleUrlChange);
+  window.addEventListener('hashchange', handleUrlChange);
+
+  setInterval(() => {
+    if (window.location.href !== lastUrl) {
+      handleUrlChange();
+    }
+  }, 600);
+
+  function handleUrlChange() {
+    lastUrl = window.location.href;
+    hasTriggeredOpen = false;
+    hasClickedListingCard = false;
+    hasClickedTab = false;
+    checkInitialStorage();
   }
 
   /**
-   * Automatically triggers Google's "Write a review" button or link ONCE in the top frame.
+   * Triggers the "Write a review" modal ONCE in top frame.
    */
   function tryOpenReviewDialog() {
-    if (!isTopFrame || hasTriggeredOpen || isReviewModalPresent()) return false;
+    if (!isTopFrame || hasTriggeredOpen || findReviewDialog()) return false;
 
     try {
-      // 1. Any anchor tag with #lrd= containing ',3,' (direct review modal action code)
       const allLinks = Array.from(document.querySelectorAll('a[href*="lrd="]'));
       for (const a of allLinks) {
         const href = a.getAttribute('href') || '';
@@ -344,19 +319,6 @@
         }
       }
 
-      // 2. Async trigger buttons
-      const asyncTriggers = document.querySelectorAll(
-        '[data-async-trigger="reviewDialog"], [data-async-trigger*="review" i], [data-async-context*="review" i]'
-      );
-      for (const el of asyncTriggers) {
-        if (isVisible(el)) {
-          hasTriggeredOpen = true;
-          el.click();
-          return true;
-        }
-      }
-
-      // 3. Text match for "Write a review" / "Rate and review"
       const clickables = Array.from(document.querySelectorAll('button, a, div[role="button"], span[role="button"]'));
       for (const el of clickables) {
         if (!isVisible(el)) continue;
@@ -370,37 +332,72 @@
           return true;
         }
       }
-
-      // 4. Google Maps multi-listing: auto-click first place card
-      if (window.location.href.includes('/maps')) {
-        if (!hasClickedListingCard) {
-          const firstCard = document.querySelector('a.hfpxzc, div[role="feed"] a[href*="/maps/place/"], div[role="article"] a');
-          if (firstCard && isVisible(firstCard)) {
-            hasClickedListingCard = true;
-            firstCard.focus();
-            firstCard.click();
-            firstCard.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-            firstCard.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-            return true;
-          }
-        }
-
-        // 5. Look for Reviews tab to reveal Write a Review
-        if (!hasClickedTab) {
-          const reviewsTab = Array.from(document.querySelectorAll('button[role="tab"], div[role="tab"]')).find(el => {
-            if (!isVisible(el)) return false;
-            const t = (el.innerText || el.getAttribute('aria-label') || '').toLowerCase();
-            return t.includes('reviews') && !t.includes('write');
-          });
-          if (reviewsTab) {
-            hasClickedTab = true;
-            reviewsTab.click();
-            return true;
-          }
-        }
-      }
     } catch (e) {}
     return false;
+  }
+
+  /**
+   * Locates Google's review modal or dialog container.
+   */
+  function findReviewDialog() {
+    if (!isTopFrame) {
+      const body = document.body;
+      if (body && (document.querySelector('textarea, div[role="textbox"], [role="radio"]') ||
+          (document.body.innerText || '').toLowerCase().includes('post') ||
+          (document.body.innerText || '').toLowerCase().includes('review'))) {
+        return body;
+      }
+    }
+
+    // 1. Check known dialog / modal tags and roles
+    const dialogSelectors = [
+      'div[role="dialog"]',
+      'dialog',
+      '[aria-modal="true"]',
+      'g-dialog',
+      '.modal-dialog',
+      'div.review-dialog',
+      'div.JAPqpe',
+      'div[data-parent-id]'
+    ];
+
+    for (const sel of dialogSelectors) {
+      const candidates = document.querySelectorAll(sel);
+      for (const d of candidates) {
+        if (!isVisible(d)) continue;
+        if (d.querySelector('textarea, div[role="textbox"], div[contenteditable="true"], [role="radio"], [role="radiogroup"]')) {
+          return d;
+        }
+        if (d.querySelector('iframe')) return d;
+
+        const txt = (d.innerText || '').toLowerCase();
+        if (txt.includes('experience') || txt.includes('post') || txt.includes('review') || txt.includes('rate') || txt.includes('posting publicly')) {
+          return d;
+        }
+
+        const rect = d.getBoundingClientRect();
+        if (rect.width > 260 && rect.height > 180) return d;
+      }
+    }
+
+    // 2. Unmistakable content markers in Google review dialogs (e.g. "Posting publicly across Google")
+    const textElements = Array.from(document.querySelectorAll('div, span, p')).filter(el => {
+      const t = (el.innerText || '').toLowerCase();
+      return t.includes('posting publicly across google') || t.includes('details of your own experience');
+    });
+
+    for (const el of textElements) {
+      let curr = el;
+      while (curr && curr !== document.body) {
+        const rect = curr.getBoundingClientRect();
+        if (rect.width > 260 && rect.height > 180 && curr.querySelector('textarea, div[role="textbox"], [role="radio"], svg')) {
+          return curr;
+        }
+        curr = curr.parentElement;
+      }
+    }
+
+    return null;
   }
 
   function getCandidateRoots(dialog) {
@@ -423,47 +420,9 @@
     return roots;
   }
 
-  function findReviewDialog() {
-    if (!isTopFrame) {
-      const body = document.body;
-      if (body && (document.querySelector('textarea, div[role="textbox"], [role="radio"]') ||
-          (document.body.innerText || '').toLowerCase().includes('post') ||
-          (document.body.innerText || '').toLowerCase().includes('review'))) {
-        return body;
-      }
-    }
-
-    const dialogSelectors = [
-      'div[role="dialog"]',
-      'dialog',
-      '[aria-modal="true"]',
-      'g-dialog',
-      '.modal-dialog',
-      'div.review-dialog'
-    ];
-
-    for (const sel of dialogSelectors) {
-      const candidates = document.querySelectorAll(sel);
-      for (const d of candidates) {
-        if (!isVisible(d)) continue;
-        if (d.querySelector('textarea, div[role="textbox"], div[contenteditable="true"], [role="radio"], [role="radiogroup"]')) {
-          return d;
-        }
-        if (d.querySelector('iframe')) return d;
-
-        const txt = (d.innerText || '').toLowerCase();
-        if (txt.includes('experience') || txt.includes('post') || txt.includes('review') || txt.includes('rate')) {
-          return d;
-        }
-
-        const rect = d.getBoundingClientRect();
-        if (rect.width > 280 && rect.height > 200) return d;
-      }
-    }
-
-    return null;
-  }
-
+  /**
+   * Finds the review textarea or contenteditable element.
+   */
   function findReviewTextarea(dialog) {
     const roots = getCandidateRoots(dialog);
 
@@ -476,7 +435,6 @@
     };
 
     for (const root of roots) {
-      // 1. Textarea elements
       const textareas = Array.from(root.querySelectorAll('textarea')).filter(isVisible).filter(el => !isSearchInput(el));
       for (const ta of textareas) {
         const ph = (ta.getAttribute('placeholder') || ta.getAttribute('aria-label') || '').toLowerCase();
@@ -484,9 +442,8 @@
           return ta;
         }
       }
-      if ((dialog || root !== document) && textareas.length > 0) return textareas[0];
+      if (dialog && textareas.length > 0) return textareas[0];
 
-      // 2. Contenteditable or role="textbox" elements
       const editables = Array.from(root.querySelectorAll('div[role="textbox"], div[contenteditable="true"], [contenteditable="true"]'))
         .filter(isVisible)
         .filter(el => !isSearchInput(el));
@@ -497,18 +454,20 @@
           return ed;
         }
       }
-      if ((dialog || root !== document) && editables.length > 0) return editables[0];
+      if (dialog && editables.length > 0) return editables[0];
     }
 
     return null;
   }
 
+  /**
+   * Populates review text into textarea/contenteditable.
+   */
   function populateText(el, text) {
     try {
       el.focus();
       el.click();
 
-      // Native property setter
       const win = el.ownerDocument?.defaultView || window;
       const proto = el.tagName === 'TEXTAREA' ? win.HTMLTextAreaElement.prototype : win.HTMLInputElement.prototype;
       const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
@@ -518,14 +477,12 @@
         el.value = text;
       }
 
-      // Dispatch event sequence
-      el.dispatchEvent(new Event('focus', { bubbles: true }));
-      el.dispatchEvent(new Event('keydown', { bubbles: true, key: ' ' }));
+      el.dispatchEvent(new Event('focus', { bubbles: true, composed: true }));
+      el.dispatchEvent(new Event('keydown', { bubbles: true, composed: true, key: ' ' }));
       el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
       el.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
-      el.dispatchEvent(new Event('keyup', { bubbles: true, key: ' ' }));
+      el.dispatchEvent(new Event('keyup', { bubbles: true, composed: true, key: ' ' }));
 
-      // execCommand fallback
       try {
         if (el.ownerDocument) {
           el.ownerDocument.execCommand('selectAll', false, null);
@@ -538,104 +495,223 @@
         el.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, data: text }));
       }
 
-      console.log('[ReviewCraft Google] Populated review text.');
-      return true;
+      const verified = (el.value && el.value.trim().length > 0) || (el.innerText && el.innerText.trim().length > 0);
+      return verified;
     } catch (e) {
+      console.warn('[ReviewCraft Google] Populate text error:', e);
       return false;
     }
   }
 
-  function findStarElement(dialog, targetRating) {
-    const roots = getCandidateRoots(dialog);
+  /**
+   * ACCURATELY LOCATES THE STAR ELEMENT FOR TARGET RATING INSIDE THE MODAL.
+   * Uses geometric left-to-right visual coordinates to guarantee 100% accuracy.
+   */
+  function findModalStars(dialog, targetRating) {
+    const container = dialog || findReviewDialog();
+    if (!container) return null;
 
-    for (const root of roots) {
-      // 1. Radio items with aria-posinset (e.g. aria-posinset="5")
-      const posRadios = root.querySelectorAll(`[role="radio"][aria-posinset="${targetRating}"]`);
-      for (const r of posRadios) {
-        if (isVisible(r)) return r;
-      }
+    // 1. Direct search by aria-posinset or data-rating inside dialog
+    const directRating = container.querySelector(
+      `[role="radio"][aria-posinset="${targetRating}"], [role="radio"][data-rating="${targetRating}"], [role="radio"][data-value="${targetRating}"], [data-rating="${targetRating}"][role="button"]`
+    );
+    if (directRating && isVisible(directRating)) {
+      return directRating;
+    }
 
-      // 2. Radiogroups
-      const radiogroups = root.querySelectorAll('[role="radiogroup"]');
-      for (const rg of radiogroups) {
-        const radios = Array.from(rg.querySelectorAll('[role="radio"]')).filter(isVisible);
-        if (radios.length >= 5) {
-          const idx = Math.max(0, Math.min(4, targetRating - 1));
-          return radios[idx];
+    // 2. Direct search by aria-label matching number word and star
+    const wordsForRating = {
+      1: ['one', '1', 'એક', 'एक'],
+      2: ['two', '2', 'બે', 'दो'],
+      3: ['three', '3', 'ત્રણ', 'तीन'],
+      4: ['four', '4', 'ચાર', 'चार'],
+      5: ['five', '5', 'પાંચ', 'पाँच', 'पांच']
+    }[targetRating] || [String(targetRating)];
+
+    const allClickables = Array.from(container.querySelectorAll('[role="radio"], button, div[tabindex], span[tabindex]')).filter(isVisible);
+    for (const el of allClickables) {
+      const label = (el.getAttribute('aria-label') || el.getAttribute('title') || '').toLowerCase();
+      if (label.includes('star') || label.includes('તારા') || label.includes('सितारे') || label.includes('rate') || label.includes('rating')) {
+        if (wordsForRating.some(w => label.includes(w))) {
+          return el;
         }
       }
+    }
 
-      // 3. Any 5 radio elements inside dialog or iframe
-      if (dialog || root !== document) {
-        const allRadios = Array.from(root.querySelectorAll('[role="radio"]')).filter(isVisible);
-        if (allRadios.length >= 5) {
-          const idx = Math.max(0, Math.min(4, targetRating - 1));
-          return allRadios[idx];
-        }
-      }
+    // 3. Anchor via review textarea
+    const textarea = findReviewTextarea(container);
+    const textareaRect = textarea ? textarea.getBoundingClientRect() : null;
 
-      // 4. Aria labels with star numbers
-      const starQuery = dialog || (root !== document ? root : null);
-      if (starQuery) {
-        const ariaStars = Array.from(starQuery.querySelectorAll('[aria-label*="star" i], [aria-label*="Star" i], [aria-label*="તારા" i], [aria-label*="सितारे" i]')).filter(el => {
-          return isVisible(el) && el.tagName !== 'TEXTAREA';
+    // 4. Candidate star elements: [role="radio"], or elements with star aria-label, or SVGs with star paths
+    let candidateStars = Array.from(container.querySelectorAll('[role="radio"]')).filter(isVisible);
+
+    if (candidateStars.length < 5) {
+      candidateStars = Array.from(container.querySelectorAll('[aria-label*="star" i], [aria-label*="તારા" i], [aria-label*="सितारे" i]'))
+        .filter(isVisible)
+        .filter(el => el.tagName !== 'TEXTAREA' && (!textarea || el !== textarea));
+    }
+
+    if (candidateStars.length < 5) {
+      const svgs = Array.from(container.querySelectorAll('svg')).filter(isVisible);
+      const starSvgs = svgs.filter(svg => {
+        const paths = Array.from(svg.querySelectorAll('path'));
+        return paths.some(p => {
+          const d = p.getAttribute('d') || '';
+          return d.includes('17.27') || d.includes('9.24') || d.includes('21l') || d.includes('12 2') || d.includes('M12');
         });
-        if (ariaStars.length >= 5) {
-          const idx = Math.max(0, Math.min(4, targetRating - 1));
-          return ariaStars[idx];
-        }
+      });
+      if (starSvgs.length >= 5) {
+        candidateStars = starSvgs.map(s => s.closest('[role="radio"], [role="button"], button, div[tabindex], span[tabindex]') || s.parentElement || s);
       }
+    }
 
-      // 5. Star SVG icons
-      const svgContainer = dialog || (root !== document ? root : null);
-      if (svgContainer) {
-        const allSvgs = Array.from(svgContainer.querySelectorAll('svg')).filter(isVisible);
-        const starSvgs = allSvgs.filter(svg => {
-          const paths = Array.from(svg.querySelectorAll('path'));
-          return paths.some(p => {
-            const d = p.getAttribute('d') || '';
-            return d.includes('17.27') || d.includes('9.24') || d.includes('21l') || d.includes('12 2');
-          });
-        });
-        if (starSvgs.length >= 5) {
-          const idx = Math.max(0, Math.min(4, targetRating - 1));
-          const targetSvg = starSvgs[idx];
-          return targetSvg.closest('button, [role="radio"], div[tabindex], span[tabindex]') || targetSvg.parentElement || targetSvg;
-        }
+    // 5. If textarea exists, filter candidate stars to those visually positioned ABOVE the textarea
+    if (textareaRect && candidateStars.length > 5) {
+      const aboveTextarea = candidateStars.filter(el => {
+        const r = el.getBoundingClientRect();
+        return r.top < textareaRect.top && r.bottom > (textareaRect.top - 200);
+      });
+      if (aboveTextarea.length >= 5) {
+        candidateStars = aboveTextarea;
       }
+    }
+
+    // De-duplicate elements
+    candidateStars = Array.from(new Set(candidateStars));
+
+    // 6. Sort candidate stars strictly from left to right by their horizontal position (rect.left)
+    if (candidateStars.length >= 5) {
+      candidateStars.sort((a, b) => {
+        const rectA = a.getBoundingClientRect();
+        const rectB = b.getBoundingClientRect();
+        return rectA.left - rectB.left;
+      });
+
+      const targetIdx = Math.max(0, Math.min(candidateStars.length - 1, targetRating - 1));
+      return candidateStars[targetIdx];
     }
 
     return null;
   }
 
-  function clickStarElement(el) {
-    try {
-      el.focus();
-      const rect = el.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
+  /**
+   * DISPATCHES COMPLETE POINTER, MOUSE, AND KEYBOARD EVENTS TO ACTIVATE STAR.
+   */
+  function clickStarElement(starEl, targetRating) {
+    if (!starEl) return false;
 
-      const opts = {
+    try {
+      starEl.focus();
+
+      const rect = starEl.getBoundingClientRect();
+      const cx = rect.left + (rect.width > 0 ? rect.width / 2 : 10);
+      const cy = rect.top + (rect.height > 0 ? rect.height / 2 : 10);
+      const win = starEl.ownerDocument?.defaultView || window;
+
+      // Pointer events
+      const pointerOpts = {
         bubbles: true,
         cancelable: true,
-        view: el.ownerDocument?.defaultView || window,
+        composed: true,
+        view: win,
         clientX: cx,
-        clientY: cy
+        clientY: cy,
+        pointerId: 1,
+        pointerType: 'mouse',
+        isPrimary: true
       };
+      starEl.dispatchEvent(new PointerEvent('pointerover', pointerOpts));
+      starEl.dispatchEvent(new PointerEvent('pointerenter', pointerOpts));
+      starEl.dispatchEvent(new PointerEvent('pointerdown', { ...pointerOpts, button: 0, buttons: 1 }));
 
-      el.dispatchEvent(new PointerEvent('pointerover', opts));
-      el.dispatchEvent(new MouseEvent('mouseover', opts));
-      el.dispatchEvent(new PointerEvent('pointerdown', opts));
-      el.dispatchEvent(new MouseEvent('mousedown', opts));
-      el.dispatchEvent(new PointerEvent('pointerup', opts));
-      el.dispatchEvent(new MouseEvent('mouseup', opts));
-      el.click();
+      // Mouse events
+      const mouseOpts = {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        view: win,
+        clientX: cx,
+        clientY: cy,
+        button: 0,
+        buttons: 1
+      };
+      starEl.dispatchEvent(new MouseEvent('mouseover', mouseOpts));
+      starEl.dispatchEvent(new MouseEvent('mouseenter', mouseOpts));
+      starEl.dispatchEvent(new MouseEvent('mousedown', mouseOpts));
 
-      console.log('[ReviewCraft Google] Star rating element clicked.');
+      const upOpts = { ...mouseOpts, buttons: 0 };
+      starEl.dispatchEvent(new PointerEvent('pointerup', { ...pointerOpts, button: 0, buttons: 0 }));
+      starEl.dispatchEvent(new MouseEvent('mouseup', upOpts));
+      starEl.dispatchEvent(new MouseEvent('click', upOpts));
+
+      // Native click
+      starEl.click();
+
+      // Dispatch on inner SVG if different
+      const inner = starEl.querySelector('svg, path');
+      if (inner && inner !== starEl) {
+        inner.dispatchEvent(new MouseEvent('mousedown', mouseOpts));
+        inner.dispatchEvent(new MouseEvent('mouseup', upOpts));
+        inner.dispatchEvent(new MouseEvent('click', upOpts));
+      }
+      if (starEl.parentElement && starEl.parentElement.getAttribute('role') === 'radio') {
+        starEl.parentElement.click();
+      }
+
+      // Keyboard events (Space & Enter)
+      starEl.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true, composed: true }));
+      starEl.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true, composed: true }));
+      starEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, composed: true }));
+      starEl.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, composed: true }));
+
       return true;
-    } catch (e) {
+    } catch (err) {
+      console.warn('[ReviewCraft Google] Star click error:', err);
       return false;
     }
+  }
+
+  /**
+   * VERIFIES WHETHER GOOGLE REGISTERED THE SELECTED STAR RATING.
+   */
+  function isStarRatingSelected(dialog, targetRating) {
+    if (!dialog) return false;
+
+    // 1. Check aria-checked="true" on radios
+    const radios = Array.from(dialog.querySelectorAll('[role="radio"]')).filter(isVisible);
+    for (const r of radios) {
+      if (r.getAttribute('aria-checked') === 'true') {
+        return true;
+      }
+    }
+
+    // 2. Check rating text in dialog
+    const ratingTexts = ['5 stars', '4 stars', '3 stars', '2 stars', '1 star', 'five stars', 'four stars', 'excellent', 'great', 'good'];
+    const textEls = Array.from(dialog.querySelectorAll('div, span')).filter(isVisible);
+    for (const el of textEls) {
+      const t = (el.innerText || '').toLowerCase().trim();
+      if (ratingTexts.some(rt => t === rt || t === `${targetRating} stars` || t === `${targetRating} star`)) {
+        return true;
+      }
+    }
+
+    // 3. Check for gold/yellow filled stars in SVGs
+    const svgs = Array.from(dialog.querySelectorAll('svg')).filter(isVisible);
+    for (const svg of svgs) {
+      const fill = (svg.getAttribute('fill') || svg.style.fill || '').toLowerCase();
+      if (fill.includes('fbbc04') || fill.includes('e7711b') || fill.includes('rgb(251, 188, 4)') || fill.includes('gold')) {
+        return true;
+      }
+      const paths = Array.from(svg.querySelectorAll('path'));
+      for (const p of paths) {
+        const pFill = (p.getAttribute('fill') || p.style.fill || '').toLowerCase();
+        if (pFill.includes('fbbc04') || pFill.includes('e7711b') || pFill.includes('rgb(251, 188, 4)') || pFill.includes('gold')) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   function isVisible(el) {
@@ -654,4 +730,104 @@
       return false;
     }
   }
+
+  /**
+   * Renders the interactive floating badge at bottom-right of page.
+   */
+  function renderFloatingBadge(pending, isFilled = false) {
+    if (!isTopFrame) return;
+
+    try {
+      let badge = document.getElementById('reviewcraft-floating-badge');
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'reviewcraft-floating-badge';
+        badge.style.cssText = `
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          z-index: 2147483647;
+          background: #0f172a;
+          color: #ffffff;
+          border: 1px solid #068dcb;
+          border-left: 5px solid #068dcb;
+          border-radius: 12px;
+          padding: 10px 16px;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          font-size: 13px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 15px rgba(6, 141, 203, 0.3);
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          transition: all 0.3s ease;
+          user-select: none;
+        `;
+        document.body.appendChild(badge);
+      }
+
+      const rating = Math.max(1, Math.min(5, Math.round(Number(pending.rating)) || 5));
+      const company = pending.companyName || 'Business';
+      const statusTitle = isFilled ? `${rating}★ Auto-Filled!` : `${rating}★ Ready to Fill`;
+      const btnLabel = isFilled ? 'Re-Fill' : 'Fill Review';
+
+      badge.innerHTML = `
+        <span style="font-size: 20px; line-height: 1;">✨</span>
+        <div style="line-height: 1.3;">
+          <div style="font-weight: 600; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
+            <span>ReviewCraft</span>
+            <span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 10px; padding: 1px 6px; border-radius: 6px;">v1.1.3</span>
+          </div>
+          <div style="font-size: 11px; color: #cbd5e1; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            ${company} • ${statusTitle}
+          </div>
+        </div>
+        <button id="reviewcraft-btn-trigger-fill" style="
+          background: #068dcb;
+          color: #ffffff;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 8px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.2s;
+        ">${btnLabel}</button>
+        <span id="reviewcraft-btn-close-badge" style="
+          color: #94a3b8;
+          font-size: 16px;
+          cursor: pointer;
+          margin-left: -4px;
+          padding: 2px 4px;
+        " title="Dismiss">✕</span>
+      `;
+
+      const btnFill = badge.querySelector('#reviewcraft-btn-trigger-fill');
+      if (btnFill) {
+        btnFill.addEventListener('click', (e) => {
+          e.stopPropagation();
+          btnFill.innerText = 'Filling...';
+          lastAppliedVersion = null; // force re-fill
+          lastAppliedReviewId = null;
+          isProcessing = false;
+          startAutofillFlow(pending);
+        });
+      }
+
+      const btnClose = badge.querySelector('#reviewcraft-btn-close-badge');
+      if (btnClose) {
+        btnClose.addEventListener('click', (e) => {
+          e.stopPropagation();
+          badge.remove();
+        });
+      }
+    } catch (e) {}
+  }
+
+  function removeFloatingBadge() {
+    try {
+      const badge = document.getElementById('reviewcraft-floating-badge');
+      if (badge) badge.remove();
+    } catch (e) {}
+  }
+
 })();

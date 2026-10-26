@@ -139,7 +139,20 @@ class ReviewGeneratorService:
         if not clean_selected_kws:
             clean_selected_kws = ["Quality Service"]
 
-        batch_keyword_distribution = distribute_keywords_to_batch(clean_selected_kws, target_count)
+        if len(clean_selected_kws) > 1:
+            batch_keyword_distribution = []
+            for idx in range(target_count):
+                if len(clean_selected_kws) == 2:
+                    if idx % 2 == 0:
+                        batch_keyword_distribution.append([clean_selected_kws[0], clean_selected_kws[1]])
+                    else:
+                        batch_keyword_distribution.append([clean_selected_kws[1], clean_selected_kws[0]])
+                else:
+                    k1 = clean_selected_kws[idx % len(clean_selected_kws)]
+                    k2 = clean_selected_kws[(idx + 1) % len(clean_selected_kws)]
+                    batch_keyword_distribution.append([k1, k2])
+        else:
+            batch_keyword_distribution = distribute_keywords_to_batch(clean_selected_kws, target_count)
 
         # Load historical review pool for this company
         history_texts = self.get_history_texts(company_id)
@@ -184,7 +197,10 @@ class ReviewGeneratorService:
         for i in range(target_count):
             item_rating = ratings_for_batch[i]
             item_keywords = batch_keyword_distribution[i]
-            item_keyword_str = ", ".join(item_keywords)
+            if len(item_keywords) == 2:
+                item_keyword_str = f"{item_keywords[0]} and {item_keywords[1]}"
+            else:
+                item_keyword_str = ", ".join(item_keywords)
             
             # Generate candidate pool specifically tailored for this rating and natural keywords
             candidates, src = llm_provider.generate_review_candidates(
@@ -287,7 +303,10 @@ class ReviewGeneratorService:
                 doc["_id"] = res.inserted_id
                 saved_records.append(serialize_doc(doc))
             except DuplicateKeyError:
-                logger.warning("DuplicateKeyError caught for hash %s. Skipping.", content_hash)
+                logger.warning("DuplicateKeyError caught for hash %s. Loading existing record.", content_hash)
+                existing_doc = self.db.generated_reviews.find_one({"contentHash": content_hash})
+                if existing_doc:
+                    saved_records.append(serialize_doc(existing_doc))
                 total_rejected_count += 1
             except Exception as e:
                 logger.error("Error saving review doc: %s", str(e))

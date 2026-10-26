@@ -85,6 +85,16 @@ export const api = {
     return handleResponse(res);
   },
 
+    // Auto SEO Keyword Generator
+  generateSeoKeywords: async (payload) => {
+    const res = await fetch(`${API_BASE}/companies/generate-seo-keywords`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse(res);
+  },
+
   // Review Generation & Rating Settings
   getRatingDistributionSettings: async () => {
     const res = await fetch(`${API_BASE}/settings/rating-distribution`);

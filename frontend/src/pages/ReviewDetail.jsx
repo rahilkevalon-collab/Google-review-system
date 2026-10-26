@@ -138,6 +138,14 @@ export default function ReviewDetail() {
       if (res.success && res.review) {
         setReview(res.review);
         syncReviewToExtension(res.review, company, 'detail_edit');
+        if (res.review.companyId) {
+          try {
+            const cacheKey = `reviewcraft_cached_reviews_${res.review.companyId}`;
+            const existing = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+            const updated = existing.map(r => (r.id === res.review.id || r._id === res.review.id) ? { ...r, reviewText: res.review.reviewText } : r);
+            localStorage.setItem(cacheKey, JSON.stringify(updated));
+          } catch (e) {}
+        }
         addToast('Review updated successfully!', 'success');
       }
     } catch (err) {

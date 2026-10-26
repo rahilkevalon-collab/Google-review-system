@@ -458,3 +458,39 @@ def test_keyword_random_distribution_across_cards():
 
 
 
+
+# 27. Auto SEO Keywords Generation (Min 3, Max 7)
+def test_auto_seo_keywords_generation_min_3_max_7(client):
+    from services.company_service import company_service
+
+    # 1. Direct service method check
+    kws = company_service.generate_seo_keywords(
+        name="Kevalon Technology",
+        category="IT Services and Software Development",
+        services="Web Development, AI Solutions, Mobile App Development",
+        location="Ahmedabad, Gujarat"
+    )
+    assert 3 <= len(kws) <= 7, f"SEO keywords count {len(kws)} must be between 3 and 7"
+    assert "Web Development" in kws
+
+    # 2. Minimal input check
+    kws_min = company_service.generate_seo_keywords(
+        name="Minimal Co",
+        category="Healthcare",
+        services="",
+        location=""
+    )
+    assert 3 <= len(kws_min) <= 7, f"SEO keywords count {len(kws_min)} must be between 3 and 7"
+
+    # 3. HTTP endpoint check
+    res = client.post("/api/companies/generate-seo-keywords", json={
+        "name": "Omni Brand",
+        "category": "E-commerce",
+        "services": "Organic Skincare, Clean Beauty, Vegan Soap",
+        "location": "Mumbai, India"
+    })
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["success"] is True
+    assert 3 <= data["count"] <= 7
+    assert 3 <= len(data["seoKeywords"]) <= 7

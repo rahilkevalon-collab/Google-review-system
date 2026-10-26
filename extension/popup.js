@@ -50,8 +50,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function refresh() {
     try {
       if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-        chrome.storage.local.get(['pendingReview'], (res) => {
-          renderPending(res.pendingReview);
+        chrome.storage.local.get(['pendingReview', 'lastSyncedReview'], (res) => {
+          renderPending(res.pendingReview || res.lastSyncedReview);
         });
       }
     } catch (e) {
@@ -65,8 +65,10 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
       chrome.storage.onChanged.addListener((changes, areaName) => {
-        if (areaName === 'local' && changes.pendingReview) {
-          renderPending(changes.pendingReview.newValue);
+        if (areaName === 'local' && (changes.pendingReview || changes.lastSyncedReview)) {
+          const item = (changes.pendingReview ? changes.pendingReview.newValue : null) ||
+                       (changes.lastSyncedReview ? changes.lastSyncedReview.newValue : null);
+          renderPending(item);
         }
       });
     }

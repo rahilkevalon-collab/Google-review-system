@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Tag, Plus, Check, X } from 'lucide-react';
+import { Tag, Plus, Check } from 'lucide-react';
 
 export default function KeywordChips({
   keywords = [],
   selectedKeywords = [],
   onToggleKeyword,
-  onAddKeyword,
-  onRemoveKeyword
+  onAddKeyword
 }) {
   const [customInput, setCustomInput] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -36,47 +35,24 @@ export default function KeywordChips({
         {cleanKeywords.map((kw) => {
           const isSelected = selectedKeywords.includes(kw);
           return (
-            <div
+            <button
               key={kw}
-              className={`inline-flex items-center rounded-full text-xs font-semibold tracking-wide uppercase transition-all duration-200 border group ${
+              type="button"
+              onClick={() => onToggleKeyword(kw)}
+              className={`inline-flex items-center px-4 py-2 rounded-full text-xs font-semibold tracking-wide uppercase transition-all duration-200 border cursor-pointer focus:outline-none ${
                 isSelected
                   ? 'bg-gradient-to-r from-[#034665] to-[#068dcb] text-white border-[#034665] shadow-md shadow-[#068dcb]/25 scale-102 ring-2 ring-[#068dcb]/20'
                   : 'bg-white text-slate-700 border-slate-200 hover:border-[#068dcb]/40 hover:text-[#034665] hover:bg-[#068dcb]/10 shadow-xs'
               }`}
+              title={`Click to ${isSelected ? 'unselect' : 'select'} "${kw}"`}
             >
-              <button
-                type="button"
-                onClick={() => onToggleKeyword(kw)}
-                className="pl-3.5 pr-2 py-2 flex items-center gap-1.5 cursor-pointer focus:outline-none"
-                title={`Click to ${isSelected ? 'unselect' : 'select'} "${kw}"`}
-              >
-                {isSelected ? (
-                  <Check className="w-3.5 h-3.5 text-white stroke-[2.5]" />
-                ) : (
-                  <Tag className="w-3 h-3 text-[#068dcb]" />
-                )}
-                <span>{kw}</span>
-              </button>
-
-              {/* Remove Keyword Button */}
-              {onRemoveKeyword && cleanKeywords.length > 1 && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemoveKeyword(kw);
-                  }}
-                  className={`pr-3 pl-1 py-2 text-xs transition-colors cursor-pointer rounded-r-full ${
-                    isSelected
-                      ? 'text-cyan-100 hover:text-white hover:bg-[#034665]/60'
-                      : 'text-slate-400 hover:text-red-500 hover:bg-red-50'
-                  }`}
-                  title={`Remove "${kw}"`}
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
+              {isSelected ? (
+                <Check className="w-3.5 h-3.5 text-white stroke-[2.5] mr-1.5" />
+              ) : (
+                <Tag className="w-3 h-3 text-[#068dcb] mr-1.5" />
               )}
-            </div>
+              <span>{kw}</span>
+            </button>
           );
         })}
 

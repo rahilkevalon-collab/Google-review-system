@@ -29,6 +29,7 @@ export default function Dashboard({ categories = [] }) {
   // Keyword states
   const [keywords, setKeywords] = useState([]);
   const [selectedKeywords, setSelectedKeywords] = useState([]);
+  const [activeReviewId, setActiveReviewId] = useState(null);
 
   // Reviews state (strictly 3 distinct suggestions)
   const [reviews, setReviews] = useState([]);
@@ -106,6 +107,41 @@ export default function Dashboard({ categories = [] }) {
             initialSelected = [finalKeywords[0]];
           }
           setSelectedKeywords(initialSelected);
+
+          // Restore cached reviews and active review on page refresh
+          try {
+            const cachedRevStr = localStorage.getItem(`reviewcraft_cached_reviews_${comp.id}`);
+            let loadedRevs = [];
+            if (cachedRevStr) {
+              const cachedRevs = JSON.parse(cachedRevStr);
+              if (Array.isArray(cachedRevs) && cachedRevs.length > 0) {
+                loadedRevs = cachedRevs;
+                setReviews(cachedRevs);
+              }
+            }
+
+            let activeRev = null;
+            const savedActiveStr = localStorage.getItem(`reviewcraft_active_selected_review_${comp.id}`) ||
+                                   localStorage.getItem('reviewcraft_active_selected_review');
+            if (savedActiveStr) {
+              try {
+                const parsed = JSON.parse(savedActiveStr);
+                if (parsed && (parsed.reviewText || parsed.text)) {
+                  activeRev = parsed;
+                  setActiveReviewId(parsed.id || parsed._id);
+                }
+              } catch (e) {}
+            }
+
+            if (!activeRev && loadedRevs.length > 0) {
+              activeRev = loadedRevs[0];
+              setActiveReviewId(loadedRevs[0].id || loadedRevs[0]._id);
+            }
+
+            if (activeRev) {
+              syncReviewToExtension(activeRev, comp, 'refresh_restore');
+            }
+          } catch (e) {}
         } else {
           setCompanyError('Business profile not found in database.');
         }
@@ -164,6 +200,9 @@ export default function Dashboard({ categories = [] }) {
       if (res.success && Array.isArray(res.reviews) && res.reviews.length > 0) {
         const topReviews = res.reviews.slice(0, 3);
         setReviews(topReviews);
+        try {
+          localStorage.setItem(`reviewcraft_cached_reviews_${company.id}`, JSON.stringify(topReviews));
+        } catch (e) {}
         if (topReviews[0] && company) {
           syncReviewToExtension(topReviews[0], company, 'auto_sync');
         }
@@ -203,12 +242,15 @@ export default function Dashboard({ categories = [] }) {
     }
   }, [company, selectedKeywords, keywords, addToast]);
 
-  // 3. Trigger initial generation when company and keywords are loaded
+  // 3. Trigger initial generation ONLY if no cached reviews exist for this company
   useEffect(() => {
     if (company?.id && selectedKeywords.length > 0) {
-      generateReviews(selectedKeywords, true);
+      const cached = localStorage.getItem(`reviewcraft_cached_reviews_${company.id}`);
+      if (!cached) {
+        generateReviews(selectedKeywords, true);
+      }
     }
-  }, [company?.id, selectedKeywords.join(',')]);
+  }, [company?.id]);
 
   // 4. Handle Keyword Selection (single or multi-select)
   const handleToggleKeyword = (kw) => {
@@ -362,19 +404,26 @@ export default function Dashboard({ categories = [] }) {
         </div>
       ) : reviews.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {reviews.slice(0, 3).map((rev) => (
-            <ReviewCard
-              key={rev._id || rev.id || `${company.name}-${rev.contentHash}`}
-              review={{
-                ...rev,
-                companyName: rev.companyName || company.name,
-                companyLocation: rev.companyLocation || company.location || company.formattedAddress,
-                googlePlaceId: rev.googlePlaceId || company.googlePlaceId,
-                googleReviewUrl: rev.googleReviewUrl || company.googleReviewUrl,
-                externalReviewLink: rev.externalReviewLink || company.externalReviewLink || company.googleReviewUrl
-              }}
-            />
-          ))}
+          {reviews.slice(0, 3).map((rev) => {
+            const revId = rev._id || rev.id;
+            const fullRev = {
+              ...rev,
+              companyName: rev.companyName || company.name,
+              companyLocation: rev.companyLocation || company.location || company.formattedAddress,
+              googlePlaceId: rev.googlePlaceId || company.googlePlaceId,
+              googleReviewUrl: rev.googleReviewUrl || company.googleReviewUrl,
+              externalReviewLink: rev.externalReviewLink || company.externalReviewLink || company.googleReviewUrl
+            };
+            return (
+              <ReviewCard
+                key={revId || `${company.name}-${rev.contentHash}`}
+                review={fullRev}
+                company={company}
+                isActive={Boolean(activeReviewId && revId && String(revId) === String(activeReviewId))}
+                onSelect={(selected) => setActiveReviewId(selected.id || selected._id)}
+              />
+            );
+          })}
         </div>
       ) : (
         <div className="p-12 rounded-3xl text-center space-y-4 glass-panel border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
