@@ -7,7 +7,8 @@ import {
   Layers,
   CheckCircle2,
   AlertCircle,
-  Info
+  Info,
+  RefreshCw
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
@@ -264,13 +265,10 @@ export default function Dashboard({ categories = [] }) {
     }
   }, [company, selectedKeywords, keywords, addToast]);
 
-  // 3. Trigger initial generation ONLY if no cached reviews exist for this company
+  // 3. Trigger fresh review generation on every page load & refresh
   useEffect(() => {
     if (company?.id && selectedKeywords.length > 0) {
-      const cached = localStorage.getItem(`reviewcraft_cached_reviews_${company.id}`);
-      if (!cached) {
-        generateReviews(selectedKeywords, true);
-      }
+      generateReviews(selectedKeywords, true);
     }
   }, [company?.id]);
 
@@ -397,8 +395,8 @@ export default function Dashboard({ categories = [] }) {
         />
       </div>
 
-      {/* 3. Review Results Section Header (Generation Buttons Removed) */}
-      <div className="flex items-center justify-between gap-3 pt-1">
+      {/* 3. Review Results Section Header with Refresh Action */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <span>Customer Review Suggestions</span>
@@ -407,6 +405,17 @@ export default function Dashboard({ categories = [] }) {
             </span>
           </h2>
         </div>
+
+        {/* Generate / Refresh Brand New Non-Repeating Reviews Button */}
+        <button
+          onClick={() => generateReviews(selectedKeywords, true)}
+          disabled={loadingReviews || isGenerating}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-[#034665] to-[#068dcb] hover:from-[#02354e] hover:to-[#057db4] shadow-md shadow-[#068dcb]/20 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+          title="Synthesize 3 new non-repeating review suggestions"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loadingReviews || isGenerating ? 'animate-spin' : ''}`} />
+          <span>{loadingReviews || isGenerating ? 'Synthesizing...' : 'Get New Reviews'}</span>
+        </button>
       </div>
 
       {/* Deduplication Status Notice (if any duplicates were rejected) */}
