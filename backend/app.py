@@ -10,6 +10,7 @@ from routes.category_routes import category_bp
 from routes.company_routes import company_bp
 from routes.review_routes import review_bp
 from routes.analytics_routes import analytics_bp
+from routes.auth_routes import auth_bp
 
 # Configure logging
 logging.basicConfig(
@@ -38,6 +39,7 @@ def create_app():
     app.register_blueprint(company_bp, url_prefix="/api")
     app.register_blueprint(review_bp, url_prefix="/api")
     app.register_blueprint(analytics_bp, url_prefix="/api")
+    app.register_blueprint(auth_bp, url_prefix="/api")
 
     @app.errorhandler(404)
     def handle_not_found(e):

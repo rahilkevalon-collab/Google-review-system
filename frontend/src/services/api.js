@@ -13,6 +13,25 @@ async function handleResponse(response) {
 }
 
 export const api = {
+  // Auth
+  login: async (credentials) => {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    });
+    return handleResponse(res);
+  },
+
+  verifyAuth: async (token) => {
+    const res = await fetch(`${API_BASE}/auth/verify`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return handleResponse(res);
+  },
+
   // Health
   getHealth: async () => {
     const res = await fetch(`${API_BASE}/health`);
