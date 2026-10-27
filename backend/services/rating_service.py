@@ -12,19 +12,19 @@ from typing import Tuple, List, Dict, Any, Optional
 
 try:
     from config import Config
-    DEFAULT_FIVE_STAR_PCT = float(getattr(Config, "DEFAULT_FIVE_STAR_PCT", 60.0))
-    DEFAULT_FOUR_STAR_PCT = float(getattr(Config, "DEFAULT_FOUR_STAR_PCT", 40.0))
+    DEFAULT_FIVE_STAR_PCT = float(getattr(Config, "DEFAULT_FIVE_STAR_PCT", 100.0))
+    DEFAULT_FOUR_STAR_PCT = float(getattr(Config, "DEFAULT_FOUR_STAR_PCT", 0.0))
 except Exception:
-    DEFAULT_FIVE_STAR_PCT = 60.0
-    DEFAULT_FOUR_STAR_PCT = 40.0
+    DEFAULT_FIVE_STAR_PCT = 100.0
+    DEFAULT_FOUR_STAR_PCT = 0.0
 
 logger = logging.getLogger(__name__)
 
 SUPPORTED_PRESETS = [
+    {"id": "100-0", "label": "100% 5-Star (All 5-Star)", "five_star": 100, "four_star": 0},
     {"id": "60-40", "label": "60% 5-Star / 40% 4-Star (Balanced Demo)", "five_star": 60, "four_star": 40},
     {"id": "70-30", "label": "70% 5-Star / 30% 4-Star (High Praise)", "five_star": 70, "four_star": 30},
     {"id": "50-50", "label": "50% 5-Star / 50% 4-Star (Even Mix)", "five_star": 50, "four_star": 50},
-    {"id": "100-0", "label": "100% 5-Star (All 5-Star)", "five_star": 100, "four_star": 0},
 ]
 
 class RatingService:

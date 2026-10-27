@@ -363,20 +363,28 @@ class CompanyService:
 
         # Compute Google Review destination URL
         ext_link = data.get("googleReviewUrl", "").strip() or data.get("externalReviewLink", "").strip()
+        lower_name = name.lower()
+        lower_loc = location.lower()
         if place_id:
             review_url = f"https://search.google.com/local/writereview?placeid={place_id}"
-        elif "kevalon" in name.lower():
+        elif location:
+            # Exact branch location targeting: opens the specific branch profile on Google Maps
+            if "kevalon" in lower_name and lower_loc in ("ahmedabad, gujarat, india", "ahmedabad, india", "ahmedabad"):
+                review_url = "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,"
+            else:
+                clean_loc = " ".join(location.replace(",", " ").split())
+                clean_q = f"{name} {clean_loc}".strip()
+                review_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(clean_q)}"
+        elif "kevalon" in lower_name:
             review_url = "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,"
-        elif "amazon" in name.lower():
+        elif "amazon" in lower_name:
             review_url = "https://www.google.com/search?q=Amazon+India+reviews#lrd=0x395e8b4dc3faaaab:0xcecd65884d1f6b7,3,,,"
-        elif "flora" in name.lower() and "fountain" in name.lower():
+        elif "flora" in lower_name and "fountain" in lower_name:
             review_url = "https://www.google.com/search?q=Flora+Fountain+Ahmedabad+reviews#lrd=0x395e8484a0c86845:0x5e2ea710a76a5b6f,3,,,"
         elif ext_link and ext_link != "https://search.google.com/local/writereview" and ext_link.startswith("http"):
             review_url = ext_link
         else:
-            primary_city = location.split(",")[0].strip() if location else ""
-            query_tokens = [name, primary_city or location]
-            clean_q = " ".join([t for t in query_tokens if t]).replace(",", " ").strip()
+            clean_q = name.strip()
             review_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(clean_q)}"
 
         doc = {

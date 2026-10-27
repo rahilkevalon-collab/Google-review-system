@@ -17,12 +17,36 @@ export function getGoogleReviewUrl(item = {}) {
 
   let baseUrl = '';
 
-  // 1. If explicit direct Google Search write-review URL exists (with #lrd=...): use it directly
+  // 1. If explicit googlePlaceId exists: direct Google write-review dialog for that specific place
+  const placeId = (item.googlePlaceId || item.placeId || '').trim();
+  if (placeId) {
+    return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
+  }
+
+  // 2. Exact Branch Location Targeting:
+  // When an end user specifies a branch location (e.g. "Nikol, Ahmedabad", "Surat", "C.G. Road", etc.),
+  // target that exact branch on Google Maps so the review is added to that specific branch.
+  if (loc) {
+    const lowerName = name.toLowerCase();
+    const lowerLoc = loc.toLowerCase().trim();
+
+    // Only use the verified Kevalon HQ link if specifically set to the default Ahmedabad HQ demo address
+    if (lowerName.includes('kevalon') && (lowerLoc === 'ahmedabad, gujarat, india' || lowerLoc === 'ahmedabad, india' || lowerLoc === 'ahmedabad')) {
+      return 'https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,';
+    }
+
+    // Include full branch location (clean extra spaces and special characters for optimal Google Maps branch resolution)
+    const cleanLoc = loc.replace(/\s+/g, ' ').trim();
+    const branchQuery = `${name} ${cleanLoc}`.trim();
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(branchQuery)}`;
+  }
+
+  // 3. If explicit direct Google Search write-review URL exists (with #lrd=...): use it directly
   if (link && link.includes('#lrd=')) {
     return link;
   }
 
-  // 2. Verified direct Google Search review modal for known businesses (Bypasses Google Maps completely)
+  // 4. Verified direct Google Search review modal for known demo businesses (Bypasses Google Maps completely)
   const lowerName = name.toLowerCase();
   if (lowerName.includes('kevalon')) {
     return 'https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,';
@@ -34,14 +58,7 @@ export function getGoogleReviewUrl(item = {}) {
     return 'https://www.google.com/search?q=Flora+Fountain+Ahmedabad+reviews#lrd=0x395e8484a0c86845:0x5e2ea710a76a5b6f,3,,,';
   }
 
-  // 3. Fallback to Google Place ID write-review dialog
-  const placeId = (item.googlePlaceId || item.placeId || '').trim();
-  if (placeId) {
-    return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
-  }
-
-  // 4. Custom direct review URL (e.g. g.page/r/..., maps.app.goo.gl, etc.)
-  // Strictly ignore bare google.com/search URLs (which have no review modal and trigger AI overviews)
+  // 5. Custom direct review URL (e.g. g.page/r/..., maps.app.goo.gl, etc.)
   if (link && link.startsWith('http') && !link.includes('google.com/search') && !link.includes('writereview/')) {
     if (link.includes('maps/search')) {
       return link.replace(/\+reviews/gi, '').replace(/%20reviews/gi, '').replace(/reviews/gi, '');
@@ -49,11 +66,9 @@ export function getGoogleReviewUrl(item = {}) {
     return link;
   }
 
-  // 5. Google Maps Search URL (Opens the exact business profile on Google Maps with Write a Review button, bypassing AI Overviews completely)
-  const primaryCity = loc ? loc.split(',')[0].trim() : '';
-  const queryTokens = [name, primaryCity || loc].filter(Boolean);
-  const cleanSearchQuery = queryTokens.join(' ').replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanSearchQuery)}`;
+  // 6. Default Google Maps Search URL
+  const query = [name, loc].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
 

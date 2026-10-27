@@ -25,9 +25,9 @@ class Config:
     RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
     COOLDOWN_SECONDS = int(os.getenv("COOLDOWN_SECONDS", "0"))
     
-    # Rating Distribution (Demo Mode: 60% 5-star, 40% 4-star default)
-    DEFAULT_FIVE_STAR_PCT = float(os.getenv("DEFAULT_FIVE_STAR_PCT", "60.0"))
-    DEFAULT_FOUR_STAR_PCT = float(os.getenv("DEFAULT_FOUR_STAR_PCT", "40.0"))
+    # Rating Distribution (Demo Mode: 100% 5-star default)
+    DEFAULT_FIVE_STAR_PCT = float(os.getenv("DEFAULT_FIVE_STAR_PCT", "100.0"))
+    DEFAULT_FOUR_STAR_PCT = float(os.getenv("DEFAULT_FOUR_STAR_PCT", "0.0"))
     
     # Google Places API for company location auto-detection
     GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")

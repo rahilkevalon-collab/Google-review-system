@@ -8,7 +8,8 @@ import {
   ChevronDown, 
   ArrowRight,
   Loader2,
-  Zap
+  Zap,
+  MapPin
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
@@ -112,7 +113,7 @@ export default function CompanySetup({ categories = [] }) {
   }, []);
 
   // Automatic SEO Keyword Synthesizer (runs silently in the background)
-  const triggerAutoSeoGeneration = useCallback((name, category, services) => {
+  const triggerAutoSeoGeneration = useCallback((name, category, services, location = '') => {
     if (seoDebounceTimeout.current) {
       clearTimeout(seoDebounceTimeout.current);
     }
@@ -123,18 +124,18 @@ export default function CompanySetup({ categories = [] }) {
           name: (name || '').trim(),
           category: (category || '').trim(),
           services: (services || '').trim(),
-          location: ''
+          location: (location || '').trim()
         });
 
         if (res.success && Array.isArray(res.seoKeywords) && res.seoKeywords.length >= 3) {
           setAutoKeywords(res.seoKeywords.slice(0, 7));
         } else {
           // Fallback to instant client synthesizer
-          const fallbackKws = synthesizeClientKeywords(name, category, services, '', categories);
+          const fallbackKws = synthesizeClientKeywords(name, category, services, location, categories);
           setAutoKeywords(fallbackKws);
         }
       } catch (e) {
-        const fallbackKws = synthesizeClientKeywords(name, category, services, '', categories);
+        const fallbackKws = synthesizeClientKeywords(name, category, services, location, categories);
         setAutoKeywords(fallbackKws);
       }
     }, 400);
@@ -149,7 +150,7 @@ export default function CompanySetup({ categories = [] }) {
     }
 
     // Auto-update SEO keywords silently in the background
-    triggerAutoSeoGeneration(val, formData.category, formData.services);
+    triggerAutoSeoGeneration(val, formData.category, formData.services, formData.location);
   };
 
   // Quick Demo Autofill
@@ -201,10 +202,10 @@ export default function CompanySetup({ categories = [] }) {
       return;
     }
 
-    // Ensure strictly between 3 and 7 keywords matching exact company name, category, and services
+    // Ensure strictly between 3 and 7 keywords matching exact company name, category, services, and location
     let finalKeywords = autoKeywords;
-    if (!finalKeywords || finalKeywords.length < 3 || formData.services) {
-      const synthesized = synthesizeClientKeywords(formData.name, formData.category, formData.services, '', categories);
+    if (!finalKeywords || finalKeywords.length < 3 || formData.services || formData.location) {
+      const synthesized = synthesizeClientKeywords(formData.name, formData.category, formData.services, formData.location, categories);
       if (synthesized && synthesized.length >= 3) {
         finalKeywords = synthesized;
       }
@@ -352,7 +353,7 @@ export default function CompanySetup({ categories = [] }) {
                           setFormData((prev) => ({ ...prev, category: cat.name }));
                           setIsCategoryOpen(false);
                           setCategorySearch('');
-                          triggerAutoSeoGeneration(formData.name, cat.name, formData.services);
+                          triggerAutoSeoGeneration(formData.name, cat.name, formData.services, formData.location);
                         }}
                         className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer ${
                           isSelected
@@ -389,7 +390,7 @@ export default function CompanySetup({ categories = [] }) {
                 onChange={(e) => {
                   const srv = e.target.value;
                   setFormData((prev) => ({ ...prev, services: srv }));
-                  triggerAutoSeoGeneration(formData.name, formData.category, srv);
+                  triggerAutoSeoGeneration(formData.name, formData.category, srv, formData.location);
                 }}
                 className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#068dcb] focus:ring-4 focus:ring-[#068dcb]/15 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
               />
@@ -407,6 +408,32 @@ export default function CompanySetup({ categories = [] }) {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Row 4: Business Location / Branch */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                Business Location / Branch <span className="text-slate-500 font-normal lowercase">(city, area, or branch address)</span>
+              </label>
+            </div>
+            <div className="relative">
+              <MapPin className="w-4 h-4 text-[#068dcb] absolute left-3.5 top-3.5" />
+              <input
+                type="text"
+                placeholder="e.g. Nikol, Ahmedabad (or branch address / city)"
+                value={formData.location}
+                onChange={(e) => {
+                  const loc = e.target.value;
+                  setFormData((prev) => ({ ...prev, location: loc, formattedAddress: loc }));
+                  triggerAutoSeoGeneration(formData.name, formData.category, formData.services, loc);
+                }}
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#068dcb] focus:ring-4 focus:ring-[#068dcb]/15 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
+              />
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1.5">
+              This exact branch location will be targeted so users open and review the correct branch on Google.
+            </p>
           </div>
 
           {/* Action CTA: Save & Generate Reviews */}
