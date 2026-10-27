@@ -6,8 +6,9 @@ from models.schemas import INITIAL_CATEGORIES
 logger = logging.getLogger(__name__)
 
 class CategoryService:
-    def __init__(self):
-        self.db = Database.get_db()
+    @property
+    def db(self):
+        return Database.get_db()
 
     def seed_categories_if_empty(self):
         """Seed default categories if the collection is empty."""

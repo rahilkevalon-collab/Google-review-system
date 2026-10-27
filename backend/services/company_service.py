@@ -204,8 +204,9 @@ DEFAULT_SAMPLE_COMPANIES = [
 ]
 
 class CompanyService:
-    def __init__(self):
-        self.db = Database.get_db()
+    @property
+    def db(self):
+        return Database.get_db()
 
     def seed_companies_if_empty(self):
         """Seed sample companies if missing for any category and update broken writereview links."""

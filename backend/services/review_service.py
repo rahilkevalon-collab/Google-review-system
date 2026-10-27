@@ -9,8 +9,9 @@ from ai.sentiment import analyze_review_sentiment
 logger = logging.getLogger(__name__)
 
 class ReviewService:
-    def __init__(self):
-        self.db = Database.get_db()
+    @property
+    def db(self):
+        return Database.get_db()
 
     def get_review_by_id(self, review_id: str) -> dict | None:
         if not ObjectId.is_valid(review_id):
