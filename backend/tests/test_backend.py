@@ -209,11 +209,17 @@ def test_rating_allocation_and_validation():
     assert neg_ok is False
     assert "negative" in neg_msg.lower()
     
-    # Batch allocations with Hamilton method (testing exact counts)
+    # Batch allocations with Hamilton method (testing 100% 5-star defaults and explicit distributions)
     assert allocate_demo_ratings(1, shuffle=False) == [5]
-    assert allocate_demo_ratings(2, shuffle=False) == [5, 4]
-    assert sorted(allocate_demo_ratings(3, shuffle=False)) == [4, 5, 5]
-    assert sorted(allocate_demo_ratings(5, shuffle=False)) == [4, 4, 5, 5, 5]
+    assert allocate_demo_ratings(2, shuffle=False) == [5, 5]
+    assert sorted(allocate_demo_ratings(3, shuffle=False)) == [5, 5, 5]
+    assert sorted(allocate_demo_ratings(5, shuffle=False)) == [5, 5, 5, 5, 5]
+
+    # Explicit 60/40 allocation
+    dist_60_40 = {"five_star": 60, "four_star": 40}
+    assert allocate_demo_ratings(2, dist_60_40, shuffle=False) == [5, 4]
+    assert sorted(allocate_demo_ratings(3, dist_60_40, shuffle=False)) == [4, 5, 5]
+    assert sorted(allocate_demo_ratings(5, dist_60_40, shuffle=False)) == [4, 4, 5, 5, 5]
     
     # 70/30 allocation
     dist_70_30 = {"five_star": 70, "four_star": 30}
@@ -233,8 +239,9 @@ def test_four_star_not_fixed_middle_position():
     """
     from services.rating_service import allocate_demo_ratings
     positions_of_four_star = set()
+    dist = {"five_star": 60, "four_star": 40}
     for seed in range(50):
-        batch = allocate_demo_ratings(3, seed=seed, shuffle=True)
+        batch = allocate_demo_ratings(3, distribution=dist, seed=seed, shuffle=True)
         assert sorted(batch) == [4, 5, 5]
         four_index = batch.index(4)
         positions_of_four_star.add(four_index)
@@ -316,7 +323,7 @@ def test_category_specific_reviews(client):
 def test_api_backend_default_rating_ratio_without_frontend_payload(client):
     """
     Verify that when frontend sends NO rating distribution in the request payload,
-    the backend automatically enforces its configured default 60% 5-star / 40% 4-star ratio.
+    the backend automatically enforces its configured default 100% 5-star ratio.
     """
     unique_company = f"Backend Ratio Co {time.time()}"
     res = client.post("/api/generate-reviews", json={
@@ -330,8 +337,8 @@ def test_api_backend_default_rating_ratio_without_frontend_payload(client):
     assert data["success"] is True
     assert len(data["reviews"]) == 3
     ratings = [r["rating"] for r in data["reviews"]]
-    assert sorted(ratings) == [4, 5, 5]
-    assert data["ratingBreakdown"] == {"5_star": 2, "4_star": 1}
+    assert ratings == [5, 5, 5]
+    assert data["ratingBreakdown"] == {"5_star": 3, "4_star": 0}
 
 # 22. Multiple Selected Keywords: All keywords must appear in every review
 def test_multiple_selected_keywords_natural_distribution(client):

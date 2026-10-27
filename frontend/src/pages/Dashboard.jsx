@@ -86,82 +86,15 @@ export default function Dashboard({ categories = [] }) {
 
           setKeywords(finalKeywords);
 
-          // Restore or set default selected keywords from localStorage
-          const savedKw = localStorage.getItem(`reviewcraft_selected_kw_${comp.id}`);
-          let initialSelected = [];
-          if (savedKw) {
-            try {
-              const parsed = JSON.parse(savedKw);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                initialSelected = parsed.filter((k) => finalKeywords.includes(k));
-              }
-            } catch (e) {
-              if (finalKeywords.includes(savedKw)) {
-                initialSelected = [savedKw];
-              }
-            }
-          }
-
-          if (initialSelected.length === 0) {
-            initialSelected = [finalKeywords[0]];
-          }
+          // Always reset selection to ONLY the 1st SEO keyword on page refresh / load
+          const initialSelected = [finalKeywords[0]];
           setSelectedKeywords(initialSelected);
+          if (comp?.id) {
+            localStorage.setItem(`reviewcraft_selected_kw_${comp.id}`, JSON.stringify(initialSelected));
+          }
 
-          // Restore cached reviews or fetch directly from backend MongoDB
-          try {
-            let loadedRevs = [];
-            const cachedRevStr = localStorage.getItem(`reviewcraft_cached_reviews_${comp.id}`);
-            if (cachedRevStr) {
-              try {
-                const cachedRevs = JSON.parse(cachedRevStr);
-                if (Array.isArray(cachedRevs) && cachedRevs.length > 0) {
-                  loadedRevs = cachedRevs;
-                  setReviews(cachedRevs);
-                }
-              } catch (e) {}
-            }
-
-            // If no local cache, fetch persisted reviews from backend database
-            if (loadedRevs.length === 0) {
-              try {
-                const dbRevsRes = await api.getReviews({ companyId: comp.id, limit: 3 });
-                if (dbRevsRes.success && Array.isArray(dbRevsRes.reviews) && dbRevsRes.reviews.length > 0) {
-                  loadedRevs = dbRevsRes.reviews.slice(0, 3);
-                  setReviews(loadedRevs);
-                  localStorage.setItem(`reviewcraft_cached_reviews_${comp.id}`, JSON.stringify(loadedRevs));
-                }
-              } catch (e) {
-                console.warn('Could not fetch reviews from database:', e);
-              }
-            }
-
-            // If still no reviews in database, immediately generate initial reviews for this company
-            if (loadedRevs.length === 0) {
-              generateReviews(initialSelected, true, comp);
-            }
-
-            let activeRev = null;
-            const savedActiveStr = localStorage.getItem(`reviewcraft_active_selected_review_${comp.id}`) ||
-                                   localStorage.getItem('reviewcraft_active_selected_review');
-            if (savedActiveStr) {
-              try {
-                const parsed = JSON.parse(savedActiveStr);
-                if (parsed && (parsed.reviewText || parsed.text)) {
-                  activeRev = parsed;
-                  setActiveReviewId(parsed.id || parsed._id);
-                }
-              } catch (e) {}
-            }
-
-            if (!activeRev && loadedRevs.length > 0) {
-              activeRev = loadedRevs[0];
-              setActiveReviewId(loadedRevs[0].id || loadedRevs[0]._id);
-            }
-
-            if (activeRev) {
-              syncReviewToExtension(activeRev, comp, 'refresh_restore');
-            }
-          } catch (e) {}
+          // Immediately generate reviews specifically for the 1st SEO keyword on page refresh
+          generateReviews(initialSelected, true, comp);
         } else {
           setCompanyError('Business profile not found in database.');
         }
@@ -200,7 +133,7 @@ export default function Dashboard({ categories = [] }) {
       : (selectedKeywords.length > 0 ? selectedKeywords : [keywords[0] || 'Quality Service']);
 
     try {
-      // Backend automatically applies its configured rating distribution ratio (60% 5-star, 40% 4-star)
+      // Backend automatically applies 100% 5-star rating
       // and natural keyword partitioning across review cards
       const payload = {
         companyId: targetComp.id,
@@ -263,23 +196,23 @@ export default function Dashboard({ categories = [] }) {
     }
   }, [company, selectedKeywords, keywords, addToast]);
 
-  // 3. Trigger fresh review generation on every page load & refresh
+  // 3. Fallback trigger if company is ready but reviews not yet generated
   useEffect(() => {
-    if (company?.id && selectedKeywords.length > 0) {
-      generateReviews(selectedKeywords, true);
+    if (company?.id && selectedKeywords.length > 0 && reviews.length === 0 && !isGeneratingRef.current) {
+      generateReviews(selectedKeywords, false);
     }
   }, [company?.id]);
 
-  // 4. Handle Keyword Selection (single or multi-select)
+  // 4. Handle Keyword Selection: Multi-select support — retain previous selections and add newly clicked chips
   const handleToggleKeyword = (kw) => {
     let next;
     if (selectedKeywords.includes(kw)) {
-      if (selectedKeywords.length > 1) {
-        next = selectedKeywords.filter((k) => k !== kw);
-      } else {
-        next = [kw];
-      }
+      // Toggle off if more than 1 keyword is selected; prevent 0 selections
+      next = selectedKeywords.length > 1
+        ? selectedKeywords.filter((k) => k !== kw)
+        : selectedKeywords;
     } else {
+      // Keep previous keywords and append newly clicked keyword
       next = [...selectedKeywords, kw];
     }
 
@@ -290,7 +223,7 @@ export default function Dashboard({ categories = [] }) {
     generateReviews(next, true);
   };
 
-  // 5. Add a new keyword chip
+  // 5. Add a new keyword chip and include it in active selection
   const handleAddKeyword = (newKw) => {
     const clean = newKw.trim();
     if (!clean) return;
@@ -298,16 +231,22 @@ export default function Dashboard({ categories = [] }) {
     if (!keywords.includes(clean)) {
       const updated = [...keywords, clean];
       setKeywords(updated);
-      setSelectedKeywords([clean]);
+      const nextSelected = [...selectedKeywords, clean];
+      setSelectedKeywords(nextSelected);
 
       if (company?.id) {
         api.addCompanyKeyword(company.id, clean).catch(() => {});
-        localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, JSON.stringify([clean]));
+        localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, JSON.stringify(nextSelected));
       }
-      generateReviews([clean], true);
+      generateReviews(nextSelected, true);
       addToast(`Added keyword: "${clean}"`, 'success');
-    } else {
-      setSelectedKeywords([clean]);
+    } else if (!selectedKeywords.includes(clean)) {
+      const nextSelected = [...selectedKeywords, clean];
+      setSelectedKeywords(nextSelected);
+      if (company?.id) {
+        localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, JSON.stringify(nextSelected));
+      }
+      generateReviews(nextSelected, true);
     }
   };
 
@@ -366,6 +305,12 @@ export default function Dashboard({ categories = [] }) {
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
           Review <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#034665] to-[#068dcb]">{company.name}</span>
         </h1>
+        {company.location && (
+          <p className="text-xs text-slate-600 font-semibold flex items-center justify-center gap-1.5 pt-1">
+            <MapPin className="w-3.5 h-3.5 text-[#068dcb]" />
+            <span>{company.location}</span>
+          </p>
+        )}
         <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#034665] pt-1.5">
           SELECT KEYWORDS & GENERATE REVIEW SUGGESTIONS
         </p>

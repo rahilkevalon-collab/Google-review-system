@@ -4,7 +4,8 @@ import {
   Star,
   Globe,
   Building,
-  CheckCircle
+  CheckCircle,
+  MapPin
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from './Toast';
@@ -99,6 +100,13 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-bold shadow-2xs">
                 <Building className="w-3 h-3 text-[#068dcb]" />
                 {review.companyName}
+              </span>
+            )}
+
+            {review.companyLocation && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium shadow-2xs">
+                <MapPin className="w-3 h-3 text-[#068dcb]" />
+                {review.companyLocation}
               </span>
             )}
 
