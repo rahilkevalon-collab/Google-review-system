@@ -13,8 +13,8 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Custom Software Development, Web & Mobile Apps, AI Solutions, Cloud Infrastructure",
         "location": "Ahmedabad, India",
         "preferredLanguage": "en",
-        "googleReviewUrl": "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,",
-        "externalReviewLink": "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,",
+        "googleReviewUrl": "https://www.google.com/maps/search/?api=1&query=Kevalon+Technology+Ahmedabad+India",
+        "externalReviewLink": "https://www.google.com/maps/search/?api=1&query=Kevalon+Technology+Ahmedabad+India",
         "keywords": [
             "Web Development",
             "Mobile App Development",
@@ -223,7 +223,7 @@ class CompanyService:
                     # If company has empty, broken, or search-only Google writereview link, upgrade to direct write-review link
                     curr_link = exists.get("externalReviewLink", "")
                     if "kevalon" in exists.get("name", "").lower():
-                        kevalon_direct = "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,"
+                        kevalon_direct = "https://www.google.com/maps/search/?api=1&query=Kevalon+Technology+Ahmedabad+India"
                         if curr_link != kevalon_direct:
                             self.db.companies.update_one(
                                 {"_id": exists["_id"]},
@@ -238,8 +238,8 @@ class CompanyService:
             self.db.companies.update_many(
                 {"name": {"$regex": "kevalon", "$options": "i"}},
                 {"$set": {
-                    "googleReviewUrl": "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,",
-                    "externalReviewLink": "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,"
+                    "googleReviewUrl": "https://www.google.com/maps/search/?api=1&query=Kevalon+Technology+Ahmedabad+India",
+                    "externalReviewLink": "https://www.google.com/maps/search/?api=1&query=Kevalon+Technology+Ahmedabad+India"
                 }}
             )
         except Exception as e:
@@ -486,20 +486,10 @@ class CompanyService:
         if place_id:
             review_url = f"https://search.google.com/local/writereview?placeid={place_id}"
         elif location:
-            # Exact branch location targeting: opens the specific branch profile on Google Maps
-            if "kevalon" in lower_name and lower_loc in ("ahmedabad, gujarat, india", "ahmedabad, india", "ahmedabad"):
-                review_url = "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,"
-            else:
-                clean_loc = " ".join(location.replace(",", " ").split())
-                clean_q = f"{name} {clean_loc}".strip()
-                review_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(clean_q)}"
-        elif "kevalon" in lower_name:
-            review_url = "https://www.google.com/search?q=Kevalon+Technology+Ahmedabad%2C+Gujarat%2C+India+reviews#lrd=0xa753f42277dc0a43:0xfc0ef4d084adee2d,3,,,"
-        elif "amazon" in lower_name:
-            review_url = "https://www.google.com/search?q=Amazon+India+reviews#lrd=0x395e8b4dc3faaaab:0xcecd65884d1f6b7,3,,,"
-        elif "flora" in lower_name and "fountain" in lower_name:
-            review_url = "https://www.google.com/search?q=Flora+Fountain+Ahmedabad+reviews#lrd=0x395e8484a0c86845:0x5e2ea710a76a5b6f,3,,,"
-        elif ext_link and ext_link != "https://search.google.com/local/writereview" and ext_link.startswith("http"):
+            clean_loc = " ".join(location.replace(",", " ").split())
+            clean_q = f"{name} {clean_loc}".strip()
+            review_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(clean_q)}"
+        elif ext_link and ext_link != "https://search.google.com/local/writereview" and ext_link.startswith("http") and "#lrd=" not in ext_link:
             review_url = ext_link
         else:
             clean_q = name.strip()

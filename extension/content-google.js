@@ -171,7 +171,7 @@
           starClicks++;
 
           // Check if Google has registered the star rating
-          if (isStarRatingSelected(dialog, targetRating) || starClicks >= 5) {
+          if (isStarRatingSelected(dialog, targetRating) || starClicks >= 15) {
             starConfirmed = true;
             console.log(`[ReviewCraft Google] Star rating ${targetRating}★ successfully confirmed.`);
           }
@@ -304,6 +304,25 @@
     if (!isTopFrame || hasTriggeredOpen || findReviewDialog()) return false;
 
     try {
+      // Auto-open place listing or Reviews tab on Google Maps
+      if (window.location.href.includes('/maps')) {
+        const placeCard = document.querySelector('a[href*="/maps/place/"], div[role="article"] a, div[role="feed"] a');
+        if (placeCard && isVisible(placeCard) && !hasClickedListingCard) {
+          hasClickedListingCard = true;
+          placeCard.click();
+        }
+
+        const reviewTabs = Array.from(document.querySelectorAll('button[role="tab"], div[role="tab"]')).filter(isVisible);
+        for (const tab of reviewTabs) {
+          const tabText = (tab.innerText || tab.getAttribute('aria-label') || '').toLowerCase();
+          if ((tabText.includes('review') || tabText.includes('રિવ્યુ') || tabText.includes('समीक्षा')) && !hasClickedTab) {
+            hasClickedTab = true;
+            tab.click();
+            break;
+          }
+        }
+      }
+
       const allLinks = Array.from(document.querySelectorAll('a[href*="lrd="]'));
       for (const a of allLinks) {
         const href = a.getAttribute('href') || '';
@@ -508,87 +527,97 @@
    * Uses geometric left-to-right visual coordinates to guarantee 100% accuracy.
    */
   function findModalStars(dialog, targetRating) {
-    const container = dialog || findReviewDialog();
-    if (!container) return null;
+    const roots = getCandidateRoots(dialog);
 
-    // 1. Direct search by aria-posinset or data-rating inside dialog
-    const directRating = container.querySelector(
-      `[role="radio"][aria-posinset="${targetRating}"], [role="radio"][data-rating="${targetRating}"], [role="radio"][data-value="${targetRating}"], [data-rating="${targetRating}"][role="button"]`
-    );
-    if (directRating && isVisible(directRating)) {
-      return directRating;
-    }
+    for (const root of roots) {
+      // 1. Direct search by aria-posinset or data-rating inside root
+      const directRating = root.querySelector(
+        `[role="radio"][aria-posinset="${targetRating}"], [role="radio"][data-rating="${targetRating}"], [role="radio"][data-value="${targetRating}"], [data-rating="${targetRating}"][role="button"]`
+      );
+      if (directRating && isVisible(directRating)) {
+        return directRating;
+      }
 
-    // 2. Direct search by aria-label matching number word and star
-    const wordsForRating = {
-      1: ['one', '1', 'એક', 'एक'],
-      2: ['two', '2', 'બે', 'दो'],
-      3: ['three', '3', 'ત્રણ', 'तीन'],
-      4: ['four', '4', 'ચાર', 'चार'],
-      5: ['five', '5', 'પાંચ', 'पाँच', 'पांच']
-    }[targetRating] || [String(targetRating)];
+      // 2. Direct search by aria-label matching target rating number and star
+      const wordsForRating = {
+        1: ['one', '1', 'એક', 'एक'],
+        2: ['two', '2', 'બે', 'दो'],
+        3: ['three', '3', 'ત્રણ', 'तीन'],
+        4: ['four', '4', 'ચાર', 'चार'],
+        5: ['five', '5', 'પાંચ', 'पाँच', 'पांच']
+      }[targetRating] || [String(targetRating)];
 
-    const allClickables = Array.from(container.querySelectorAll('[role="radio"], button, div[tabindex], span[tabindex]')).filter(isVisible);
-    for (const el of allClickables) {
-      const label = (el.getAttribute('aria-label') || el.getAttribute('title') || '').toLowerCase();
-      if (label.includes('star') || label.includes('તારા') || label.includes('सितारे') || label.includes('rate') || label.includes('rating')) {
-        if (wordsForRating.some(w => label.includes(w))) {
-          return el;
+      const allClickables = Array.from(root.querySelectorAll('[role="radio"], button, div[tabindex], span[tabindex]')).filter(isVisible);
+      for (const el of allClickables) {
+        const label = (el.getAttribute('aria-label') || el.getAttribute('title') || '').toLowerCase();
+        if (label.includes('star') || label.includes('તારા') || label.includes('सितारे') || label.includes('rate') || label.includes('rating')) {
+          if (wordsForRating.some(w => label.includes(w))) {
+            return el;
+          }
         }
       }
-    }
 
-    // 3. Anchor via review textarea
-    const textarea = findReviewTextarea(container);
-    const textareaRect = textarea ? textarea.getBoundingClientRect() : null;
+      // 3. Look for role="radiogroup" containing role="radio"
+      const radiogroups = root.querySelectorAll('[role="radiogroup"]');
+      for (const rg of radiogroups) {
+        const radios = Array.from(rg.querySelectorAll('[role="radio"]')).filter(isVisible);
+        if (radios.length >= 5) {
+          radios.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+          const targetIdx = Math.max(0, Math.min(radios.length - 1, targetRating - 1));
+          return radios[targetIdx];
+        }
+      }
 
-    // 4. Candidate star elements: [role="radio"], or elements with star aria-label, or SVGs with star paths
-    let candidateStars = Array.from(container.querySelectorAll('[role="radio"]')).filter(isVisible);
+      // 4. Anchor via review textarea inside this root
+      const textarea = findReviewTextarea(dialog || root);
+      const textareaRect = textarea ? textarea.getBoundingClientRect() : null;
 
-    if (candidateStars.length < 5) {
-      candidateStars = Array.from(container.querySelectorAll('[aria-label*="star" i], [aria-label*="તારા" i], [aria-label*="सितारे" i]'))
-        .filter(isVisible)
-        .filter(el => el.tagName !== 'TEXTAREA' && (!textarea || el !== textarea));
-    }
+      // 5. Candidate star elements: [role="radio"], or elements with star aria-label, or SVGs with star paths
+      let candidateStars = Array.from(root.querySelectorAll('[role="radio"]')).filter(isVisible);
 
-    if (candidateStars.length < 5) {
-      const svgs = Array.from(container.querySelectorAll('svg')).filter(isVisible);
-      const starSvgs = svgs.filter(svg => {
-        const paths = Array.from(svg.querySelectorAll('path'));
-        return paths.some(p => {
-          const d = p.getAttribute('d') || '';
-          return d.includes('17.27') || d.includes('9.24') || d.includes('21l') || d.includes('12 2') || d.includes('M12');
+      if (candidateStars.length < 5) {
+        candidateStars = Array.from(root.querySelectorAll('[aria-label*="star" i], [aria-label*="તારા" i], [aria-label*="सितारे" i]'))
+          .filter(isVisible)
+          .filter(el => el.tagName !== 'TEXTAREA' && (!textarea || el !== textarea));
+      }
+
+      if (candidateStars.length < 5) {
+        const svgs = Array.from(root.querySelectorAll('svg')).filter(isVisible);
+        const starSvgs = svgs.filter(svg => {
+          const paths = Array.from(svg.querySelectorAll('path'));
+          return paths.some(p => {
+            const d = p.getAttribute('d') || '';
+            return d.includes('17.27') || d.includes('9.24') || d.includes('21l') || d.includes('12 2') || d.includes('M12');
+          });
         });
-      });
-      if (starSvgs.length >= 5) {
-        candidateStars = starSvgs.map(s => s.closest('[role="radio"], [role="button"], button, div[tabindex], span[tabindex]') || s.parentElement || s);
+        if (starSvgs.length >= 5) {
+          candidateStars = starSvgs.map(s => s.closest('[role="radio"], [role="button"], button, div[tabindex], span[tabindex]') || s.parentElement || s);
+        }
       }
-    }
 
-    // 5. If textarea exists, filter candidate stars to those visually positioned ABOVE the textarea
-    if (textareaRect && candidateStars.length > 5) {
-      const aboveTextarea = candidateStars.filter(el => {
-        const r = el.getBoundingClientRect();
-        return r.top < textareaRect.top && r.bottom > (textareaRect.top - 200);
-      });
-      if (aboveTextarea.length >= 5) {
-        candidateStars = aboveTextarea;
+      // 6. Filter candidate stars visually positioned above textarea
+      if (textareaRect && candidateStars.length > 5) {
+        const aboveTextarea = candidateStars.filter(el => {
+          const r = el.getBoundingClientRect();
+          return r.top < textareaRect.top && r.bottom > (textareaRect.top - 200);
+        });
+        if (aboveTextarea.length >= 5) {
+          candidateStars = aboveTextarea;
+        }
       }
-    }
 
-    // De-duplicate elements
-    candidateStars = Array.from(new Set(candidateStars));
+      candidateStars = Array.from(new Set(candidateStars));
 
-    // 6. Sort candidate stars strictly from left to right by their horizontal position (rect.left)
-    if (candidateStars.length >= 5) {
-      candidateStars.sort((a, b) => {
-        const rectA = a.getBoundingClientRect();
-        const rectB = b.getBoundingClientRect();
-        return rectA.left - rectB.left;
-      });
+      if (candidateStars.length >= 5) {
+        candidateStars.sort((a, b) => {
+          const rectA = a.getBoundingClientRect();
+          const rectB = b.getBoundingClientRect();
+          return rectA.left - rectB.left;
+        });
 
-      const targetIdx = Math.max(0, Math.min(candidateStars.length - 1, targetRating - 1));
-      return candidateStars[targetIdx];
+        const targetIdx = Math.max(0, Math.min(candidateStars.length - 1, targetRating - 1));
+        return candidateStars[targetIdx];
+      }
     }
 
     return null;
@@ -621,8 +650,8 @@
         isPrimary: true
       };
       starEl.dispatchEvent(new PointerEvent('pointerover', pointerOpts));
-      starEl.dispatchEvent(new PointerEvent('pointerenter', pointerOpts));
       starEl.dispatchEvent(new PointerEvent('pointerdown', { ...pointerOpts, button: 0, buttons: 1 }));
+      starEl.dispatchEvent(new PointerEvent('pointerup', { ...pointerOpts, button: 0, buttons: 0 }));
 
       // Mouse events
       const mouseOpts = {
@@ -636,33 +665,30 @@
         buttons: 1
       };
       starEl.dispatchEvent(new MouseEvent('mouseover', mouseOpts));
-      starEl.dispatchEvent(new MouseEvent('mouseenter', mouseOpts));
       starEl.dispatchEvent(new MouseEvent('mousedown', mouseOpts));
 
       const upOpts = { ...mouseOpts, buttons: 0 };
-      starEl.dispatchEvent(new PointerEvent('pointerup', { ...pointerOpts, button: 0, buttons: 0 }));
       starEl.dispatchEvent(new MouseEvent('mouseup', upOpts));
       starEl.dispatchEvent(new MouseEvent('click', upOpts));
 
       // Native click
       starEl.click();
 
-      // Dispatch on inner SVG if different
-      const inner = starEl.querySelector('svg, path');
-      if (inner && inner !== starEl) {
-        inner.dispatchEvent(new MouseEvent('mousedown', mouseOpts));
-        inner.dispatchEvent(new MouseEvent('mouseup', upOpts));
-        inner.dispatchEvent(new MouseEvent('click', upOpts));
-      }
-      if (starEl.parentElement && starEl.parentElement.getAttribute('role') === 'radio') {
-        starEl.parentElement.click();
+      // Also trigger on radio parent / closest clickable if starEl is inside a radio or svg
+      const radioParent = starEl.closest('[role="radio"], [role="button"], button');
+      if (radioParent && radioParent !== starEl) {
+        radioParent.focus();
+        radioParent.dispatchEvent(new PointerEvent('pointerdown', pointerOpts));
+        radioParent.dispatchEvent(new PointerEvent('pointerup', { ...pointerOpts, buttons: 0 }));
+        radioParent.dispatchEvent(new MouseEvent('mousedown', mouseOpts));
+        radioParent.dispatchEvent(new MouseEvent('mouseup', upOpts));
+        radioParent.dispatchEvent(new MouseEvent('click', upOpts));
+        radioParent.click();
       }
 
       // Keyboard events (Space & Enter)
       starEl.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true, composed: true }));
       starEl.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true, composed: true }));
-      starEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, composed: true }));
-      starEl.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, composed: true }));
 
       return true;
     } catch (err) {
@@ -719,13 +745,11 @@
     try {
       const win = el.ownerDocument?.defaultView || window;
       const style = win.getComputedStyle(el);
-      return (
-        style.display !== 'none' &&
-        style.visibility !== 'hidden' &&
-        style.opacity !== '0' &&
-        el.offsetWidth > 0 &&
-        el.offsetHeight > 0
-      );
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+        return false;
+      }
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
     } catch (e) {
       return false;
     }
