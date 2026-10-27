@@ -114,16 +114,24 @@ export default function ReviewDetail() {
     triggerExtensionAutoFill({ ...review, reviewText, text: reviewText }, company);
 
     const targetItem = {
+      ...(company || {}),
       ...review,
-      reviewText,
-      ...(company || {})
+      reviewText
     };
     const googleUrl = getGoogleReviewUrl(targetItem);
 
-    addToast('Review text copied! Opening Google Reviews — ReviewCraft extension will auto-paste text & rating.', 'success', 5000);
-    setTimeout(() => {
-      window.open(googleUrl, '_blank', 'noopener,noreferrer');
-    }, 100);
+    const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      addToast('Review text copied! Opening Google review dialog...', 'success', 3000);
+      window.location.href = googleUrl;
+    } else {
+      addToast('Review text copied! Opening Google Reviews - ReviewCraft extension will auto-paste text & rating.', 'success', 4000);
+      const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
+      if (!win) {
+        window.location.href = googleUrl;
+      }
+    }
   };
 
   const handleSaveEdits = async () => {

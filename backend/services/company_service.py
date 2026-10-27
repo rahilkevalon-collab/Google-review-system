@@ -13,8 +13,9 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Custom Software Development, Web & Mobile Apps, AI Solutions, Cloud Infrastructure",
         "location": "Ahmedabad, India",
         "preferredLanguage": "en",
-        "googleReviewUrl": "https://www.google.com/maps/search/?api=1&query=Kevalon+Technology+Ahmedabad+India",
-        "externalReviewLink": "https://www.google.com/maps/search/?api=1&query=Kevalon+Technology+Ahmedabad+India",
+        "googlePlaceId": "ChIJQwrcdyL0U6cRLe6thND0Dvw",
+        "googleReviewUrl": "https://search.google.com/local/writereview?placeid=ChIJQwrcdyL0U6cRLe6thND0Dvw",
+        "externalReviewLink": "https://search.google.com/local/writereview?placeid=ChIJQwrcdyL0U6cRLe6thND0Dvw",
         "keywords": [
             "Web Development",
             "Mobile App Development",
@@ -223,12 +224,15 @@ class CompanyService:
                     # If company has empty, broken, or search-only Google writereview link, upgrade to direct write-review link
                     curr_link = exists.get("externalReviewLink", "")
                     if "kevalon" in exists.get("name", "").lower():
-                        kevalon_direct = "https://www.google.com/maps/search/?api=1&query=Kevalon+Technology+Ahmedabad+India"
-                        if curr_link != kevalon_direct:
-                            self.db.companies.update_one(
-                                {"_id": exists["_id"]},
-                                {"$set": {"externalReviewLink": kevalon_direct, "googleReviewUrl": kevalon_direct}}
-                            )
+                        kevalon_direct = "https://search.google.com/local/writereview?placeid=ChIJQwrcdyL0U6cRLe6thND0Dvw"
+                        self.db.companies.update_one(
+                            {"_id": exists["_id"]},
+                            {"$set": {
+                                "googlePlaceId": "ChIJQwrcdyL0U6cRLe6thND0Dvw",
+                                "externalReviewLink": kevalon_direct,
+                                "googleReviewUrl": kevalon_direct
+                            }}
+                        )
                     elif not curr_link or curr_link == "https://search.google.com/local/writereview":
                         self.db.companies.update_one(
                             {"_id": exists["_id"]},
@@ -238,8 +242,9 @@ class CompanyService:
             self.db.companies.update_many(
                 {"name": {"$regex": "kevalon", "$options": "i"}},
                 {"$set": {
-                    "googleReviewUrl": "https://www.google.com/maps/search/?api=1&query=Kevalon+Technology+Ahmedabad+India",
-                    "externalReviewLink": "https://www.google.com/maps/search/?api=1&query=Kevalon+Technology+Ahmedabad+India"
+                    "googlePlaceId": "ChIJQwrcdyL0U6cRLe6thND0Dvw",
+                    "googleReviewUrl": "https://search.google.com/local/writereview?placeid=ChIJQwrcdyL0U6cRLe6thND0Dvw",
+                    "externalReviewLink": "https://search.google.com/local/writereview?placeid=ChIJQwrcdyL0U6cRLe6thND0Dvw"
                 }}
             )
         except Exception as e:

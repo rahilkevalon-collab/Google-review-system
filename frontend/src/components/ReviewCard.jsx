@@ -39,13 +39,15 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
   // Open Google Reviews handler: Copies text directly & launches verified review modal
   const handleOpenGoogle = async (e) => {
     e.stopPropagation();
-    const googleUrl = getGoogleReviewUrl(review);
+    const mergedTarget = { ...(company || {}), ...(review || {}) };
+    const googleUrl = getGoogleReviewUrl(mergedTarget);
     
     // Persist as the active selected review in localStorage
     try {
       localStorage.setItem('reviewcraft_active_selected_review', JSON.stringify(review));
       if (company?.id) {
-        localStorage.setItem(`reviewcraft_active_selected_review_${company.id}`, JSON.stringify(review));
+        localStorage.setItem(
+eviewcraft_active_selected_review_, JSON.stringify(review));
       }
     } catch (err) {}
 
@@ -53,7 +55,7 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
       onSelect(review);
     }
 
-    // 1. Copy review text to clipboard (reliable fallback)
+    // 1. Copy review text to clipboard
     await copyToClipboard();
     if (reviewId) {
       api.recordCopyEvent(reviewId).catch(() => {});
@@ -62,11 +64,19 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
     // 2. Dispatch event for ReviewCraft Chrome Extension to auto-fill review text & stars on Google
     triggerExtensionAutoFill(review, company);
 
-    addToast(`Review copied! Opening Google — ReviewCraft extension will auto-paste text & select ${ratingVal} stars.`, 'success', 4000);
-    
-    setTimeout(() => {
-      window.open(googleUrl, '_blank', 'noopener,noreferrer');
-    }, 100);
+    // 3. Mobile device handling: direct navigation prevents popup blocking and opens Google Maps / Review dialog immediately
+    const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      addToast('Review text copied! Opening Google review dialog...', 'success', 3000);
+      window.location.href = googleUrl;
+    } else {
+      addToast(`Review copied! Opening Google — ReviewCraft extension will auto-paste text & select ${ratingVal} stars.`, 'success', 4000);
+      const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
+      if (!win) {
+        window.location.href = googleUrl;
+      }
+    }
   };
 
   const handleCardInteraction = () => {

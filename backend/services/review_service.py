@@ -30,16 +30,17 @@ class ReviewService:
                 r["companyLocation"] = r.get("companyLocation") or c.get("location", "")
                 r["formattedAddress"] = c.get("formattedAddress", "")
                 r["googlePlaceId"] = c.get("googlePlaceId", "")
-                r["googleReviewUrl"] = c.get("googleReviewUrl", "")
                 r["category"] = r.get("category") or c.get("category", "")
                 
-                ext_link = c.get("googleReviewUrl") or c.get("externalReviewLink") or ""
-                if not ext_link or ext_link == "https://search.google.com/local/writereview" or not ext_link.startswith("http"):
-                    if c.get("googlePlaceId"):
-                        ext_link = f"https://search.google.com/local/writereview?placeid={c.get('googlePlaceId')}"
-                    else:
+                if c.get("googlePlaceId"):
+                    ext_link = f"https://search.google.com/local/writereview?placeid={c.get('googlePlaceId')}"
+                else:
+                    ext_link = c.get("googleReviewUrl") or c.get("externalReviewLink") or ""
+                    if not ext_link or ext_link == "https://search.google.com/local/writereview" or not ext_link.startswith("http"):
                         query_str = f"{r['companyName']} {r['companyLocation']} reviews".strip()
                         ext_link = f"https://www.google.com/search?q={urllib.parse.quote_plus(query_str)}"
+                
+                r["googleReviewUrl"] = ext_link
         # Normalize legacy record fields safely without recalculating or randomizing
         if "rating" not in r or r["rating"] is None:
             r["rating"] = 5
