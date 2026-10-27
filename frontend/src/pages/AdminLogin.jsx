@@ -8,9 +8,7 @@ import {
   EyeOff, 
   ArrowRight, 
   Loader2, 
-  ShieldCheck, 
-  KeyRound,
-  Zap
+  ShieldCheck
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
@@ -33,14 +31,6 @@ export default function AdminLogin({ onLoginSuccess }) {
     if (errorMsg) setErrorMsg('');
   };
 
-  const handleFillDemo = () => {
-    setFormData({
-      identifier: 'admin@reviewcraft.com',
-      password: 'admin123'
-    });
-    setErrorMsg('');
-    addToast('Filled Admin demo credentials!', 'info');
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -120,17 +110,7 @@ export default function AdminLogin({ onLoginSuccess }) {
             Sign in with your admin credentials to setup businesses and manage reviews.
           </p>
 
-          {/* Quick Demo Fill Pill */}
-          <div className="pt-1">
-            <button
-              type="button"
-              onClick={handleFillDemo}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-[#068dcb]/10 border border-slate-200 hover:border-[#068dcb]/40 text-xs font-semibold text-slate-700 hover:text-[#034665] transition-all shadow-2xs cursor-pointer group"
-            >
-              <Zap className="w-3.5 h-3.5 text-amber-500 group-hover:scale-110 transition-transform" />
-              <span>Fill Admin Credentials</span>
-            </button>
-          </div>
+
         </div>
 
         {/* Login Card */}
@@ -217,16 +197,7 @@ export default function AdminLogin({ onLoginSuccess }) {
               </button>
             </div>
 
-            {/* Default Credentials Notice */}
-            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center space-y-1">
-              <p className="text-[11px] font-bold text-slate-700 flex items-center justify-center gap-1">
-                <KeyRound className="w-3 h-3 text-[#068dcb]" />
-                <span>Default Credentials</span>
-              </p>
-              <p className="text-[11px] text-slate-500 font-mono">
-                Email: <strong className="text-slate-700">admin@reviewcraft.com</strong> | Password: <strong className="text-slate-700">admin123</strong>
-              </p>
-            </div>
+
 
           </form>
 
