@@ -24,7 +24,9 @@ class Database:
         return cls._is_mock
 
     @classmethod
-    def initialize(cls):
+    def initialize(cls, force=False):
+        if cls._db is not None and not force:
+            return cls._db
         try:
             client = MongoClient(Config.MONGODB_URI, serverSelectionTimeoutMS=2500)
             # Trigger server selection to verify connectivity

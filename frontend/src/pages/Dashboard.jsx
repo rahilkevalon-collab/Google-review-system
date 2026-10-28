@@ -13,6 +13,7 @@ import { useToast } from '../components/Toast';
 import KeywordChips from '../components/KeywordChips';
 import ReviewCard from '../components/ReviewCard';
 import SkeletonReviewCard from '../components/SkeletonReviewCard';
+import BookmarkletBar from '../components/BookmarkletBar';
 import { getGoogleReviewUrl } from '../utils/googleReviewUrl';
 import { syncReviewToExtension } from '../utils/extensionSync';
 
@@ -315,6 +316,9 @@ export default function Dashboard({ categories = [] }) {
           SELECT KEYWORDS & GENERATE REVIEW SUGGESTIONS
         </p>
       </div>
+
+      {/* 1-Click Zero-Installation Bookmarklet Auto-Filler (Alternative A) */}
+      <BookmarkletBar />
 
       {/* SEO Keywords Chips Section */}
       <div>

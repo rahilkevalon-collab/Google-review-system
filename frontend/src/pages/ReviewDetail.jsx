@@ -126,7 +126,7 @@ export default function ReviewDetail() {
       addToast('Review text copied! Opening Google review dialog...', 'success', 3000);
       window.location.href = googleUrl;
     } else {
-      addToast('Review text copied! Opening Google Reviews - ReviewCraft extension will auto-paste text & rating.', 'success', 4000);
+      addToast('Opening Google Reviews — click "⚡ Auto-Fill Review" in your bookmarks bar to auto-paste!', 'success', 5000);
       const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
       if (!win) {
         window.location.href = googleUrl;
@@ -358,10 +358,10 @@ export default function ReviewDetail() {
               type="button"
               onClick={handleOpenGoogle}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#034665] to-[#068dcb] hover:from-[#02354e] hover:to-[#057db4] text-white text-xs font-bold shadow-md shadow-[#068dcb]/25 transition-all active:scale-95 cursor-pointer"
-              title="Copy review and open Google Review page"
+              title="Post review on Google"
             >
               <Globe className="w-4 h-4 text-white" />
-              <span>Open Google Reviews</span>
+              <span>Post on Google</span>
               <ExternalLink className="w-3.5 h-3.5 text-white/80" />
             </button>
 

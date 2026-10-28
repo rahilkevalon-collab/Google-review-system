@@ -56,8 +56,9 @@ def distribute_keywords_to_batch(selected_keywords: list[str], count: int) -> li
     return [[kw] for kw in pool]
 
 class ReviewGeneratorService:
-    def __init__(self):
-        self.db = Database.get_db()
+    @property
+    def db(self):
+        return Database.get_db()
 
     def get_history_hashes(self, company_id: str) -> set[str]:
         """

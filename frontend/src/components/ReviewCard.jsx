@@ -4,13 +4,12 @@ import {
   Star,
   Globe,
   Building,
-  CheckCircle,
   MapPin
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from './Toast';
 import { getGoogleReviewUrl } from '../utils/googleReviewUrl';
-import { syncReviewToExtension, triggerExtensionAutoFill } from '../utils/extensionSync';
+import { triggerExtensionAutoFill } from '../utils/extensionSync';
 
 export default function ReviewCard({ review, company = {}, isActive = false, onSelect }) {
   const { addToast } = useToast();
@@ -24,7 +23,10 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
       } else {
         const textArea = document.createElement('textarea');
         textArea.value = review.reviewText;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
         document.body.appendChild(textArea);
+        textArea.focus();
         textArea.select();
         document.execCommand('copy');
         document.body.removeChild(textArea);
@@ -37,8 +39,11 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
   };
 
   // Open Google Reviews handler: Copies text directly & launches verified review modal
+  // Triggered when user taps ANYWHERE on the card or the button
   const handleOpenGoogle = async (e) => {
-    e.stopPropagation();
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
     const mergedTarget = { ...(company || {}), ...(review || {}) };
     const googleUrl = getGoogleReviewUrl(mergedTarget);
     
@@ -46,8 +51,7 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
     try {
       localStorage.setItem('reviewcraft_active_selected_review', JSON.stringify(review));
       if (company?.id) {
-        localStorage.setItem(
-eviewcraft_active_selected_review_, JSON.stringify(review));
+        localStorage.setItem(`reviewcraft_active_selected_review_${company.id}`, JSON.stringify(review));
       }
     } catch (err) {}
 
@@ -55,7 +59,7 @@ eviewcraft_active_selected_review_, JSON.stringify(review));
       onSelect(review);
     }
 
-    // 1. Copy review text to clipboard
+    // 1. Copy review text to clipboard immediately
     await copyToClipboard();
     if (reviewId) {
       api.recordCopyEvent(reviewId).catch(() => {});
@@ -71,7 +75,7 @@ eviewcraft_active_selected_review_, JSON.stringify(review));
       addToast('Review text copied! Opening Google review dialog...', 'success', 3000);
       window.location.href = googleUrl;
     } else {
-      addToast(`Review copied! Opening Google — ReviewCraft extension will auto-paste text & select ${ratingVal} stars.`, 'success', 4000);
+      addToast(`Opening Google — click "⚡ Auto-Fill Review" in your bookmarks bar to auto-paste!`, 'success', 5000);
       const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
       if (!win) {
         window.location.href = googleUrl;
@@ -79,27 +83,22 @@ eviewcraft_active_selected_review_, JSON.stringify(review));
     }
   };
 
-  const handleCardInteraction = () => {
-    try {
-      localStorage.setItem('reviewcraft_active_selected_review', JSON.stringify(review));
-      if (company?.id) {
-        localStorage.setItem(`reviewcraft_active_selected_review_${company.id}`, JSON.stringify(review));
-      }
-    } catch (err) {}
-
-    if (onSelect) {
-      onSelect(review);
-    }
-    syncReviewToExtension(review, company, 'card_select');
-  };
-
   return (
     <div
-      onClick={handleCardInteraction}
-      className={`glass-card group p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden bg-white border transition-all duration-200 font-sans cursor-pointer ${
+      onClick={handleOpenGoogle}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleOpenGoogle(e);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      title="Click anywhere on card to copy review & open Google Reviews"
+      className={`glass-card group p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden bg-white border transition-all duration-200 font-sans cursor-pointer active:scale-[0.99] select-none ${
         isActive 
           ? 'border-[#068dcb] ring-2 ring-[#068dcb]/25 shadow-lg shadow-[#068dcb]/10' 
-          : 'border-slate-200 hover:border-[#068dcb]/40 hover:shadow-xl hover:shadow-[#068dcb]/10'
+          : 'border-slate-200 hover:border-[#068dcb] hover:shadow-xl hover:shadow-[#068dcb]/15'
       }`}
     >
       {/* Top badges */}
@@ -117,13 +116,6 @@ eviewcraft_active_selected_review_, JSON.stringify(review));
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium shadow-2xs">
                 <MapPin className="w-3 h-3 text-[#068dcb]" />
                 {review.companyLocation}
-              </span>
-            )}
-
-            {isActive && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#068dcb] text-white text-[10px] font-bold shadow-xs">
-                <CheckCircle className="w-3 h-3 text-white" />
-                Active for Google
               </span>
             )}
           </div>
@@ -159,17 +151,17 @@ eviewcraft_active_selected_review_, JSON.stringify(review));
         </div>
       </div>
 
-      {/* Card Action Row (Auto-copy text removed, opens Google directly & auto-fills) */}
+      {/* Card Action Row */}
       <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-end">
-        {/* Open Google Reviews Button */}
+        {/* Post on Google Button */}
         <button
           type="button"
           onClick={handleOpenGoogle}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-xs bg-gradient-to-r from-[#034665] to-[#068dcb] hover:from-[#02354e] hover:to-[#057db4] text-white shadow-md shadow-[#068dcb]/25 active:scale-95 transition-all cursor-pointer"
-          title="Open Google Review dialog and auto-fill"
+          title="Post review on Google"
         >
           <Globe className="w-3.5 h-3.5 text-white" />
-          <span>Open Google</span>
+          <span>Post on Google</span>
           <ExternalLink className="w-3 h-3 text-white/80" />
         </button>
       </div>
