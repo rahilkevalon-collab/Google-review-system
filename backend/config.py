@@ -9,12 +9,11 @@ class Config:
     MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://127.0.0.1:27017/seo_review_generator")
     DB_NAME = os.getenv("DB_NAME", "seo_review_generator")
     
-    # Pluggable LLM configuration
-    # Options: "gemini", "openai", "groq", "demo"
-    LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini" if os.getenv("GEMINI_API_KEY") else "demo")
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-    GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+    # Primary AI Provider: Groq API
+    # Options: "groq" (default), "demo" (offline template fallback)
+    LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq").lower()
+    GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip().strip('"').strip("'")
+    GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b").strip()
     
     # NLP & Deduplication Settings
     SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "0.72"))

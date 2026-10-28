@@ -237,7 +237,7 @@ class ReviewGeneratorService:
                     language=language or "en",
                     tone=tone,
                     length=length,
-                    count=12,
+                    count=5,
                     target_rating=item_rating
                 )
 
@@ -268,7 +268,8 @@ class ReviewGeneratorService:
                             "rating": item_rating,
                             "selectedKeywords": item_keywords,
                             "keyword": item_keyword_str,
-                            "contentHash": cand_hash
+                            "contentHash": cand_hash,
+                            "source_provider": src
                         }
                         break
                     else:
@@ -334,6 +335,8 @@ class ReviewGeneratorService:
                 sentiment_data["label"] = "Balanced & Constructive"
                 sentiment_data["toneAssessment"] = "Positive with Constructive Area"
 
+            item_source_provider = item.get("source_provider", provider_name)
+            item_is_ai = (item_source_provider == "groq")
             doc = {
                 "companyId": str(company_id),
                 "companyName": target_company_name,
@@ -350,7 +353,8 @@ class ReviewGeneratorService:
                 "tone": tone,
                 "length": length,
                 "source": source_val,
-                "isAiGenerated": is_ai_powered,
+                "isAiGenerated": item_is_ai,
+                "llmProvider": item_source_provider,
                 "contentHash": content_hash,
                 "generationBatchId": batch_id,
                 "wordCount": extract_word_count(review_text),
