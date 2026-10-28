@@ -1,8 +1,8 @@
 /**
- * ReviewCraft Chrome Extension - Google Review Auto-Filler Content Script (v1.1.3)
+ * ReviewCraft Chrome Extension - Google Review Auto-Filler Content Script (v1.1.4)
  * Runs on Google Search, Google Maps, and Google Local Review pages.
  * 
- * Key Enhancements in v1.1.3:
+ * Key Enhancements in v1.1.4:
  * 1. Scope Guarded Star Finding:
  *    - Stars are STRICTLY searched inside the active review modal / dialog container.
  *    - Prevents background search result snippets from being falsely matched!
@@ -15,7 +15,11 @@
  *    - Retries across ticks until Google registers the star rating or confirms via aria-checked.
  * 4. Reliable Textarea Population:
  *    - Native setter + execCommand('insertText') ensures Google's Post button activates.
- * 5. 1-Click Interactive Floating Badge:
+ * 5. Loop & Storage Storm Prevention:
+ *    - Guards against repeated evaluatePendingReview cycles across multiple Google iframes.
+ *    - Only writes applied status once to chrome.storage.local.
+ *    - Checks native #lrd URL hash before attempting programmatic element clicks to avoid Google CSP warnings.
+ * 6. 1-Click Interactive Floating Badge:
  *    - Displays real-time status and gives the user an instant [Re-Fill] button.
  */
 
@@ -23,7 +27,7 @@
   'use strict';
 
   const isTopFrame = window.top === window;
-  console.log('[ReviewCraft Google v1.1.3] Injected (isTopFrame=' + isTopFrame + ') on:', window.location.href);
+  console.log('[ReviewCraft Google v1.1.4] Injected (isTopFrame=' + isTopFrame + ') on:', window.location.href);
 
   // Version-based state tracking
   let lastAppliedVersion = null;
@@ -101,13 +105,21 @@
       return;
     }
 
-    // Render floating helper badge
+    // Render floating helper badge in top frame
     if (isTopFrame) {
-      renderFloatingBadge(pending, lastAppliedVersion === version);
+      renderFloatingBadge(pending, lastAppliedVersion === version || pending.applied === true);
     }
 
-    // Check if this exact version was already filled in this page session
-    if (lastAppliedVersion === version && lastAppliedReviewId === reviewId && !isRealtimeUpdate) {
+    // If pending review has already been marked applied, do not trigger duplicate autofill loops
+    if (pending.applied === true || pending.status === 'applied') {
+      lastAppliedVersion = version;
+      lastAppliedReviewId = reviewId;
+      cleanup();
+      return;
+    }
+
+    // Check if this exact version was already filled in this session
+    if (lastAppliedVersion === version && lastAppliedReviewId === reviewId) {
       return;
     }
 
@@ -195,19 +207,22 @@
 
         console.log(`[ReviewCraft Google] Successfully auto-filled review text and ${targetRating}★ for version:`, version);
 
-        // Update storage to mark applied
-        try {
-          if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-            chrome.storage.local.set({
-              pendingReview: {
-                ...pending,
-                applied: true,
-                appliedTimestamp: Date.now(),
-                status: 'applied'
-              }
-            });
-          }
-        } catch (e) {}
+        // Update storage to mark applied ONLY if it wasn't already marked applied
+        if (!pending.applied) {
+          pending.applied = true;
+          try {
+            if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+              chrome.storage.local.set({
+                pendingReview: {
+                  ...pending,
+                  applied: true,
+                  appliedTimestamp: Date.now(),
+                  status: 'applied'
+                }
+              });
+            }
+          } catch (e) {}
+        }
 
         // Update floating badge to success
         if (isTopFrame) {
@@ -302,6 +317,12 @@
    */
   function tryOpenReviewDialog() {
     if (!isTopFrame || hasTriggeredOpen || findReviewDialog()) return false;
+
+    // If URL already contains the direct #lrd=... review link, Google Search handles opening the modal natively
+    if (window.location.hash && window.location.hash.includes('lrd=') && window.location.hash.includes(',3')) {
+      hasTriggeredOpen = true;
+      return false;
+    }
 
     try {
       // Auto-open place listing or Reviews tab on Google Maps
@@ -799,7 +820,7 @@
         <div style="line-height: 1.3;">
           <div style="font-weight: 600; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
             <span>ReviewCraft</span>
-            <span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 10px; padding: 1px 6px; border-radius: 6px;">v1.1.3</span>
+            <span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 10px; padding: 1px 6px; border-radius: 6px;">v1.1.4</span>
           </div>
           <div style="font-size: 11px; color: #cbd5e1; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             ${company} • ${statusTitle}

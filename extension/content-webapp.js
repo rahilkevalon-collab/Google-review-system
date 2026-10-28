@@ -12,10 +12,21 @@
 (function () {
   'use strict';
 
+  // Only run on web application hosts, never on Google or accounts pages
+  const hostname = (window.location.hostname || '').toLowerCase();
+  if (
+    hostname.includes('google.') ||
+    hostname.endsWith('google.com') ||
+    hostname.includes('gstatic.com') ||
+    hostname === 'accounts.google.com'
+  ) {
+    return;
+  }
+
   // Mark DOM element synchronously so React app can detect extension presence instantly
   try {
     if (document.documentElement) {
-      document.documentElement.setAttribute('data-reviewcraft-extension-active', '1.1.3');
+      document.documentElement.setAttribute('data-reviewcraft-extension-active', '1.1.4');
     }
   } catch (e) {}
 
@@ -28,7 +39,7 @@
     try {
       window.postMessage({
         type: 'REVIEW_CRAFT_EXTENSION_AVAILABLE',
-        version: '1.1.3',
+        version: '1.1.4',
         timestamp: Date.now(),
         ...additionalData
       }, '*');
