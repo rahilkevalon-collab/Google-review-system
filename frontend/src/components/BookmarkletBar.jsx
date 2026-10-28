@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Bookmark, Sparkles, X, Smartphone } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bookmark, Sparkles, X, Smartphone, Check, Star } from 'lucide-react';
 import { BOOKMARKLET_HREF } from '../utils/bookmarklet';
 
 export default function BookmarkletBar() {
@@ -12,14 +12,6 @@ export default function BookmarkletBar() {
   });
 
   const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  const bookmarkRef = useRef(null);
-
-  // Imperatively set href attribute to bypass React 19's virtual DOM javascript: URL security check
-  useEffect(() => {
-    if (bookmarkRef.current) {
-      bookmarkRef.current.setAttribute('href', BOOKMARKLET_HREF);
-    }
-  }, []);
 
   if (dismissed) {
     return (
@@ -75,7 +67,7 @@ export default function BookmarkletBar() {
           <button
             type="button"
             onClick={handleDismiss}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
             title="Dismiss"
           >
             <X className="w-4 h-4" />
@@ -144,8 +136,7 @@ export default function BookmarkletBar() {
         
         {/* The Draggable Bookmarklet Button */}
         <a
-          ref={bookmarkRef}
-          href="#bookmarklet"
+          href={BOOKMARKLET_HREF}
           onClick={(e) => {
             e.preventDefault();
             alert('To install: Drag and drop this "⚡ Auto-Fill Review" button up into your browser\'s Bookmarks bar! (Press Ctrl+Shift+B if your bookmarks bar is not visible).');

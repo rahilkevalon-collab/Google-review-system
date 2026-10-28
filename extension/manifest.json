@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ReviewCraft Google Review Auto-Filler",
-  "version": "1.1.4",
+  "version": "1.1.3",
   "description": "Seamlessly auto-pastes AI review text and selects star ratings directly in Google Review modals.",
   "permissions": [
     "storage"
@@ -16,29 +16,6 @@
     {
       "matches": [
         "<all_urls>"
-      ],
-      "exclude_matches": [
-        "*://*.google.com/*",
-        "*://google.com/*",
-        "*://*.google.co.in/*",
-        "*://google.co.in/*",
-        "*://*.google.co.uk/*",
-        "*://google.co.uk/*",
-        "*://*.google.ca/*",
-        "*://google.ca/*",
-        "*://*.google.com.au/*",
-        "*://google.com.au/*",
-        "*://*.google.de/*",
-        "*://google.de/*",
-        "*://*.google.fr/*",
-        "*://google.fr/*",
-        "*://*.google.it/*",
-        "*://google.it/*",
-        "*://*.google.es/*",
-        "*://google.es/*",
-        "*://*.google.nl/*",
-        "*://google.nl/*",
-        "*://*.gstatic.com/*"
       ],
       "js": ["content-webapp.js"],
       "run_at": "document_start"
@@ -57,9 +34,9 @@
         "*://*.google.com.au/*",
         "*://google.de/*",
         "*://*.google.de/*",
-        "*://*.google.fr/*",
         "*://google.fr/*",
-        "*://*.google.it/*",
+        "*://*.google.fr/*",
+        "*://google.it/*",
         "*://*.google.it/*",
         "*://google.es/*",
         "*://*.google.es/*",
