@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Bookmark, Sparkles, X, Smartphone, Check, Star } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Bookmark, Sparkles, X, Smartphone, Check, Copy, HelpCircle } from 'lucide-react';
 import { BOOKMARKLET_HREF } from '../utils/bookmarklet';
 
 export default function BookmarkletBar() {
@@ -11,7 +11,45 @@ export default function BookmarkletBar() {
     }
   });
 
+  const [copied, setCopied] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+
   const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  // Anchor ref to imperatively set native href on real DOM node
+  // This completely prevents React virtual DOM from seeing or evaluating "javascript:" in JSX attributes
+  const dragAnchorRef = useRef(null);
+
+  useEffect(() => {
+    if (dragAnchorRef.current) {
+      dragAnchorRef.current.setAttribute('href', BOOKMARKLET_HREF);
+    }
+  }, []);
+
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(BOOKMARKLET_HREF);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch (err) {
+      // Fallback if clipboard API is blocked
+      const input = document.createElement('textarea');
+      input.value = BOOKMARKLET_HREF;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    }
+  };
+
+  const handleDismiss = () => {
+    setDismissed(true);
+    try {
+      localStorage.setItem('reviewcraft_bookmarklet_dismissed', 'true');
+    } catch (e) {}
+  };
 
   if (dismissed) {
     return (
@@ -32,13 +70,6 @@ export default function BookmarkletBar() {
       </div>
     );
   }
-
-  const handleDismiss = () => {
-    setDismissed(true);
-    try {
-      localStorage.setItem('reviewcraft_bookmarklet_dismissed', 'true');
-    } catch (e) {}
-  };
 
   // Mobile Version: Optimized for thumb interactions on Android & iPhone
   if (isMobile) {
@@ -67,7 +98,7 @@ export default function BookmarkletBar() {
           <button
             type="button"
             onClick={handleDismiss}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
             title="Dismiss"
           >
             <X className="w-4 h-4" />
@@ -96,7 +127,7 @@ export default function BookmarkletBar() {
     );
   }
 
-  // Desktop Version: Draggable Bookmarklet Tool
+  // Desktop Version: Draggable Bookmarklet Tool + 1-Click Code Copier
   return (
     <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-sky-50 via-white to-indigo-50/40 border border-sky-200/80 shadow-md shadow-sky-100/50 space-y-3 relative animate-in fade-in duration-300">
       
@@ -109,14 +140,14 @@ export default function BookmarkletBar() {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-extrabold text-slate-900">
-                1-Click Google Auto-Filler
+                1-Click Google Auto-Filler (Bookmarklet)
               </h3>
               <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-2xs font-bold uppercase tracking-wider">
                 No Extension Required
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium">
-              Automatically pastes review text & selects star ratings on Google with 1 click.
+              Automatically pastes review text & selects 5★ on Google with 1 click.
             </p>
           </div>
         </div>
@@ -131,43 +162,104 @@ export default function BookmarkletBar() {
         </button>
       </div>
 
-      {/* Action Row: Draggable Button + Quick Instructions */}
+      {/* Action Row: Draggable Anchor + Copy Button + Instructions */}
       <div className="flex flex-wrap items-center gap-3 pt-1">
         
-        {/* The Draggable Bookmarklet Button */}
+        {/* Draggable Anchor: React JSX renders safe '#install-bookmarklet', href is populated via ref */}
         <a
-          href={BOOKMARKLET_HREF}
+          ref={dragAnchorRef}
+          href="#install-bookmarklet"
+          draggable="true"
           onClick={(e) => {
             e.preventDefault();
-            alert('To install: Drag and drop this "⚡ Auto-Fill Review" button up into your browser\'s Bookmarks bar! (Press Ctrl+Shift+B if your bookmarks bar is not visible).');
+            setShowHelpModal(true);
           }}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#034665] to-[#068dcb] hover:from-[#02354e] hover:to-[#057db4] text-white text-xs font-bold shadow-md shadow-[#068dcb]/25 transition-all cursor-grab active:cursor-grabbing border border-white/20 select-none animate-pulse hover:animate-none"
-          title="Drag and drop this button to your Bookmarks Bar"
+          title="Drag this button up into your browser's Bookmarks Bar (or click for instructions)"
         >
           <Bookmark className="w-4 h-4 text-white fill-white/20" />
-          <span>⚡ Auto-Fill Review</span>
+          <span>⚡ Drag to Bookmarks Bar</span>
         </a>
 
-        {/* Instructions pill */}
-        <div className="flex-1 min-w-[240px] text-xs text-slate-600 flex items-center gap-2 bg-white/80 p-2 rounded-xl border border-slate-200">
-          <span className="w-5 h-5 rounded-full bg-[#068dcb]/10 text-[#034665] flex items-center justify-center font-bold text-2xs shrink-0">
-            1
-          </span>
-          <span className="leading-snug">
-            <strong>Drag the button above</strong> into your browser's Bookmarks bar <em>(Press Ctrl + Shift + B to show bar)</em>.
-          </span>
-        </div>
+        {/* 1-Click Copy Code Button (Proper React button, separate from navigation) */}
+        <button
+          type="button"
+          onClick={handleCopyCode}
+          className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+            copied
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+              : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-2xs'
+          }`}
+          title="Copy bookmarklet javascript code directly to clipboard"
+        >
+          {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
+          <span>{copied ? 'Copied Code!' : 'Copy Code'}</span>
+        </button>
 
-        <div className="flex-1 min-w-[240px] text-xs text-slate-600 flex items-center gap-2 bg-white/80 p-2 rounded-xl border border-slate-200">
+        {/* Instructions Toggle Button */}
+        <button
+          type="button"
+          onClick={() => setShowHelpModal(prev => !prev)}
+          className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition-all cursor-pointer"
+          title="View installation instructions"
+        >
+          <HelpCircle className="w-3.5 h-3.5 text-slate-500" />
+          <span>{showHelpModal ? 'Hide Steps' : 'How to Install?'}</span>
+        </button>
+
+        {/* Quick Instructions Pill */}
+        <div className="flex-1 min-w-[260px] text-xs text-slate-600 flex items-center gap-2 bg-white/80 p-2 rounded-xl border border-slate-200">
           <span className="w-5 h-5 rounded-full bg-[#068dcb]/10 text-[#034665] flex items-center justify-center font-bold text-2xs shrink-0">
-            2
+            ℹ️
           </span>
-          <span className="leading-snug">
-            Click <strong>"Post on Google"</strong> below ➔ On Google's page, click your bookmark to auto-fill text & stars!
+          <span className="leading-snug text-2xs">
+            Drag the button above to your Bookmarks Bar <em>(Press <strong>Ctrl + Shift + B</strong> to show bar)</em>, or click <strong>Copy Code</strong>.
           </span>
         </div>
 
       </div>
+
+      {/* Expandable Step-by-Step Instructions */}
+      {showHelpModal && (
+        <div className="p-4 rounded-2xl bg-white border border-sky-200 shadow-sm space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
+              <span>📌</span> Quick Setup (Only Once)
+            </h4>
+            <span className="text-2xs text-slate-500">Works in Chrome, Edge, Safari, Firefox</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
+              <p className="font-bold text-slate-800 flex items-center gap-1.5">
+                <span className="w-4 h-4 rounded-full bg-[#068dcb] text-white inline-flex items-center justify-center text-3xs font-bold">A</span>
+                Option 1: Drag & Drop
+              </p>
+              <ol className="list-decimal list-inside text-2xs text-slate-600 space-y-1">
+                <li>Press <kbd className="px-1 py-0.5 rounded bg-slate-200 font-mono text-3xs">Ctrl + Shift + B</kbd> (Mac: <kbd className="px-1 py-0.5 rounded bg-slate-200 font-mono text-3xs">Cmd + Shift + B</kbd>) to make sure your Bookmarks Bar is visible.</li>
+                <li>Drag the blue <strong>"⚡ Drag to Bookmarks Bar"</strong> button directly up into your Bookmarks Bar.</li>
+              </ol>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
+              <p className="font-bold text-slate-800 flex items-center gap-1.5">
+                <span className="w-4 h-4 rounded-full bg-[#034665] text-white inline-flex items-center justify-center text-3xs font-bold">B</span>
+                Option 2: Manual Copy & Paste
+              </p>
+              <ol className="list-decimal list-inside text-2xs text-slate-600 space-y-1">
+                <li>Click the <strong>"Copy Code"</strong> button above.</li>
+                <li>Right-click your browser's Bookmarks bar ➔ click <strong>Add Page...</strong> (or Add Bookmark).</li>
+                <li>Set Name: <code className="text-[#034665] font-bold">⚡ Auto-Fill Review</code>, and paste the code into the <strong>URL</strong> field.</li>
+              </ol>
+            </div>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-sky-50/70 border border-sky-100 text-2xs text-slate-700 flex items-center gap-2">
+            <span className="font-bold text-sky-800 shrink-0">🎯 How to Use:</span>
+            <span>Click <strong>"Post on Google"</strong> on any review card below. On Google's page, click your saved <strong>"⚡ Auto-Fill Review"</strong> bookmark — 5 stars and review text are filled instantly!</span>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -106,6 +106,41 @@ export function triggerExtensionAutoFill(review, company = {}) {
 }
 
 /**
+ * Asynchronously triggers extension autofill and waits for storage acknowledgment
+ * or a short timeout before same-tab navigation.
+ */
+export function triggerExtensionAutoFillAsync(review, company = {}, maxWaitMs = 120) {
+  return new Promise((resolve) => {
+    let resolved = false;
+    const cleanup = () => {
+      window.removeEventListener('message', handler);
+      clearTimeout(timer);
+    };
+
+    const handler = (event) => {
+      if (event.source === window && event.data?.type === 'REVIEW_CRAFT_SYNC_ACK') {
+        if (!resolved) {
+          resolved = true;
+          cleanup();
+          resolve(true);
+        }
+      }
+    };
+
+    window.addEventListener('message', handler);
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        resolve(false);
+      }
+    }, maxWaitMs);
+
+    triggerExtensionAutoFill(review, company);
+  });
+}
+
+/**
  * Sends a ping to the extension bridge to request acknowledgment and presence.
  */
 export function pingExtension() {

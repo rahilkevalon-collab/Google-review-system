@@ -530,35 +530,12 @@
     const roots = getCandidateRoots(dialog);
 
     for (const root of roots) {
-      // 1. Direct search by aria-posinset or data-rating inside root
-      const directRating = root.querySelector(
-        `[role="radio"][aria-posinset="${targetRating}"], [role="radio"][data-rating="${targetRating}"], [role="radio"][data-value="${targetRating}"], [data-rating="${targetRating}"][role="button"]`
-      );
-      if (directRating && isVisible(directRating)) {
-        return directRating;
-      }
+      // 1. Textarea Anchor: Locate the review textarea in this root
+      const textarea = findReviewTextarea(dialog || root);
+      const scope = textarea ? (textarea.closest('form, div[role="dialog"], dialog, div.JAPqpe, body') || root) : (dialog || root);
 
-      // 2. Direct search by aria-label matching target rating number and star
-      const wordsForRating = {
-        1: ['one', '1', 'એક', 'एक'],
-        2: ['two', '2', 'બે', 'दो'],
-        3: ['three', '3', 'ત્રણ', 'तीन'],
-        4: ['four', '4', 'ચાર', 'चार'],
-        5: ['five', '5', 'પાંચ', 'पाँच', 'पांच']
-      }[targetRating] || [String(targetRating)];
-
-      const allClickables = Array.from(root.querySelectorAll('[role="radio"], button, div[tabindex], span[tabindex]')).filter(isVisible);
-      for (const el of allClickables) {
-        const label = (el.getAttribute('aria-label') || el.getAttribute('title') || '').toLowerCase();
-        if (label.includes('star') || label.includes('તારા') || label.includes('सितारे') || label.includes('rate') || label.includes('rating')) {
-          if (wordsForRating.some(w => label.includes(w))) {
-            return el;
-          }
-        }
-      }
-
-      // 3. Look for role="radiogroup" containing role="radio"
-      const radiogroups = root.querySelectorAll('[role="radiogroup"]');
+      // Strategy A: Find role="radiogroup" containing role="radio"
+      const radiogroups = Array.from(scope.querySelectorAll('[role="radiogroup"]'));
       for (const rg of radiogroups) {
         const radios = Array.from(rg.querySelectorAll('[role="radio"]')).filter(isVisible);
         if (radios.length >= 5) {
@@ -568,55 +545,58 @@
         }
       }
 
-      // 4. Anchor via review textarea inside this root
-      const textarea = findReviewTextarea(dialog || root);
-      const textareaRect = textarea ? textarea.getBoundingClientRect() : null;
-
-      // 5. Candidate star elements: [role="radio"], or elements with star aria-label, or SVGs with star paths
-      let candidateStars = Array.from(root.querySelectorAll('[role="radio"]')).filter(isVisible);
-
-      if (candidateStars.length < 5) {
-        candidateStars = Array.from(root.querySelectorAll('[aria-label*="star" i], [aria-label*="તારા" i], [aria-label*="सितारे" i]'))
-          .filter(isVisible)
-          .filter(el => el.tagName !== 'TEXTAREA' && (!textarea || el !== textarea));
+      // Strategy B: Find all role="radio" in scope
+      let radios = Array.from(scope.querySelectorAll('[role="radio"]')).filter(isVisible);
+      if (radios.length >= 5) {
+        if (textarea) {
+          const taTop = textarea.getBoundingClientRect().top;
+          const aboveTa = radios.filter(r => r.getBoundingClientRect().top < taTop);
+          if (aboveTa.length >= 5) radios = aboveTa;
+        }
+        radios.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+        const targetIdx = Math.max(0, Math.min(radios.length - 1, targetRating - 1));
+        return radios[targetIdx];
       }
 
-      if (candidateStars.length < 5) {
-        const svgs = Array.from(root.querySelectorAll('svg')).filter(isVisible);
-        const starSvgs = svgs.filter(svg => {
-          const paths = Array.from(svg.querySelectorAll('path'));
-          return paths.some(p => {
-            const d = p.getAttribute('d') || '';
-            return d.includes('17.27') || d.includes('9.24') || d.includes('21l') || d.includes('12 2') || d.includes('M12');
-          });
-        });
-        if (starSvgs.length >= 5) {
-          candidateStars = starSvgs.map(s => s.closest('[role="radio"], [role="button"], button, div[tabindex], span[tabindex]') || s.parentElement || s);
+      // Strategy C: Target specific radio by aria-label inside scope
+      const wordsForRating = {
+        1: ['one', '1', 'એક', 'एक'],
+        2: ['two', '2', 'બે', 'दो'],
+        3: ['three', '3', 'ત્રણ', 'तीन'],
+        4: ['four', '4', 'ચાર', 'चार'],
+        5: ['five', '5', 'પાંચ', 'पाँच', 'पांच']
+      }[targetRating] || [String(targetRating)];
+
+      const candidateRadios = Array.from(scope.querySelectorAll('[role="radio"], div[data-rating], span[data-rating]')).filter(isVisible);
+      for (const r of candidateRadios) {
+        const label = (r.getAttribute('aria-label') || r.getAttribute('title') || '').toLowerCase();
+        if (wordsForRating.some(w => label.includes(w))) {
+          return r;
         }
       }
 
-      // 6. Filter candidate stars visually positioned above textarea
-      if (textareaRect && candidateStars.length > 5) {
-        const aboveTextarea = candidateStars.filter(el => {
-          const r = el.getBoundingClientRect();
-          return r.top < textareaRect.top && r.bottom > (textareaRect.top - 200);
+      // Strategy D: SVGs with star paths in scope positioned above textarea
+      const svgs = Array.from(scope.querySelectorAll('svg')).filter(isVisible);
+      const starSvgs = svgs.filter(svg => {
+        const paths = Array.from(svg.querySelectorAll('path'));
+        return paths.some(p => {
+          const d = p.getAttribute('d') || '';
+          return d.includes('17.27') || d.includes('9.24') || d.includes('21l') || d.includes('12 2') || d.includes('M12');
         });
-        if (aboveTextarea.length >= 5) {
-          candidateStars = aboveTextarea;
+      });
+      if (starSvgs.length >= 5) {
+        let stars = starSvgs.map(s => s.closest('[role="radio"], [role="button"], button, div[tabindex], span[tabindex]') || s.parentElement || s);
+        stars = Array.from(new Set(stars)).filter(isVisible);
+        if (stars.length >= 5) {
+          if (textarea) {
+            const taTop = textarea.getBoundingClientRect().top;
+            const aboveTa = stars.filter(s => s.getBoundingClientRect().top < taTop);
+            if (aboveTa.length >= 5) stars = aboveTa;
+          }
+          stars.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+          const targetIdx = Math.max(0, Math.min(stars.length - 1, targetRating - 1));
+          return stars[targetIdx];
         }
-      }
-
-      candidateStars = Array.from(new Set(candidateStars));
-
-      if (candidateStars.length >= 5) {
-        candidateStars.sort((a, b) => {
-          const rectA = a.getBoundingClientRect();
-          const rectB = b.getBoundingClientRect();
-          return rectA.left - rectB.left;
-        });
-
-        const targetIdx = Math.max(0, Math.min(candidateStars.length - 1, targetRating - 1));
-        return candidateStars[targetIdx];
       }
     }
 
@@ -624,71 +604,88 @@
   }
 
   /**
-   * DISPATCHES COMPLETE POINTER, MOUSE, AND KEYBOARD EVENTS TO ACTIVATE STAR.
+   * DISPATCHES COMPLETE POINTER, MOUSE, KEYBOARD, AND TOUCH EVENTS TO ACTIVATE STAR.
    */
   function clickStarElement(starEl, targetRating) {
     if (!starEl) return false;
 
     try {
+      const win = starEl.ownerDocument?.defaultView || window;
+      if (typeof starEl.scrollIntoView === 'function') {
+        starEl.scrollIntoView({ behavior: 'instant', block: 'nearest' });
+      }
       starEl.focus();
 
       const rect = starEl.getBoundingClientRect();
       const cx = rect.left + (rect.width > 0 ? rect.width / 2 : 10);
       const cy = rect.top + (rect.height > 0 ? rect.height / 2 : 10);
-      const win = starEl.ownerDocument?.defaultView || window;
 
-      // Pointer events
-      const pointerOpts = {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-        view: win,
-        clientX: cx,
-        clientY: cy,
-        pointerId: 1,
-        pointerType: 'mouse',
-        isPrimary: true
-      };
-      starEl.dispatchEvent(new PointerEvent('pointerover', pointerOpts));
-      starEl.dispatchEvent(new PointerEvent('pointerdown', { ...pointerOpts, button: 0, buttons: 1 }));
-      starEl.dispatchEvent(new PointerEvent('pointerup', { ...pointerOpts, button: 0, buttons: 0 }));
+      const doc = starEl.ownerDocument || document;
+      const leafEl = doc.elementFromPoint(cx, cy) || starEl;
 
-      // Mouse events
-      const mouseOpts = {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-        view: win,
-        clientX: cx,
-        clientY: cy,
-        button: 0,
-        buttons: 1
-      };
-      starEl.dispatchEvent(new MouseEvent('mouseover', mouseOpts));
-      starEl.dispatchEvent(new MouseEvent('mousedown', mouseOpts));
+      // Targets: Dispatch on leaf element under mouse, starEl, SVG, path, and parent
+      const targets = Array.from(new Set([
+        leafEl,
+        starEl,
+        starEl.querySelector('svg'),
+        starEl.querySelector('path'),
+        starEl.querySelector('span'),
+        starEl.parentElement
+      ].filter(Boolean)));
 
-      const upOpts = { ...mouseOpts, buttons: 0 };
-      starEl.dispatchEvent(new MouseEvent('mouseup', upOpts));
-      starEl.dispatchEvent(new MouseEvent('click', upOpts));
+      for (const target of targets) {
+        const pointerOpts = {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          view: win,
+          clientX: cx,
+          clientY: cy,
+          pointerId: 1,
+          pointerType: 'mouse',
+          isPrimary: true,
+          button: 0,
+          buttons: 1,
+          which: 1
+        };
+        target.dispatchEvent(new PointerEvent('pointerover', pointerOpts));
+        target.dispatchEvent(new PointerEvent('pointerenter', pointerOpts));
+        target.dispatchEvent(new PointerEvent('pointermove', pointerOpts));
+        target.dispatchEvent(new PointerEvent('pointerdown', pointerOpts));
 
-      // Native click
-      starEl.click();
+        const mouseOpts = {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          view: win,
+          clientX: cx,
+          clientY: cy,
+          button: 0,
+          buttons: 1,
+          which: 1
+        };
+        target.dispatchEvent(new MouseEvent('mouseover', mouseOpts));
+        target.dispatchEvent(new MouseEvent('mouseenter', mouseOpts));
+        target.dispatchEvent(new MouseEvent('mousemove', mouseOpts));
+        target.dispatchEvent(new MouseEvent('mousedown', mouseOpts));
 
-      // Also trigger on radio parent / closest clickable if starEl is inside a radio or svg
-      const radioParent = starEl.closest('[role="radio"], [role="button"], button');
-      if (radioParent && radioParent !== starEl) {
-        radioParent.focus();
-        radioParent.dispatchEvent(new PointerEvent('pointerdown', pointerOpts));
-        radioParent.dispatchEvent(new PointerEvent('pointerup', { ...pointerOpts, buttons: 0 }));
-        radioParent.dispatchEvent(new MouseEvent('mousedown', mouseOpts));
-        radioParent.dispatchEvent(new MouseEvent('mouseup', upOpts));
-        radioParent.dispatchEvent(new MouseEvent('click', upOpts));
-        radioParent.click();
+        const upPointerOpts = { ...pointerOpts, buttons: 0 };
+        target.dispatchEvent(new PointerEvent('pointerup', upPointerOpts));
+
+        const upMouseOpts = { ...mouseOpts, buttons: 0 };
+        target.dispatchEvent(new MouseEvent('mouseup', upMouseOpts));
+        target.dispatchEvent(new MouseEvent('click', upMouseOpts));
+
+        if (typeof target.click === 'function') {
+          target.click();
+        }
       }
 
-      // Keyboard events (Space & Enter)
-      starEl.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true, composed: true }));
-      starEl.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true, composed: true }));
+      // Space & Enter Keyboard events (Google ARIA radios select on Space and Enter)
+      starEl.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true, cancelable: true, composed: true }));
+      starEl.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true, cancelable: true, composed: true }));
+      starEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true }));
+      starEl.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true }));
 
       return true;
     } catch (err) {
@@ -701,37 +698,39 @@
    * VERIFIES WHETHER GOOGLE REGISTERED THE SELECTED STAR RATING.
    */
   function isStarRatingSelected(dialog, targetRating) {
-    if (!dialog) return false;
+    const roots = getCandidateRoots(dialog);
 
-    // 1. Check aria-checked="true" on radios
-    const radios = Array.from(dialog.querySelectorAll('[role="radio"]')).filter(isVisible);
-    for (const r of radios) {
-      if (r.getAttribute('aria-checked') === 'true') {
-        return true;
+    for (const root of roots) {
+      // 1. Check aria-checked="true" on radios
+      const radios = Array.from(root.querySelectorAll('[role="radio"]')).filter(isVisible);
+      for (const r of radios) {
+        if (r.getAttribute('aria-checked') === 'true') {
+          return true;
+        }
       }
-    }
 
-    // 2. Check rating text in dialog
-    const ratingTexts = ['5 stars', '4 stars', '3 stars', '2 stars', '1 star', 'five stars', 'four stars', 'excellent', 'great', 'good'];
-    const textEls = Array.from(dialog.querySelectorAll('div, span')).filter(isVisible);
-    for (const el of textEls) {
-      const t = (el.innerText || '').toLowerCase().trim();
-      if (ratingTexts.some(rt => t === rt || t === `${targetRating} stars` || t === `${targetRating} star`)) {
-        return true;
+      // 2. Check for gold/yellow filled stars in SVGs
+      const svgs = Array.from(root.querySelectorAll('svg')).filter(isVisible);
+      for (const svg of svgs) {
+        const fill = (svg.getAttribute('fill') || svg.style.fill || '').toLowerCase();
+        if (fill.includes('fbbc04') || fill.includes('e7711b') || fill.includes('rgb(251, 188, 4)') || fill.includes('gold') || fill.includes('yellow') || fill.includes('rgb(231, 113, 27)')) {
+          return true;
+        }
+        const paths = Array.from(svg.querySelectorAll('path'));
+        for (const p of paths) {
+          const pFill = (p.getAttribute('fill') || p.style.fill || '').toLowerCase();
+          if (pFill.includes('fbbc04') || pFill.includes('e7711b') || pFill.includes('rgb(251, 188, 4)') || pFill.includes('gold') || pFill.includes('yellow') || pFill.includes('rgb(231, 113, 27)')) {
+            return true;
+          }
+        }
       }
-    }
 
-    // 3. Check for gold/yellow filled stars in SVGs
-    const svgs = Array.from(dialog.querySelectorAll('svg')).filter(isVisible);
-    for (const svg of svgs) {
-      const fill = (svg.getAttribute('fill') || svg.style.fill || '').toLowerCase();
-      if (fill.includes('fbbc04') || fill.includes('e7711b') || fill.includes('rgb(251, 188, 4)') || fill.includes('gold')) {
-        return true;
-      }
-      const paths = Array.from(svg.querySelectorAll('path'));
-      for (const p of paths) {
-        const pFill = (p.getAttribute('fill') || p.style.fill || '').toLowerCase();
-        if (pFill.includes('fbbc04') || pFill.includes('e7711b') || pFill.includes('rgb(251, 188, 4)') || pFill.includes('gold')) {
+      // 3. Check rating text in dialog
+      const ratingTexts = ['5 stars', '4 stars', '3 stars', '2 stars', '1 star', 'five stars', 'four stars', 'excellent', 'great', 'good', '5 તારા', '5 सितारे'];
+      const textEls = Array.from(root.querySelectorAll('div, span')).filter(isVisible);
+      for (const el of textEls) {
+        const t = (el.innerText || '').toLowerCase().trim();
+        if (ratingTexts.some(rt => t === rt || t === `${targetRating} stars` || t === `${targetRating} star`)) {
           return true;
         }
       }

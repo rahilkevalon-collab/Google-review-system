@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-  ExternalLink, 
+  ArrowRight, 
   Star,
   Globe,
   Building,
@@ -9,7 +9,7 @@ import {
 import { api } from '../services/api';
 import { useToast } from './Toast';
 import { getGoogleReviewUrl } from '../utils/googleReviewUrl';
-import { triggerExtensionAutoFill } from '../utils/extensionSync';
+import { triggerExtensionAutoFillAsync } from '../utils/extensionSync';
 
 export default function ReviewCard({ review, company = {}, isActive = false, onSelect }) {
   const { addToast } = useToast();
@@ -65,22 +65,12 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
       api.recordCopyEvent(reviewId).catch(() => {});
     }
 
-    // 2. Dispatch event for ReviewCraft Chrome Extension to auto-fill review text & stars on Google
-    triggerExtensionAutoFill(review, company);
+    // 2. Dispatch event for ReviewCraft Chrome Extension & wait for sync
+    await triggerExtensionAutoFillAsync(review, company);
 
-    // 3. Mobile device handling: direct navigation prevents popup blocking and opens Google Maps / Review dialog immediately
-    const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-    if (isMobile) {
-      addToast('Review text copied! Opening Google review dialog...', 'success', 3000);
-      window.location.href = googleUrl;
-    } else {
-      addToast(`Opening Google — click "⚡ Auto-Fill Review" in your bookmarks bar to auto-paste!`, 'success', 5000);
-      const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
-      if (!win) {
-        window.location.href = googleUrl;
-      }
-    }
+    // 3. Same-tab navigation: Opens Google review dialog directly in the current browser tab
+    addToast('Review copied! Opening Google review dialog...', 'success', 2000);
+    window.location.href = googleUrl;
   };
 
   return (
@@ -98,42 +88,39 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
       className={`glass-card group p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden bg-white border transition-all duration-200 font-sans cursor-pointer active:scale-[0.99] select-none ${
         isActive 
           ? 'border-[#068dcb] ring-2 ring-[#068dcb]/25 shadow-lg shadow-[#068dcb]/10' 
-          : 'border-slate-200 hover:border-[#068dcb] hover:shadow-xl hover:shadow-[#068dcb]/15'
+          : 'border-slate-200/80 hover:border-[#068dcb]/50 shadow-sm hover:shadow-md'
       }`}
     >
-      {/* Top badges */}
       <div>
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {review.companyName && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-bold shadow-2xs">
-                <Building className="w-3 h-3 text-[#068dcb]" />
-                {review.companyName}
-              </span>
-            )}
+        {/* Card Header: Company & Location Badges */}
+        <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+          {company?.name && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-50 text-[#034665] border border-sky-100 text-xs font-semibold max-w-[200px] truncate">
+              <Building className="w-3.5 h-3.5 shrink-0 text-[#068dcb]" />
+              <span className="truncate">{company.name}</span>
+            </span>
+          )}
 
-            {review.companyLocation && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium shadow-2xs">
-                <MapPin className="w-3 h-3 text-[#068dcb]" />
-                {review.companyLocation}
-              </span>
-            )}
-          </div>
+          {(company?.location || company?.formattedAddress) && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-50 text-slate-600 border border-slate-100 text-xs font-medium max-w-[220px] truncate">
+              <MapPin className="w-3 h-3 shrink-0 text-slate-400" />
+              <span className="truncate">{company.location || company.formattedAddress}</span>
+            </span>
+          )}
+        </div>
 
-          {/* Rating stars */}
-          <div 
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold"
-            title={`${ratingVal}.0 Star Review`}
-          >
-            <div className="flex items-center gap-0.5">
-              {[1, 2, 3, 4, 5].map((starNum) => (
-                <Star 
-                  key={starNum} 
+        {/* Star Rating Badges */}
+        <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-1 bg-amber-50/80 px-2.5 py-0.5 rounded-full border border-amber-200/60">
+            <div className="flex text-amber-500">
+              {[...Array(5)].map((_, i) => (
+                <Star
+                  key={i}
                   className={`w-3.5 h-3.5 ${
-                    starNum <= ratingVal 
-                      ? 'fill-amber-400 text-amber-400' 
-                      : 'fill-slate-200 text-slate-300'
-                  }`} 
+                    i < ratingVal
+                      ? 'fill-amber-400 text-amber-500'
+                      : 'fill-slate-100 text-slate-300'
+                  }`}
                 />
               ))}
             </div>
@@ -162,7 +149,7 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
         >
           <Globe className="w-3.5 h-3.5 text-white" />
           <span>Post on Google</span>
-          <ExternalLink className="w-3 h-3 text-white/80" />
+          <ArrowRight className="w-3 h-3 text-white/80" />
         </button>
       </div>
     </div>

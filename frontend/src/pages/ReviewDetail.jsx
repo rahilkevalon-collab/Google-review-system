@@ -19,7 +19,7 @@ import {
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
 import { getGoogleReviewUrl } from '../utils/googleReviewUrl';
-import { syncReviewToExtension, triggerExtensionAutoFill } from '../utils/extensionSync';
+import { syncReviewToExtension, triggerExtensionAutoFill, triggerExtensionAutoFillAsync } from '../utils/extensionSync';
 
 export default function ReviewDetail() {
   const { id, reviewId } = useParams();
@@ -111,7 +111,7 @@ export default function ReviewDetail() {
     await copyToClipboard();
     api.recordCopyEvent(effectiveId).catch(() => {});
 
-    triggerExtensionAutoFill({ ...review, reviewText, text: reviewText }, company);
+    await triggerExtensionAutoFillAsync({ ...review, reviewText, text: reviewText }, company);
 
     const targetItem = {
       ...(company || {}),
@@ -120,18 +120,8 @@ export default function ReviewDetail() {
     };
     const googleUrl = getGoogleReviewUrl(targetItem);
 
-    const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-    if (isMobile) {
-      addToast('Review text copied! Opening Google review dialog...', 'success', 3000);
-      window.location.href = googleUrl;
-    } else {
-      addToast('Opening Google Reviews — click "⚡ Auto-Fill Review" in your bookmarks bar to auto-paste!', 'success', 5000);
-      const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
-      if (!win) {
-        window.location.href = googleUrl;
-      }
-    }
+    addToast('Review text copied! Opening Google review dialog...', 'success', 2000);
+    window.location.href = googleUrl;
   };
 
   const handleSaveEdits = async () => {
