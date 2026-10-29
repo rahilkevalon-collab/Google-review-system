@@ -217,7 +217,7 @@ class GroqLLMProvider(BaseLLMProvider):
         if int(target_rating) == 4:
             rating_instructions = f"""
 - Target Rating: 4 Stars
-- Tone & Perspective: Positive, constructive review draft praising {company_name} on "{keyword}", with ONE mild realistic feedback comment (e.g. "slight wait time" or "response was a little delayed, but overall very happy"). Keep it casual, friendly, and authentic.
+- Tone & Perspective: Positive, constructive review draft praising {company_name} on "{keyword}", with ONE mild constructive observation about turnaround, communication, or response (e.g. "turnaround took a bit longer than expected, but quality was top-notch" or "response during initial kickoff had a slight delay, but overall very happy"). Keep it authentic and constructive.
 """
         else:
             rating_instructions = f"""
