@@ -1,4 +1,6 @@
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '') + '/api';
+const PROD_API_URL = 'https://google-review-system-9302.onrender.com';
+const rawApiUrl = (import.meta.env.VITE_API_URL || (import.meta.env.PROD ? PROD_API_URL : '')).trim();
+const API_BASE = (rawApiUrl ? rawApiUrl.replace(/\/$/, '') : '') + '/api';
 
 async function handleResponse(response) {
   const data = await response.json().catch(() => ({}));

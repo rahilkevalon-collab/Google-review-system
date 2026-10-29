@@ -6,8 +6,9 @@ from ai.llm_provider import get_llm_provider
 logger = logging.getLogger(__name__)
 
 class AnalyticsService:
-    def __init__(self):
-        self.db = Database.get_db()
+    @property
+    def db(self):
+        return Database.get_db()
 
     def get_overview(self) -> dict:
         total_companies = self.db.companies.count_documents({})

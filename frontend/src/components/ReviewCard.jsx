@@ -47,7 +47,6 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
     const mergedTarget = { ...(company || {}), ...(review || {}) };
     const googleUrl = getGoogleReviewUrl(mergedTarget);
     
-    // Persist as the active selected review in localStorage
     try {
       localStorage.setItem('reviewcraft_active_selected_review', JSON.stringify(review));
       if (company?.id) {
@@ -65,12 +64,25 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
       api.recordCopyEvent(reviewId).catch(() => {});
     }
 
-    // 2. Dispatch event for ReviewCraft Chrome Extension & wait for sync
-    await triggerExtensionAutoFillAsync(review, company);
+// 2. Optional sync trigger if ReviewCraft Chrome extension is active
+    try {
+      triggerExtensionAutoFill(review, company);
+    } catch (e) {}
 
-    // 3. Same-tab navigation: Opens Google review dialog directly in the current browser tab
-    addToast('Review copied! Opening Google review dialog...', 'success', 2000);
-    window.location.href = googleUrl;
+    // 3. Clear, honest, reliable user notification on every device
+    addToast(`Review text copied to clipboard! (5.0 Stars) Paste into Google's review box to submit.`, 'success', 4500);
+
+    // 4. Navigate directly to verified Google Review dialog
+    const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.location.href = googleUrl;
+    } else {
+      const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
+      if (!win) {
+        window.location.href = googleUrl;
+      }
+    }
+
   };
 
   return (

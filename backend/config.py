@@ -6,7 +6,12 @@ load_dotenv()
 class Config:
     PORT = int(os.getenv("PORT", 5000))
     DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1")
-    MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://127.0.0.1:27017/seo_review_generator")
+    MONGODB_URI = (
+        os.getenv("MONGODB_URI") or 
+        os.getenv("MONGO_URI") or 
+        os.getenv("DATABASE_URL") or 
+        "mongodb://127.0.0.1:27017/seo_review_generator"
+    )
     DB_NAME = os.getenv("DB_NAME", "seo_review_generator")
     
     # Primary AI Provider: Groq API
