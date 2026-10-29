@@ -72,16 +72,8 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
     // 3. Clear, honest, reliable user notification on every device
     addToast(`Review text copied to clipboard! (5.0 Stars) Paste into Google's review box to submit.`, 'success', 4500);
 
-    // 4. Navigate directly to verified Google Review dialog
-    const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    if (isMobile) {
-      window.location.href = googleUrl;
-    } else {
-      const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
-      if (!win) {
-        window.location.href = googleUrl;
-      }
-    }
+    // 4. Navigate directly to verified Google Review dialog in the same page
+    window.location.href = googleUrl;
 
   };
 
@@ -156,7 +148,7 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
         <button
           type="button"
           onClick={handleOpenGoogle}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-xs bg-gradient-to-r from-[#034665] to-[#068dcb] hover:from-[#02354e] hover:to-[#057db4] text-white shadow-md shadow-[#068dcb]/25 active:scale-95 transition-all cursor-pointer"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-xs bg-gradient-to-r from-[#034665] to-[#068dcb] group-hover:from-[#068dcb] group-hover:to-[#2ec5ff] group-hover:shadow-lg group-hover:shadow-[#068dcb]/35 hover:brightness-110 text-white shadow-md shadow-[#068dcb]/25 active:scale-95 transition-all cursor-pointer"
           title="Post review on Google"
         >
           <Globe className="w-3.5 h-3.5 text-white" />

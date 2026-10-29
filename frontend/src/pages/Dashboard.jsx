@@ -11,7 +11,6 @@ import { useToast } from '../components/Toast';
 import KeywordChips from '../components/KeywordChips';
 import ReviewCard from '../components/ReviewCard';
 import SkeletonReviewCard from '../components/SkeletonReviewCard';
-import BookmarkletBar from '../components/BookmarkletBar';
 import { syncReviewToExtension } from '../utils/extensionSync';
 
 export default function Dashboard({ categories = [] }) {
@@ -180,36 +179,8 @@ export default function Dashboard({ categories = [] }) {
           if (comp?.id) {
             localStorage.setItem(`reviewcraft_selected_kw_${comp.id}`, JSON.stringify(initialSelected));
           }
-
-          // 1. Instant rendering from local cache if available (0ms)
-          let foundExisting = false;
-          try {
-            const cached = localStorage.getItem(`reviewcraft_cached_reviews_${comp.id}`);
-            if (cached) {
-              const parsed = JSON.parse(cached);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                setReviews(parsed.slice(0, 3));
-                foundExisting = true;
-              }
-            }
-          } catch (e) {}
-
-          // 2. Fetch existing reviews from MongoDB for this company
-          try {
-            const existingRes = await api.getReviews({ companyId: comp.id, limit: 3 });
-            if (existingRes.success && Array.isArray(existingRes.reviews) && existingRes.reviews.length > 0) {
-              setReviews(existingRes.reviews.slice(0, 3));
-              localStorage.setItem(`reviewcraft_cached_reviews_${comp.id}`, JSON.stringify(existingRes.reviews.slice(0, 3)));
-              foundExisting = true;
-            }
-          } catch (e) {
-            console.warn('Could not fetch existing reviews:', e);
-          }
-
-          // 3. ONLY generate fresh reviews if company has zero reviews yet
-          if (!foundExisting) {
-            generateReviews(initialSelected, true, comp);
-          }
+          // Generate fresh reviews on every page load and refresh
+          generateReviews(initialSelected, true, comp);
         } else {
           setCompanyError('Business profile not found in database.');
         }
@@ -336,9 +307,6 @@ export default function Dashboard({ categories = [] }) {
           SELECT KEYWORDS & GENERATE REVIEW SUGGESTIONS
         </p>
       </div>
-
-      {/* 1-Click Zero-Installation Bookmarklet Auto-Filler (Alternative A) */}
-      <BookmarkletBar />
 
       {/* SEO Keywords Chips */}
       <div>

@@ -120,17 +120,8 @@ export default function ReviewDetail() {
     };
     const googleUrl = getGoogleReviewUrl(targetItem);
 
-const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-    addToast("Review text copied to clipboard! (5.0 Stars) Paste into Google's review box to submit.", 'success', 4500);
-    if (isMobile) {
-      window.location.href = googleUrl;
-    } else {
-      const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
-      if (!win) {
-        window.location.href = googleUrl;
-      }
-    }
+addToast("Review text copied to clipboard! (5.0 Stars) Paste into Google's review box to submit.", 'success', 4500);
+    window.location.href = googleUrl;
 
   };
 
