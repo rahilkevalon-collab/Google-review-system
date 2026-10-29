@@ -64,9 +64,9 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
       api.recordCopyEvent(reviewId).catch(() => {});
     }
 
-// 2. Optional sync trigger if ReviewCraft Chrome extension is active
+// 2. Dispatch event for ReviewCraft Chrome Extension & wait for storage ACK
     try {
-      triggerExtensionAutoFill(review, company);
+      await triggerExtensionAutoFillAsync(review, company, 350);
     } catch (e) {}
 
     // 3. Clear, honest, reliable user notification on every device

@@ -109,7 +109,7 @@ export function triggerExtensionAutoFill(review, company = {}) {
  * Asynchronously triggers extension autofill and waits for storage acknowledgment
  * or a short timeout before same-tab navigation.
  */
-export function triggerExtensionAutoFillAsync(review, company = {}, maxWaitMs = 120) {
+export function triggerExtensionAutoFillAsync(review, company = {}, maxWaitMs = 350) {
   return new Promise((resolve) => {
     let resolved = false;
     const cleanup = () => {

@@ -82,6 +82,15 @@
                 currentVersion: existing.version,
                 staleVersion: record.version
               });
+              try {
+                window.postMessage({
+                  type: 'REVIEW_CRAFT_SYNC_ACK',
+                  success: true,
+                  reviewId: existing.reviewId,
+                  version: existing.version,
+                  status: existing.status
+                }, '*');
+              } catch (e) {}
               return;
             }
 

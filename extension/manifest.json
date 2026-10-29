@@ -41,7 +41,8 @@
         "*://google.es/*",
         "*://*.google.es/*",
         "*://google.nl/*",
-        "*://*.google.nl/*"
+        "*://*.google.nl/*",
+        "*://*.goo.gl/*"
       ],
       "js": ["content-google.js"],
       "run_at": "document_idle",

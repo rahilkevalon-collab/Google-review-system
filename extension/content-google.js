@@ -43,14 +43,21 @@
    * Validates whether the current Google page corresponds to the target company.
    */
   function isBusinessMatching(pending) {
-    if (!pending || !pending.companyName) return true;
+    if (!pending || !pending.text) return false;
+    if (!pending.companyName) return true;
     
-    const target = pending.companyName.toLowerCase().trim();
-    if (!target) return true;
+    // Inside iframes (dialog frames), always allow so autofill is not blocked
+    if (!isTopFrame) return true;
 
     const url = window.location.href.toLowerCase();
-    // Direct review links and review dialog hashes always match
-    if (url.includes('writereview') || url.includes('#lrd=')) return true;
+    // Direct review links, writereview, reviewdialog, and review hashes always match
+    if (url.includes('writereview') || url.includes('#lrd=') || url.includes('rc_auto=') || url.includes('reviewdialog')) return true;
+
+    // If review modal is already open on page, always trust it
+    if (findReviewDialog()) return true;
+
+    const target = pending.companyName.toLowerCase().trim();
+    if (!target) return true;
 
     const tokens = target.split(/\s+/).filter(t => t.length > 2);
     if (tokens.length === 0) return true;
@@ -245,16 +252,50 @@
     }
   }
 
-  // 1. Read initial state from storage
+  // Extract review payload directly from URL hash or query params as instant fallback
+  function checkHashPayload() {
+    try {
+      const href = window.location.href || '';
+      if (href.includes('rc_auto=')) {
+        const raw = href.split('rc_auto=')[1].split('&')[0].split('#')[0];
+        const data = JSON.parse(decodeURIComponent(raw));
+        if (data && data.text) {
+          const hashRecord = {
+            companyName: data.company || '',
+            text: data.text,
+            rating: Math.max(1, Math.min(5, Math.round(Number(data.rating)) || 5)),
+            timestamp: Date.now(),
+            version: Date.now(),
+            source: 'url_hash'
+          };
+          console.log('[ReviewCraft Google] Loaded pending review from URL hash:', hashRecord);
+          evaluatePendingReview(hashRecord, true);
+          return true;
+        }
+      }
+    } catch (e) {
+      console.warn('[ReviewCraft Google] Failed parsing hash payload:', e);
+    }
+    return false;
+  }
+
+  // 1. Read initial state from storage with URL hash fallback
   function checkInitialStorage() {
     try {
       if (typeof chrome !== 'undefined' && chrome.storage?.local) {
         chrome.storage.local.get(['pendingReview'], (res) => {
-          if (chrome.runtime?.lastError || !res) return;
-          evaluatePendingReview(res.pendingReview, false);
+          if (!chrome.runtime?.lastError && res && res.pendingReview && res.pendingReview.text) {
+            evaluatePendingReview(res.pendingReview, false);
+          } else {
+            checkHashPayload();
+          }
         });
+      } else {
+        checkHashPayload();
       }
-    } catch (e) {}
+    } catch (e) {
+      checkHashPayload();
+    }
   }
 
   checkInitialStorage();
@@ -534,6 +575,12 @@
       const textarea = findReviewTextarea(dialog || root);
       const scope = textarea ? (textarea.closest('form, div[role="dialog"], dialog, div.JAPqpe, body') || root) : (dialog || root);
 
+      // Strategy 0: Exact data attributes
+      const exactDataMatch = scope.querySelector(`[data-rating="${targetRating}"], [data-value="${targetRating}"], [data-score="${targetRating}"]`);
+      if (exactDataMatch && isVisible(exactDataMatch)) {
+        return exactDataMatch;
+      }
+
       // Strategy A: Find role="radiogroup" containing role="radio"
       const radiogroups = Array.from(scope.querySelectorAll('[role="radiogroup"]'));
       for (const rg of radiogroups) {
@@ -567,7 +614,7 @@
         5: ['five', '5', 'પાંચ', 'पाँच', 'पांच']
       }[targetRating] || [String(targetRating)];
 
-      const candidateRadios = Array.from(scope.querySelectorAll('[role="radio"], div[data-rating], span[data-rating]')).filter(isVisible);
+      const candidateRadios = Array.from(scope.querySelectorAll('[role="radio"], button, [data-rating], span[role="button"], div[role="button"], span[data-rating]')).filter(isVisible);
       for (const r of candidateRadios) {
         const label = (r.getAttribute('aria-label') || r.getAttribute('title') || '').toLowerCase();
         if (wordsForRating.some(w => label.includes(w))) {

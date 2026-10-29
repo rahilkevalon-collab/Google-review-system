@@ -111,7 +111,7 @@ export default function ReviewDetail() {
     await copyToClipboard();
     api.recordCopyEvent(effectiveId).catch(() => {});
 
-    await triggerExtensionAutoFillAsync({ ...review, reviewText, text: reviewText }, company);
+    await triggerExtensionAutoFillAsync({ ...review, reviewText, text: reviewText }, company, 350);
 
     const targetItem = {
       ...(company || {}),
