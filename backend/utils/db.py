@@ -1,14 +1,13 @@
 import logging
-from datetime import datetime
-from bson import ObjectId
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
+from bson import ObjectId
+from datetime import datetime
 from config import Config
 
 logger = logging.getLogger(__name__)
 
 class Database:
-    _instance = None
     _client = None
     _db = None
     _is_mock = False
@@ -24,17 +23,23 @@ class Database:
         return cls._is_mock
 
     @classmethod
-    def initialize(cls, force=False):
+    def initialize(cls, force: bool = False):
         if cls._db is not None and not force:
             return cls._db
         try:
-            client = MongoClient(Config.MONGODB_URI, serverSelectionTimeoutMS=2500)
+            # 10s timeout to allow MongoDB Atlas DNS resolution and SSL handshake on cloud platforms
+            client = MongoClient(Config.MONGODB_URI, serverSelectionTimeoutMS=10000)
             # Trigger server selection to verify connectivity
             client.admin.command('ping')
             cls._client = client
-            cls._db = client[Config.DB_NAME]
+            try:
+                cls._db = client.get_default_database()
+            except Exception:
+                cls._db = None
+            if cls._db is None:
+                cls._db = client[Config.DB_NAME]
             cls._is_mock = False
-            logger.info("Connected successfully to real MongoDB at %s", Config.MONGODB_URI)
+            logger.info("Connected successfully to real MongoDB database: %s", cls._db.name)
         except (ConnectionFailure, ServerSelectionTimeoutError, Exception) as e:
             logger.warning("Could not connect to real MongoDB (%s). Falling back to in-memory mongomock database.", str(e))
             try:

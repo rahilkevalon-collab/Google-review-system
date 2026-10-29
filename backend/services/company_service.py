@@ -23,6 +23,14 @@ DEFAULT_SAMPLE_COMPANIES = [
             "CRM & ERP Development",
             "AI Solutions",
             "Cloud Migration"
+        ],
+        "seoKeywords": [
+            "Web Development",
+            "Mobile App Development",
+            "Custom Software Development",
+            "CRM & ERP Development",
+            "AI Solutions",
+            "Cloud Migration"
         ]
     },
     {
@@ -247,12 +255,43 @@ class CompanyService:
                     "externalReviewLink": "https://search.google.com/local/writereview?placeid=ChIJQwrcdyL0U6cRLe6thND0Dvw"
                 }}
             )
+
+            # Ensure all companies have seoKeywords field populated
+            for c_doc in self.db.companies.find():
+                if not c_doc.get("seoKeywords") and c_doc.get("keywords"):
+                    self.db.companies.update_one(
+                        {"_id": c_doc["_id"]},
+                        {"$set": {"seoKeywords": c_doc["keywords"]}}
+                    )
+
+            # Ensure every company has at least 3 initial review templates saved in generated_reviews
+            for c_doc in self.db.companies.find():
+                cid_str = str(c_doc["_id"])
+                existing_cnt = self.db.generated_reviews.count_documents({"companyId": cid_str})
+                if existing_cnt < 3:
+                    try:
+                        from ai.generator import generator_service
+                        k_list = c_doc.get("seoKeywords") or c_doc.get("keywords") or ["Quality Service"]
+                        init_kws = k_list[:2] if len(k_list) >= 2 else k_list
+                        generator_service.generate_reviews(
+                            company_id=cid_str,
+                            company_name=c_doc["name"],
+                            category=c_doc.get("category", "Other"),
+                            keyword=", ".join(init_kws),
+                            selected_keywords=init_kws,
+                            services=c_doc.get("services", ""),
+                            location=c_doc.get("location", ""),
+                            language=c_doc.get("preferredLanguage", "en"),
+                            count=3
+                        )
+                    except Exception as ge:
+                        logger.warning("Initial review template seeding error for %s: %s", c_doc["name"], str(ge))
         except Exception as e:
             logger.warning("Error seeding companies: %s", str(e))
 
     def get_all_companies(self) -> list[dict]:
         self.seed_companies_if_empty()
-        companies = list(self.db.companies.find().sort("createdAt", 1))
+        companies = list(self.db.companies.find().sort("createdAt", -1))
         return [serialize_doc(c) for c in companies]
 
     def get_company_by_id(self, company_id: str) -> dict | None:
@@ -488,14 +527,20 @@ class CompanyService:
         ext_link = data.get("googleReviewUrl", "").strip() or data.get("externalReviewLink", "").strip()
         lower_name = name.lower()
         lower_loc = location.lower()
+        import re
         if place_id:
             review_url = f"https://search.google.com/local/writereview?placeid={place_id}"
+        elif ext_link and "writereview" in ext_link and "placeid=" in ext_link:
+            review_url = ext_link
+            m = re.search(r'placeid=([^&]+)', ext_link)
+            if m and not place_id:
+                place_id = m.group(1).strip()
+        elif ext_link and ext_link.startswith("http") and not ext_link.startswith("https://search.google.com/local/writereview") and "maps/search" not in ext_link:
+            review_url = ext_link
         elif location:
             clean_loc = " ".join(location.replace(",", " ").split())
             clean_q = f"{name} {clean_loc}".strip()
             review_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(clean_q)}"
-        elif ext_link and ext_link != "https://search.google.com/local/writereview" and ext_link.startswith("http") and "#lrd=" not in ext_link:
-            review_url = ext_link
         else:
             clean_q = name.strip()
             review_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(clean_q)}"

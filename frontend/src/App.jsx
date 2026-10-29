@@ -8,7 +8,6 @@ import ReviewDetail from './pages/ReviewDetail';
 import AdminLogin from './pages/AdminLogin';
 import AdminCompanyList from './pages/AdminCompanyList';
 import AdminHeader from './components/AdminHeader';
-import { Sparkles } from 'lucide-react';
 
 function AppLayout({ children, adminUser, onLogout }) {
   const location = useLocation();
@@ -29,8 +28,7 @@ function AppLayout({ children, adminUser, onLogout }) {
       {/* Footer */}
       <footer className="border-t border-slate-200/80 bg-white py-4 text-center text-xs text-slate-500 shadow-2xs">
         <div className="flex items-center justify-center gap-2 font-medium text-slate-600">
-          <Sparkles className="w-3.5 h-3.5 text-[#068dcb]" />
-          <span>ReviewCraft AI • Intelligent SEO Business Review Generator</span>
+          <span>Powered by Kevalon Technology</span>
         </div>
       </footer>
     </div>
@@ -169,6 +167,10 @@ export default function App() {
               {/* Route 4: Public Review Studio (For End-Users & Customers) */}
               <Route 
                 path="/reviews/:companyId" 
+                element={<Dashboard categories={categories} />} 
+              />
+              <Route 
+                path="/reviews/:id" 
                 element={<Dashboard categories={categories} />} 
               />
               <Route 

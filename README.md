@@ -9,17 +9,17 @@ An enterprise-grade, full-stack AI review generation and Google Review onboardin
 ## 1. System Architecture & Workflow
 
 ```mermaid
-graph TD
-    P1["Page 1: /setup (Company Setup Form)"] -->|POST /api/companies (Place ID, Services, Keywords)| API["Flask REST API Server (:5000)"]
-    API -->|Save Profile| DB[("MongoDB Collections: companies, generated_reviews, generation_logs")]
-    P1 -->|React Router Navigate| P2["Page 2: /reviews/:companyId (Tapzy-Inspired Dark Studio)"]
-    P2 -->|POST /api/generate-reviews| API
-    API -->|TF-IDF Vectorization & Cosine Similarity Deduplication| DEDUP["NLP Deduplication Engine (Threshold: 0.72)"]
-    API -->|Template / LLM Synthesis| LLM["Pluggable Engine (Gemini API or Multilingual Templates)"]
-    DEDUP -->|Verified Distinct Reviews (3)| P2
-    P2 -->|Click Card| P3["Page 3: /review/:reviewId (Editor & Review Detail)"]
-    P2 -->|Copy & Open Google| GOOGLE["Google Reviews Destination (Verified Place ID writereview link)"]
-    P3 -->|PATCH /api/reviews/:reviewId| API
+flowchart TD
+    P1["Page 1: /setup (Company Setup Form)"] -->|"POST /api/companies"| API["Flask REST API Server"]
+    API -->|"Save Profile"| DB[("MongoDB Collections")]
+    P1 -->|"Navigate"| P2["Page 2: /reviews/:companyId"]
+    P2 -->|"POST /api/generate-reviews"| API
+    API -->|"Vectorization and Deduplication"| DEDUP["NLP Engine (TF-IDF & Cosine Similarity)"]
+    API -->|"Synthesis"| LLM["Template & LLM Engine"]
+    DEDUP -->|"Verified Distinct Reviews (3)"| P2
+    P2 -->|"Click Card"| P3["Page 3: /review/:reviewId"]
+    P2 -->|"Copy and Open Google"| GOOGLE["Google Reviews Destination"]
+    P3 -->|"PATCH /api/reviews/:reviewId"| API
 ```
 
 ---

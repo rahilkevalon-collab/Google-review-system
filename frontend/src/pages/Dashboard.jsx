@@ -3,22 +3,19 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   Sparkles, 
   MapPin, 
-  Globe, 
   CheckCircle2,
-  AlertCircle,
-  Info
+  AlertCircle
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
 import KeywordChips from '../components/KeywordChips';
 import ReviewCard from '../components/ReviewCard';
 import SkeletonReviewCard from '../components/SkeletonReviewCard';
-import BookmarkletBar from '../components/BookmarkletBar';
-import { getGoogleReviewUrl } from '../utils/googleReviewUrl';
 import { syncReviewToExtension } from '../utils/extensionSync';
 
 export default function Dashboard({ categories = [] }) {
-  const { companyId: routeCompanyId } = useParams();
+  const params = useParams();
+  const routeCompanyId = params.companyId || params.id;
   const navigate = useNavigate();
   const { addToast } = useToast();
 
@@ -37,87 +34,24 @@ export default function Dashboard({ categories = [] }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [dedupNotice, setDedupNotice] = useState(null);
 
-  // Guard against React StrictMode double-execution and rapid clicking
+  // Concurrency guard
   const isGeneratingRef = useRef(false);
   const lastGenerationTime = useRef(0);
 
-  // 1. Load Company Profile from MongoDB via Flask
-  useEffect(() => {
-    let isMounted = true;
-    setLoadingCompany(true);
-    setCompanyError(null);
+    const companyRef = useRef(null);
+  companyRef.current = company;
 
-    async function fetchCompany() {
-      try {
-        let targetId = routeCompanyId;
+  const selectedKeywordsRef = useRef(selectedKeywords);
+  selectedKeywordsRef.current = selectedKeywords;
 
-        // If no companyId in route, check localStorage or fetch the first existing company
-        if (!targetId) {
-          const savedId = localStorage.getItem('reviewcraft_company_id');
-          if (savedId) {
-            targetId = savedId;
-          } else {
-            const allRes = await api.getCompanies();
-            if (allRes.success && allRes.companies && allRes.companies.length > 0) {
-              targetId = allRes.companies[0].id;
-            } else {
-              // No company found at all, navigate to setup form
-              navigate('/setup');
-              return;
-            }
-          }
-        }
+  const keywordsRef = useRef(keywords);
+  keywordsRef.current = keywords;
 
-        const res = await api.getCompanyById(targetId);
-        if (!isMounted) return;
-
-        if (res.success && res.company) {
-          const comp = res.company;
-          setCompany(comp);
-          localStorage.setItem('reviewcraft_company_id', comp.id);
-          localStorage.setItem('reviewcraft_category', comp.category || '');
-
-          // Setup SEO keywords
-          const rawKeywords = Array.isArray(comp.seoKeywords) && comp.seoKeywords.length > 0
-            ? comp.seoKeywords
-            : (Array.isArray(comp.keywords) && comp.keywords.length > 0 ? comp.keywords : []);
-
-          const cleanKeywords = Array.from(new Set(rawKeywords.map((k) => k.trim()).filter(Boolean)));
-          const finalKeywords = cleanKeywords.length > 0 ? cleanKeywords : ['Quality Service', 'Customer Support'];
-
-          setKeywords(finalKeywords);
-
-          // Always reset selection to ONLY the 1st SEO keyword on page refresh / load
-          const initialSelected = [finalKeywords[0]];
-          setSelectedKeywords(initialSelected);
-          if (comp?.id) {
-            localStorage.setItem(`reviewcraft_selected_kw_${comp.id}`, JSON.stringify(initialSelected));
-          }
-
-          // Immediately generate reviews specifically for the 1st SEO keyword on page refresh
-          generateReviews(initialSelected, true, comp);
-        } else {
-          setCompanyError('Business profile not found in database.');
-        }
-      } catch (err) {
-        if (!isMounted) return;
-        console.error('Error fetching company details:', err);
-        setCompanyError(err.message || 'Failed to load company profile.');
-      } finally {
-        if (isMounted) setLoadingCompany(false);
-      }
-    }
-
-    fetchCompany();
-    return () => { isMounted = false; };
-  }, [routeCompanyId, navigate]);
-
-  // 2. Generate Review Suggestions using Flask (Ratio handled entirely in backend)
+  // 1. Generate or fetch reviews helper
   const generateReviews = useCallback(async (keywordsToUse, forceFresh = false, companyOverride = null) => {
-    const targetComp = companyOverride || company;
+    const targetComp = companyOverride || companyRef.current;
     if (!targetComp?.id) return;
 
-    // Concurrency / rapid-click guard (throttle within 800ms)
     const now = Date.now();
     if (isGeneratingRef.current || (now - lastGenerationTime.current < 800 && !forceFresh)) {
       return;
@@ -131,11 +65,9 @@ export default function Dashboard({ categories = [] }) {
 
     const activeKeywords = Array.isArray(keywordsToUse) && keywordsToUse.length > 0
       ? keywordsToUse
-      : (selectedKeywords.length > 0 ? selectedKeywords : [keywords[0] || 'Quality Service']);
+      : ((selectedKeywordsRef.current && selectedKeywordsRef.current.length > 0) ? selectedKeywordsRef.current : [(keywordsRef.current && keywordsRef.current[0]) || 'Quality Service']);
 
     try {
-      // Backend automatically applies 100% 5-star rating
-      // and natural keyword partitioning across review cards
       const payload = {
         companyId: targetComp.id,
         companyName: targetComp.name,
@@ -155,76 +87,130 @@ export default function Dashboard({ categories = [] }) {
       if (res.success && Array.isArray(res.reviews) && res.reviews.length > 0) {
         const topReviews = res.reviews.slice(0, 3);
         setReviews(topReviews);
-        try {
-          localStorage.setItem(`reviewcraft_cached_reviews_${targetComp.id}`, JSON.stringify(topReviews));
-        } catch (e) {}
         if (topReviews[0] && targetComp) {
-          syncReviewToExtension(topReviews[0], targetComp, 'auto_sync');
+          try {
+            syncReviewToExtension(topReviews[0], targetComp, 'auto_sync');
+          } catch (e) {}
         }
         if (res.rejectedDuplicates > 0) {
           setDedupNotice(
-            `TF-IDF deduplication verified 3 distinct suggestions (${res.rejectedDuplicates} similar variant${res.rejectedDuplicates > 1 ? 's' : ''} filtered).`
+            `Deduplication verified 3 distinct suggestions (${res.rejectedDuplicates} similar variant${res.rejectedDuplicates > 1 ? 's' : ''} filtered).`
           );
         }
       } else {
-        // Fallback to existing reviews for this company
         const fallbackRes = await api.getReviews({
-          companyId: company.id,
+          companyId: targetComp.id,
           limit: 3
         });
         if (fallbackRes.success && fallbackRes.reviews && fallbackRes.reviews.length > 0) {
-          const topFallback = fallbackRes.reviews.slice(0, 3);
-          setReviews(topFallback);
-          if (topFallback[0] && company) {
-            syncReviewToExtension(topFallback[0], company, 'auto_sync');
-          }
+          setReviews(fallbackRes.reviews.slice(0, 3));
         }
       }
     } catch (err) {
-      console.warn('Generation encountered an issue, fetching cached suggestions:', err);
+      console.warn('Review generation error, fetching stored reviews:', err);
       try {
-        const fallback = await api.getReviews({ companyId: company.id, limit: 3 });
-        if (fallback.success && fallback.reviews) {
+        const fallback = await api.getReviews({ companyId: targetComp?.id, limit: 3 });
+        if (fallback.success && fallback.reviews && fallback.reviews.length > 0) {
           setReviews(fallback.reviews.slice(0, 3));
         }
       } catch (e) {
-        addToast('Unable to generate reviews. Please check backend connection.', 'error');
+        addToast('Unable to load reviews. Please verify backend connection.', 'error');
       }
     } finally {
       setLoadingReviews(false);
       setIsGenerating(false);
       isGeneratingRef.current = false;
     }
-  }, [company, selectedKeywords, keywords, addToast]);
+  }, [addToast]);
 
-  // 3. Fallback trigger if company is ready but reviews not yet generated
+  // Initial load: Generate fresh reviews on every page load and refresh
+  const loadInitialReviews = useCallback(async (comp, initialKeywords) => {
+    if (!comp?.id) return;
+    generateReviews(initialKeywords, true, comp);
+  }, [generateReviews]);
+
+  // 2. Load Company Profile deterministically without depending on localStorage
   useEffect(() => {
-    if (company?.id && selectedKeywords.length > 0 && reviews.length === 0 && !isGeneratingRef.current) {
-      generateReviews(selectedKeywords, false);
-    }
-  }, [company?.id]);
+    let isMounted = true;
+    setLoadingCompany(true);
+    setCompanyError(null);
 
-  // 4. Handle Keyword Selection: Multi-select support — retain previous selections and add newly clicked chips
+    async function fetchCompany() {
+      try {
+        let targetId = routeCompanyId;
+
+        // If no companyId in route, look up the primary active business from database
+        if (!targetId) {
+          const allRes = await api.getCompanies();
+          if (allRes.success && Array.isArray(allRes.companies) && allRes.companies.length > 0) {
+            // Prefer Kevalon Technology if present, or the newest company
+            const kevalon = allRes.companies.find(c => c.name && c.name.toLowerCase().includes('kevalon'));
+            const primary = kevalon || allRes.companies[0];
+            targetId = primary.id;
+            // Update browser URL cleanly so refreshing or sharing works identically on all devices
+            navigate(`/reviews/${targetId}`, { replace: true });
+            return;
+          } else {
+            navigate('/setup');
+            return;
+          }
+        }
+
+        const res = await api.getCompanyById(targetId);
+        if (!isMounted) return;
+
+        if (res.success && res.company) {
+          const comp = res.company;
+          setCompany(comp);
+
+          // Setup SEO keywords
+          const rawKeywords = Array.isArray(comp.seoKeywords) && comp.seoKeywords.length > 0
+            ? comp.seoKeywords
+            : (Array.isArray(comp.keywords) && comp.keywords.length > 0 ? comp.keywords : []);
+
+          const cleanKeywords = Array.from(new Set(rawKeywords.map((k) => k.trim()).filter(Boolean)));
+          const finalKeywords = cleanKeywords.length > 0 ? cleanKeywords : ['Quality Service', 'Customer Support'];
+
+          setKeywords(finalKeywords);
+
+          // Set 1st SEO keyword as initial selection
+          const initialSelected = [finalKeywords[0]];
+          setSelectedKeywords(initialSelected);
+
+          // Deterministically load predefined reviews or synthesize initial set
+          loadInitialReviews(comp, initialSelected);
+        } else {
+          setCompanyError('Business profile not found in database.');
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        console.error('Error fetching company details:', err);
+        setCompanyError(err.message || 'Failed to load company profile.');
+      } finally {
+        if (isMounted) setLoadingCompany(false);
+      }
+    }
+
+    fetchCompany();
+    return () => { isMounted = false; };
+  }, [routeCompanyId, navigate, loadInitialReviews]);
+
+  // 3. Handle Keyword Selection: Multi-select support
   const handleToggleKeyword = (kw) => {
     let next;
     if (selectedKeywords.includes(kw)) {
-      // Toggle off if more than 1 keyword is selected; prevent 0 selections
       next = selectedKeywords.length > 1
         ? selectedKeywords.filter((k) => k !== kw)
         : selectedKeywords;
     } else {
-      // Keep previous keywords and append newly clicked keyword
       next = [...selectedKeywords, kw];
     }
 
     setSelectedKeywords(next);
-    if (company?.id) {
-      localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, JSON.stringify(next));
-    }
-    generateReviews(next, true);
+    generateReviews(next, true, company);
   };
 
-  // 5. Add a new keyword chip and include it in active selection
+  // 4. Add a new keyword chip
   const handleAddKeyword = (newKw) => {
     const clean = newKw.trim();
     if (!clean) return;
@@ -237,21 +223,17 @@ export default function Dashboard({ categories = [] }) {
 
       if (company?.id) {
         api.addCompanyKeyword(company.id, clean).catch(() => {});
-        localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, JSON.stringify(nextSelected));
       }
-      generateReviews(nextSelected, true);
+      generateReviews(nextSelected, true, company);
       addToast(`Added keyword: "${clean}"`, 'success');
     } else if (!selectedKeywords.includes(clean)) {
       const nextSelected = [...selectedKeywords, clean];
       setSelectedKeywords(nextSelected);
-      if (company?.id) {
-        localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, JSON.stringify(nextSelected));
-      }
-      generateReviews(nextSelected, true);
+      generateReviews(nextSelected, true, company);
     }
   };
 
-  // 6. Remove a keyword chip
+  // 5. Remove a keyword chip
   const handleRemoveKeyword = (kwToRemove) => {
     const updated = keywords.filter((k) => k !== kwToRemove);
     setKeywords(updated);
@@ -262,7 +244,6 @@ export default function Dashboard({ categories = [] }) {
 
     if (company?.id) {
       api.removeCompanyKeyword(company.id, kwToRemove).catch(() => {});
-      localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, JSON.stringify(finalSelected));
     }
     addToast(`Removed keyword: "${kwToRemove}"`, 'info');
   };
@@ -272,7 +253,7 @@ export default function Dashboard({ categories = [] }) {
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <div className="w-10 h-10 rounded-full border-2 border-[#068dcb] border-t-transparent animate-spin"></div>
         <p className="text-xs text-slate-500 font-medium tracking-wide">
-          Loading business profile & SEO keywords...
+          Loading business profile & SEO reviews...
         </p>
       </div>
     );
@@ -301,7 +282,7 @@ export default function Dashboard({ categories = [] }) {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       
-      {/* 2. Simplified Company Heading Section (Centered, Clean, No Badges or Buttons) */}
+      {/* Company Header */}
       <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-slate-200 bg-white shadow-md shadow-slate-200/40 text-center">
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
           Review <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#034665] to-[#068dcb]">{company.name}</span>
@@ -317,12 +298,8 @@ export default function Dashboard({ categories = [] }) {
         </p>
       </div>
 
-      {/* 1-Click Zero-Installation Bookmarklet Auto-Filler (Alternative A) */}
-      <BookmarkletBar />
-
-      {/* SEO Keywords Chips Section */}
+      {/* SEO Keywords Chips */}
       <div>
-        {/* Rounded Brand Gradient Chips Component */}
         <KeywordChips
           keywords={keywords}
           selectedKeywords={selectedKeywords}
@@ -332,7 +309,7 @@ export default function Dashboard({ categories = [] }) {
         />
       </div>
 
-      {/* Deduplication Status Notice (if any duplicates were rejected) */}
+      {/* Deduplication Notice */}
       {dedupNotice && (
         <div className="p-3 rounded-2xl bg-[#068dcb]/10 border border-[#068dcb]/25 flex items-center gap-2 text-xs text-[#034665] animate-in fade-in">
           <CheckCircle2 className="w-4 h-4 text-[#068dcb] shrink-0" />
@@ -340,7 +317,7 @@ export default function Dashboard({ categories = [] }) {
         </div>
       )}
 
-      {/* 3 Review Cards Grid */}
+      {/* 3 Review Cards Grid - 100% consistent across all devices */}
       {loadingReviews || isGenerating ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <SkeletonReviewCard />
@@ -353,15 +330,16 @@ export default function Dashboard({ categories = [] }) {
             const revId = rev._id || rev.id;
             const fullRev = {
               ...rev,
-              companyName: rev.companyName || company.name,
-              companyLocation: rev.companyLocation || company.location || company.formattedAddress,
-              googlePlaceId: rev.googlePlaceId || company.googlePlaceId,
-              googleReviewUrl: rev.googleReviewUrl || company.googleReviewUrl,
-              externalReviewLink: rev.externalReviewLink || company.externalReviewLink || company.googleReviewUrl
+              rating: Number(rev.rating) || 5,
+              companyName: rev.companyName || company?.name || '',
+              companyLocation: rev.companyLocation || company?.location || company?.formattedAddress || '',
+              googlePlaceId: rev.googlePlaceId || company?.googlePlaceId || '',
+              googleReviewUrl: rev.googleReviewUrl || company?.googleReviewUrl || '',
+              externalReviewLink: rev.externalReviewLink || company?.externalReviewLink || company?.googleReviewUrl || ''
             };
             return (
               <ReviewCard
-                key={revId || `${company.name}-${rev.contentHash}`}
+                key={revId || `${company?.name || 'co'}-${rev.contentHash || rev.reviewText || Math.random()}`}
                 review={fullRev}
                 company={company}
                 isActive={Boolean(activeReviewId && revId && String(revId) === String(activeReviewId))}
@@ -381,15 +359,6 @@ export default function Dashboard({ categories = [] }) {
           </p>
         </div>
       )}
-
-      {/* AI Transparency & Ethical Disclaimer */}
-      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start sm:items-center gap-3 text-xs text-slate-600">
-        <Info className="w-4 h-4 text-[#068dcb] shrink-0 mt-0.5 sm:mt-0" />
-        <p className="leading-relaxed">
-          <strong className="text-[#034665] font-semibold">AI Review Draft Notice:</strong> All suggestions are AI-synthesized templates using your business details and selected keywords. Reviews must be reviewed, edited, and voluntarily submitted by real customers on Google.
-        </p>
-      </div>
-
     </div>
   );
 }
