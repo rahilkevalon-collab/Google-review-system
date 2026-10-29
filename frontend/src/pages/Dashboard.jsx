@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   Sparkles, 
   MapPin, 
-  CheckCircle2,
   AlertCircle
 } from 'lucide-react';
 import { api } from '../services/api';
@@ -319,53 +318,22 @@ export default function Dashboard({ categories = [] }) {
         />
       </div>
 
-      {/* Deduplication Notice */}
-      {dedupNotice && (
-        <div className="p-3 rounded-2xl bg-[#068dcb]/10 border border-[#068dcb]/25 flex items-center gap-2 text-xs text-[#034665] animate-in fade-in">
-          <CheckCircle2 className="w-4 h-4 text-[#068dcb] shrink-0" />
-          <span>{dedupNotice}</span>
-        </div>
-      )}
 
-      {/* Active AI Generation Progress Banner */}
-      {isGenerating && (
-        <div className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#034665]/10 via-[#068dcb]/15 to-[#034665]/10 border border-[#068dcb]/30 shadow-md text-[#034665] animate-in fade-in duration-200">
-          <div className="flex items-center gap-3">
-            <div className="relative flex items-center justify-center shrink-0">
-              <div className="w-5 h-5 rounded-full border-2 border-[#068dcb] border-t-transparent animate-spin"></div>
-              <Sparkles className="w-2.5 h-2.5 text-[#068dcb] absolute animate-pulse" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-sm font-bold text-slate-800">
-                Generating review suggestions with AI...
-              </p>
-              <p className="text-[11px] text-slate-500">
-                Crafting authentic drafts for <strong className="text-slate-700">{company.name}</strong> based on "{selectedKeywords.join(', ')}"
-              </p>
-            </div>
-          </div>
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 border border-[#068dcb]/20 text-[11px] font-semibold text-[#034665] shadow-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Groq AI Active</span>
-          </div>
-        </div>
-      )}
 
       {/* 3 Review Cards Grid - 100% consistent across all devices */}
       {reviews.length === 0 && (loadingReviews || isGenerating) ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <SkeletonReviewCard index={1} />
-          <SkeletonReviewCard index={2} />
-          <SkeletonReviewCard index={3} />
+          <SkeletonReviewCard />
+          <SkeletonReviewCard />
+          <SkeletonReviewCard />
         </div>
       ) : reviews.length > 0 ? (
         <div className="relative">
           {/* Subtle loading overlay while regenerating existing reviews */}
           {isGenerating && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/60 backdrop-blur-[1px] rounded-3xl transition-opacity duration-300">
-              <div className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-white shadow-xl border border-[#068dcb]/30 text-xs font-bold text-[#034665] animate-pulse">
-                <div className="w-4 h-4 rounded-full border-2 border-[#068dcb] border-t-transparent animate-spin"></div>
-                <span>Updating review suggestions...</span>
+              <div className="p-3.5 rounded-2xl bg-white shadow-xl border border-[#068dcb]/30">
+                <div className="w-6 h-6 rounded-full border-2 border-[#068dcb] border-t-transparent animate-spin"></div>
               </div>
             </div>
           )}
