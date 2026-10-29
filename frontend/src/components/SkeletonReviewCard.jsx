@@ -1,26 +1,45 @@
 import React from 'react';
+import { Sparkles, Star } from 'lucide-react';
 
-export default function SkeletonReviewCard() {
+export default function SkeletonReviewCard({ index = 1 }) {
   return (
-    <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm animate-pulse flex flex-col justify-between space-y-4 min-h-[180px]">
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2">
-          <div className="h-5 w-24 bg-slate-200 rounded-lg"></div>
-          <div className="h-5 w-16 bg-[#068dcb]/15 rounded-md"></div>
+    <div className="relative p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between space-y-4 min-h-[200px] overflow-hidden">
+      {/* Subtle animated shimmer gradient in background */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-100/60 to-transparent animate-shimmer pointer-events-none"></div>
+
+      {/* Card Header with Star placeholders and badge */}
+      <div className="flex items-center justify-between z-10">
+        <div className="flex items-center gap-1 text-amber-400">
+          {[...Array(5)].map((_, i) => (
+            <Star key={i} className="w-4 h-4 fill-amber-300 text-amber-400 animate-pulse" />
+          ))}
         </div>
-        <div className="h-5 w-20 bg-amber-100 rounded-md"></div>
-      </div>
-      <div className="space-y-2.5 py-2">
-        <div className="h-3.5 bg-slate-200 rounded w-full"></div>
-        <div className="h-3.5 bg-slate-200 rounded w-5/6"></div>
-        <div className="h-3.5 bg-slate-200 rounded w-2/3"></div>
-      </div>
-      <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-        <div className="h-4 w-20 bg-slate-200 rounded"></div>
-        <div className="flex gap-2">
-          <div className="h-7 w-20 bg-slate-100 rounded-xl"></div>
-          <div className="h-7 w-24 bg-[#068dcb]/25 rounded-xl"></div>
+        <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#068dcb]/10 text-[10px] font-semibold text-[#034665]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#068dcb] animate-ping"></span>
+          <span>Draft #{index}</span>
         </div>
+      </div>
+
+      {/* Card Center: Animated Spinner & Text */}
+      <div className="my-auto py-3 flex flex-col items-center justify-center text-center space-y-2.5 z-10">
+        <div className="relative flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-[#068dcb] border-t-transparent animate-spin"></div>
+          <Sparkles className="w-3.5 h-3.5 text-[#068dcb] absolute animate-pulse" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-xs font-bold text-slate-800">
+            Crafting Review Draft...
+          </p>
+          <p className="text-[10px] text-slate-400">
+            Synthesizing authentic customer perspective
+          </p>
+        </div>
+      </div>
+
+      {/* Bottom Action Placeholders */}
+      <div className="pt-3 border-t border-slate-100 flex items-center justify-between z-10">
+        <div className="h-3 w-16 bg-slate-200 rounded animate-pulse"></div>
+        <div className="h-8 w-28 bg-gradient-to-r from-slate-200 to-slate-100 rounded-xl animate-pulse"></div>
       </div>
     </div>
   );

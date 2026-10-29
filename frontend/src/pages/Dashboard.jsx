@@ -87,15 +87,42 @@ export default function Dashboard({ categories = [] }) {
 
           setKeywords(finalKeywords);
 
-          // Always reset selection to ONLY the 1st SEO keyword on page refresh / load
+          // Always set selection to the 1st SEO keyword
           const initialSelected = [finalKeywords[0]];
           setSelectedKeywords(initialSelected);
           if (comp?.id) {
             localStorage.setItem(`reviewcraft_selected_kw_${comp.id}`, JSON.stringify(initialSelected));
           }
 
-          // Immediately generate reviews specifically for the 1st SEO keyword on page refresh
-          generateReviews(initialSelected, true, comp);
+          // 1. Instant rendering from local cache if available (0ms)
+          let foundExisting = false;
+          try {
+            const cached = localStorage.getItem(`reviewcraft_cached_reviews_${comp.id}`);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setReviews(parsed.slice(0, 3));
+                foundExisting = true;
+              }
+            }
+          } catch (e) {}
+
+          // 2. Fetch existing reviews from MongoDB for this company
+          try {
+            const existingRes = await api.getReviews({ companyId: comp.id, limit: 3 });
+            if (existingRes.success && Array.isArray(existingRes.reviews) && existingRes.reviews.length > 0) {
+              setReviews(existingRes.reviews.slice(0, 3));
+              localStorage.setItem(`reviewcraft_cached_reviews_${comp.id}`, JSON.stringify(existingRes.reviews.slice(0, 3)));
+              foundExisting = true;
+            }
+          } catch (e) {
+            console.warn('Could not fetch existing reviews:', e);
+          }
+
+          // 3. ONLY generate fresh reviews if company has zero reviews yet
+          if (!foundExisting) {
+            generateReviews(initialSelected, true, comp);
+          }
         } else {
           setCompanyError('Business profile not found in database.');
         }
@@ -340,35 +367,71 @@ export default function Dashboard({ categories = [] }) {
         </div>
       )}
 
-      {/* 3 Review Cards Grid */}
-      {loadingReviews || isGenerating ? (
+      {/* Active AI Generation Progress Banner */}
+      {isGenerating && (
+        <div className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#034665]/10 via-[#068dcb]/15 to-[#034665]/10 border border-[#068dcb]/30 shadow-md text-[#034665] animate-in fade-in duration-200">
+          <div className="flex items-center gap-3">
+            <div className="relative flex items-center justify-center shrink-0">
+              <div className="w-5 h-5 rounded-full border-2 border-[#068dcb] border-t-transparent animate-spin"></div>
+              <Sparkles className="w-2.5 h-2.5 text-[#068dcb] absolute animate-pulse" />
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-slate-800">
+                Generating review suggestions with AI...
+              </p>
+              <p className="text-[11px] text-slate-500">
+                Crafting authentic drafts for <strong className="text-slate-700">{company.name}</strong> based on "{selectedKeywords.join(', ')}"
+              </p>
+            </div>
+          </div>
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 border border-[#068dcb]/20 text-[11px] font-semibold text-[#034665] shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Groq AI Active</span>
+          </div>
+        </div>
+      )}
+
+      {/* Review Cards Grid or Skeletons */}
+      {reviews.length === 0 && (loadingReviews || isGenerating) ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <SkeletonReviewCard />
-          <SkeletonReviewCard />
-          <SkeletonReviewCard />
+          <SkeletonReviewCard index={1} />
+          <SkeletonReviewCard index={2} />
+          <SkeletonReviewCard index={3} />
         </div>
       ) : reviews.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {reviews.slice(0, 3).map((rev) => {
-            const revId = rev._id || rev.id;
-            const fullRev = {
-              ...rev,
-              companyName: rev.companyName || company.name,
-              companyLocation: rev.companyLocation || company.location || company.formattedAddress,
-              googlePlaceId: rev.googlePlaceId || company.googlePlaceId,
-              googleReviewUrl: rev.googleReviewUrl || company.googleReviewUrl,
-              externalReviewLink: rev.externalReviewLink || company.externalReviewLink || company.googleReviewUrl
-            };
-            return (
-              <ReviewCard
-                key={revId || `${company.name}-${rev.contentHash}`}
-                review={fullRev}
-                company={company}
-                isActive={Boolean(activeReviewId && revId && String(revId) === String(activeReviewId))}
-                onSelect={(selected) => setActiveReviewId(selected.id || selected._id)}
-              />
-            );
-          })}
+        <div className="relative">
+          {/* Subtle loading overlay while regenerating existing reviews */}
+          {isGenerating && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/60 backdrop-blur-[1px] rounded-3xl transition-opacity duration-300">
+              <div className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-white shadow-xl border border-[#068dcb]/30 text-xs font-bold text-[#034665] animate-pulse">
+                <div className="w-4 h-4 rounded-full border-2 border-[#068dcb] border-t-transparent animate-spin"></div>
+                <span>Updating review suggestions...</span>
+              </div>
+            </div>
+          )}
+
+          <div className={`grid grid-cols-1 md:grid-cols-3 gap-5 transition-opacity duration-300 ${isGenerating ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+            {reviews.slice(0, 3).map((rev) => {
+              const revId = rev._id || rev.id;
+              const fullRev = {
+                ...rev,
+                companyName: rev.companyName || company.name,
+                companyLocation: rev.companyLocation || company.location || company.formattedAddress,
+                googlePlaceId: rev.googlePlaceId || company.googlePlaceId,
+                googleReviewUrl: rev.googleReviewUrl || company.googleReviewUrl,
+                externalReviewLink: rev.externalReviewLink || company.externalReviewLink || company.googleReviewUrl
+              };
+              return (
+                <ReviewCard
+                  key={revId || `${company.name}-${rev.contentHash}`}
+                  review={fullRev}
+                  company={company}
+                  isActive={Boolean(activeReviewId && revId && String(revId) === String(activeReviewId))}
+                  onSelect={(selected) => setActiveReviewId(selected.id || selected._id)}
+                />
+              );
+            })}
+          </div>
         </div>
       ) : (
         <div className="p-12 rounded-3xl text-center space-y-4 glass-panel border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
