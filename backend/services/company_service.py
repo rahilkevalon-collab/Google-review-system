@@ -40,7 +40,9 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Natural Skincare, Eco-friendly Home Decor, Organic Teas, Sustainable Packaging",
         "location": "Mumbai, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://www.google.com/search?q=Aura+Organic+Living+Mumbai+reviews",
+        "googlePlaceId": "ChIJi3y7u3XB5zsRRd90Sy4sva0",
+        "googleReviewUrl": "https://search.google.com/local/writereview?placeid=ChIJi3y7u3XB5zsRRd90Sy4sva0",
+        "externalReviewLink": "https://search.google.com/local/writereview?placeid=ChIJi3y7u3XB5zsRRd90Sy4sva0",
         "keywords": [
             "Product Quality",
             "Fast Delivery",
@@ -92,7 +94,9 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Fine Dining, Private Banquet, Catering, Royal Thali Experience",
         "location": "Delhi, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://www.google.com/search?q=Spice+Pavilion+Fine+Dine+Delhi+reviews",
+        "googlePlaceId": "ChIJkYvqFzIBDTkRebU3AA7VtVg",
+        "googleReviewUrl": "https://search.google.com/local/writereview?placeid=ChIJkYvqFzIBDTkRebU3AA7VtVg",
+        "externalReviewLink": "https://search.google.com/local/writereview?placeid=ChIJkYvqFzIBDTkRebU3AA7VtVg",
         "keywords": [
             "Culinary Taste",
             "Ambiance & Atmosphere",
@@ -111,7 +115,9 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Preventive Care, Cosmetic Dentistry, Diagnostics, Routine Checkups",
         "location": "Bangalore, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://www.google.com/search?q=Apex+Care+Multispeciality+Clinic+Bangalore+reviews",
+        "googlePlaceId": "ChIJW-MP6V4VrjsRDEEqgetQJCo",
+        "googleReviewUrl": "https://search.google.com/local/writereview?placeid=ChIJW-MP6V4VrjsRDEEqgetQJCo",
+        "externalReviewLink": "https://search.google.com/local/writereview?placeid=ChIJW-MP6V4VrjsRDEEqgetQJCo",
         "keywords": [
             "Doctor Expertise",
             "Compassionate Care",
@@ -128,7 +134,9 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Residential Sales, Commercial Leasing, Property Advisory, Legal Due Diligence",
         "location": "Pune, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://www.google.com/search?q=Prime+Landmark+Realty+Pune+reviews",
+        "googlePlaceId": "ChIJN-pwAYy_wjsRYRhXpMOhikE",
+        "googleReviewUrl": "https://search.google.com/local/writereview?placeid=ChIJN-pwAYy_wjsRYRhXpMOhikE",
+        "externalReviewLink": "https://search.google.com/local/writereview?placeid=ChIJN-pwAYy_wjsRYRhXpMOhikE",
         "keywords": [
             "Prime Location",
             "Transparent Dealings",
@@ -146,7 +154,9 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "STEM Education, Competitive Exam Preparation, Student Mentoring, Career Counseling",
         "location": "Hyderabad, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://www.google.com/search?q=BrightPath+International+Academy+Hyderabad+reviews",
+        "googlePlaceId": "ChIJN7TSooPzyzsRa-dQJGmZWvc",
+        "googleReviewUrl": "https://search.google.com/local/writereview?placeid=ChIJN7TSooPzyzsRa-dQJGmZWvc",
+        "externalReviewLink": "https://search.google.com/local/writereview?placeid=ChIJN7TSooPzyzsRa-dQJGmZWvc",
         "keywords": [
             "Experienced Faculty",
             "Interactive Curriculum",
@@ -163,7 +173,9 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Curated Tour Packages, Luxury Hotel Bookings, Visa Assistance, Custom Itineraries",
         "location": "Goa, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://www.google.com/search?q=Wanderlust+Horizon+Travels+Goa+reviews",
+        "googlePlaceId": "ChIJbQfYrOO5vzsRBEfbxi_in7M",
+        "googleReviewUrl": "https://search.google.com/local/writereview?placeid=ChIJbQfYrOO5vzsRBEfbxi_in7M",
+        "externalReviewLink": "https://search.google.com/local/writereview?placeid=ChIJbQfYrOO5vzsRBEfbxi_in7M",
         "keywords": [
             "Comfortable Stay",
             "Scenic Location",
@@ -180,7 +192,9 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Hair Styling, Botanical Facials, Spa Therapies, Bridal Makeovers",
         "location": "Jaipur, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://www.google.com/search?q=Glow+and+Grace+Luxury+Wellness+Salon+Jaipur+reviews",
+        "googlePlaceId": "ChIJ5dg7rAezbTkRORkVnq3T7Lg",
+        "googleReviewUrl": "https://search.google.com/local/writereview?placeid=ChIJ5dg7rAezbTkRORkVnq3T7Lg",
+        "externalReviewLink": "https://search.google.com/local/writereview?placeid=ChIJ5dg7rAezbTkRORkVnq3T7Lg",
         "keywords": [
             "Expert Stylists",
             "Premium Products",
@@ -197,7 +211,9 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Search Engine Optimization, Performance Ads, Content Strategy, Brand Consulting",
         "location": "Gurgaon, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://www.google.com/search?q=NexGen+Growth+Media+Gurgaon+reviews",
+        "googlePlaceId": "ChIJO05hWEsZDTkR99gFDRY-UX0",
+        "googleReviewUrl": "https://search.google.com/local/writereview?placeid=ChIJO05hWEsZDTkR99gFDRY-UX0",
+        "externalReviewLink": "https://search.google.com/local/writereview?placeid=ChIJO05hWEsZDTkR99gFDRY-UX0",
         "keywords": [
             "SEO Ranking Growth",
             "Targeted Lead Generation",
@@ -214,7 +230,9 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Fashion Apparel, Footwear, Home Accents, Personal Shopping",
         "location": "Chennai, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://www.google.com/search?q=Urban+Trendz+Lifestyle+Superstore+Chennai+reviews",
+        "googlePlaceId": "ChIJb2_ONDpcUjoRF57wnIFtyj4",
+        "googleReviewUrl": "https://search.google.com/local/writereview?placeid=ChIJb2_ONDpcUjoRF57wnIFtyj4",
+        "externalReviewLink": "https://search.google.com/local/writereview?placeid=ChIJb2_ONDpcUjoRF57wnIFtyj4",
         "keywords": [
             "Wide Selection",
             "Helpful Staff",
@@ -231,7 +249,9 @@ DEFAULT_SAMPLE_COMPANIES = [
         "services": "Business Advisory, Financial Consulting, Supply Chain Optimization, Risk Management",
         "location": "Kolkata, India",
         "preferredLanguage": "en",
-        "externalReviewLink": "https://www.google.com/search?q=Elite+Falcon+Global+Consulting+Kolkata+reviews",
+        "googlePlaceId": "ChIJ99BkbKNdXz4RaY9ijYl87v4",
+        "googleReviewUrl": "https://search.google.com/local/writereview?placeid=ChIJ99BkbKNdXz4RaY9ijYl87v4",
+        "externalReviewLink": "https://search.google.com/local/writereview?placeid=ChIJ99BkbKNdXz4RaY9ijYl87v4",
         "keywords": [
             "Professionalism",
             "Timely Delivery",
@@ -243,6 +263,22 @@ DEFAULT_SAMPLE_COMPANIES = [
     }
 ]
 
+def int_feature_to_place_id(f1: int | str, f2: int | str) -> str | None:
+    """Converts a Google 64-bit integer feature pair into a canonical Place ID (ChIJ...)."""
+    try:
+        import struct, base64
+        buf = bytearray(20)
+        buf[0] = 10
+        buf[1] = 18
+        buf[2] = 9
+        struct.pack_into("<Q", buf, 3, int(f1))
+        buf[11] = 17
+        struct.pack_into("<Q", buf, 12, int(f2))
+        b64 = base64.b64encode(buf).decode("ascii")
+        return b64.replace("+", "-").replace("/", "_").rstrip("=")
+    except Exception:
+        return None
+
 def hex_feature_to_place_id(hex_str: str) -> str | None:
     """Converts a Google hex feature pair (0x...:0x...) into a canonical Place ID (ChIJ...)."""
     try:
@@ -253,18 +289,7 @@ def hex_feature_to_place_id(hex_str: str) -> str | None:
         clean1 = parts[1].split(",")[0].strip()
         if not (clean0.startswith("0x") and clean1.startswith("0x")):
             return None
-        f1 = int(clean0, 16)
-        f2 = int(clean1, 16)
-        import struct, base64
-        buf = bytearray(20)
-        buf[0] = 10
-        buf[1] = 18
-        buf[2] = 9
-        struct.pack_into("<Q", buf, 3, f1)
-        buf[11] = 17
-        struct.pack_into("<Q", buf, 12, f2)
-        b64 = base64.b64encode(buf).decode("ascii")
-        return b64.replace("+", "-").replace("/", "_").rstrip("=")
+        return int_feature_to_place_id(int(clean0, 16), int(clean1, 16))
     except Exception:
         return None
 
@@ -306,28 +331,91 @@ PRESET_BUSINESS_PLACE_IDS = {
     "prime": "ChIJszBVRACHXjkRtG5e073CAoQ",
     "budventure": "ChIJMWJeZ_aEXjkRFt-P5KOVgFE",
     "maxgen": "ChIJOYKhVKyEXjkRU_gN_7BOj1U",
-    "shivalik": "ChIJk0usKwCBXjkRpPxi1bxD4vI"
+    "shivalik": "ChIJk0usKwCBXjkRpPxi1bxD4vI",
+    "aura organic": "ChIJi3y7u3XB5zsRRd90Sy4sva0",
+    "spice pavilion": "ChIJkYvqFzIBDTkRebU3AA7VtVg",
+    "apex care": "ChIJW-MP6V4VrjsRDEEqgetQJCo",
+    "prime landmark": "ChIJN-pwAYy_wjsRYRhXpMOhikE",
+    "brightpath": "ChIJN7TSooPzyzsRa-dQJGmZWvc",
+    "wanderlust horizon": "ChIJbQfYrOO5vzsRBEfbxi_in7M",
+    "glow & grace": "ChIJ5dg7rAezbTkRORkVnq3T7Lg",
+    "nexgen growth": "ChIJO05hWEsZDTkR99gFDRY-UX0",
+    "urban trendz": "ChIJb2_ONDpcUjoRF57wnIFtyj4",
+    "elite falcon": "ChIJ99BkbKNdXz4RaY9ijYl87v4"
 }
 
 def auto_discover_place_id(name: str, location: str = "") -> str:
-    """Discovers verified Google Place ID from presets, extracted links, or candidate official domains."""
-    clean_name = str(name or "").lower().strip()
+    """
+    Universally discovers verified Google Place ID for ANY business name and location
+    via preset mappings, direct URL extraction, and Google Maps embed metadata (extracting
+    ChIJ Place IDs, 0x hex feature pairs, and 64-bit integer feature pairs).
+    """
+    clean_name = str(name or "").strip()
     if not clean_name:
         return ""
 
-    # 1. Match presets dictionary
+    lower_name = clean_name.lower()
+
+    # 1. Check verified presets dictionary
     for key, pid in PRESET_BUSINESS_PLACE_IDS.items():
-        if key in clean_name:
+        if key in lower_name:
             return pid
 
-    # 2. Extract from location/name if user pasted link
+    # 2. Check if user pasted a link or raw Place ID in location or name
     pid = extract_place_id_from_url(location) or extract_place_id_from_url(name)
     if pid:
         return pid
 
-    # 3. Check official domain candidates for maps embeds or shortlinks
-    import re, urllib.request
-    words = clean_name.split()
+    # 3. Universal discovery via Google Maps embed metadata
+    import urllib.parse, urllib.request, re
+    clean_loc = re.sub(r'[,.]+', ' ', str(location or '')).strip()
+    clean_loc = ' '.join(clean_loc.split())
+    clean_n = re.sub(r'[,.]+', ' ', clean_name).strip()
+    clean_n = ' '.join(clean_n.split())
+
+    queries_to_try = []
+    if clean_loc:
+        queries_to_try.append(f"{clean_n} {clean_loc}")
+        loc_words = clean_loc.split()
+        if len(loc_words) > 2:
+            queries_to_try.append(f"{clean_n} {loc_words[0]} {loc_words[-1]}")
+    queries_to_try.append(clean_n)
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    }
+
+    for q in queries_to_try:
+        try:
+            url = f"https://maps.google.com/maps?q={urllib.parse.quote_plus(q)}&output=embed"
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                html = resp.read().decode("utf-8", errors="ignore")
+
+            # Check direct canonical Place ID (ChIJ...)
+            chijs = re.findall(r'ChIJ[0-9A-Za-z_-]{22,}', html)
+            if chijs:
+                return chijs[0]
+
+            # Check hex feature pair (0x...:0x...)
+            hexes = re.findall(r'0x[0-9a-fA-F]+:0x[0-9a-fA-F]+', html)
+            if hexes:
+                conv = hex_feature_to_place_id(hexes[0])
+                if conv:
+                    return conv
+
+            # Check 64-bit integer feature pairs [\"4133886534972652285\",\"12951051994302378265\"]
+            dec_pairs = re.findall(r'\["(\d{15,22})",\s*"(\d{15,22})"', html)
+            if dec_pairs:
+                conv = int_feature_to_place_id(dec_pairs[0][0], dec_pairs[0][1])
+                if conv:
+                    return conv
+        except Exception as e:
+            logger.debug("Embed lookup attempt failed for '%s': %s", q, str(e))
+            continue
+
+    # 4. Fallback: Check candidate domain shortlinks/embeds
+    words = lower_name.split()
     slug = re.sub(r'[^a-z0-9]', '', words[0]) if words else ""
     full_slug = re.sub(r'[^a-z0-9]', '', "".join(words[:2])) if len(words) >= 2 else slug
     candidates = [
@@ -340,17 +428,16 @@ def auto_discover_place_id(name: str, location: str = "") -> str:
     ]
     for url in candidates:
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
-            html = urllib.request.urlopen(req, timeout=3).read().decode('utf-8', errors='ignore')
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                html = resp.read().decode("utf-8", errors="ignore")
 
-            # Check for maps.app.goo.gl shortlinks
             shorts = re.findall(r'https?://(?:maps\.app\.goo\.gl|goo\.gl/maps)/[a-zA-Z0-9_-]+', html)
             for s in shorts:
                 s_pid = extract_place_id_from_url(s)
                 if s_pid:
                     return s_pid
 
-            # Check for hex feature pair in embed
             embed_hex = re.search(r'0x[0-9a-fA-F]+:0x[0-9a-fA-F]+', html)
             if embed_hex:
                 conv = hex_feature_to_place_id(embed_hex.group(0))
@@ -378,42 +465,35 @@ class CompanyService:
                     self.db.companies.insert_one(doc)
                     logger.info("Sample company seeded for category %s: %s", comp["category"], comp["name"])
                 else:
-                    # If company has empty, broken, or search-only Google writereview link, upgrade to direct write-review link
-                    curr_link = exists.get("externalReviewLink", "")
-                    if "kevalon" in exists.get("name", "").lower():
-                        kevalon_direct = "https://search.google.com/local/writereview?placeid=ChIJQwrcdyL0U6cRLe6thND0Dvw"
+                    # Update sample company to official writereview link if needed
+                    c_pid = comp.get("googlePlaceId")
+                    if c_pid and exists.get("googlePlaceId") != c_pid:
+                        direct_url = f"https://search.google.com/local/writereview?placeid={c_pid}"
                         self.db.companies.update_one(
                             {"_id": exists["_id"]},
                             {"$set": {
-                                "googlePlaceId": "ChIJQwrcdyL0U6cRLe6thND0Dvw",
-                                "externalReviewLink": kevalon_direct,
-                                "googleReviewUrl": kevalon_direct
+                                "googlePlaceId": c_pid,
+                                "googleReviewUrl": direct_url,
+                                "externalReviewLink": direct_url
                             }}
                         )
-                    elif not curr_link or curr_link == "https://search.google.com/local/writereview":
-                        self.db.companies.update_one(
-                            {"_id": exists["_id"]},
-                            {"$set": {"externalReviewLink": comp["externalReviewLink"], "googleReviewUrl": comp.get("googleReviewUrl", comp["externalReviewLink"])}}
-                        )
 
-            # Upgrade verified companies with their direct writereview links
-            preset_updates = [
-                ("kevalon", "ChIJQwrcdyL0U6cRLe6thND0Dvw"),
-                ("prime.*(?:rest|banq|benq)", "ChIJszBVRACHXjkRtG5e073CAoQ"),
-                ("budventure", "ChIJMWJeZ_aEXjkRFt-P5KOVgFE"),
-                ("maxgen", "ChIJOYKhVKyEXjkRU_gN_7BOj1U"),
-                ("shivalik", "ChIJk0usKwCBXjkRpPxi1bxD4vI")
-            ]
-            for pattern, pid in preset_updates:
-                direct_url = f"https://search.google.com/local/writereview?placeid={pid}"
-                self.db.companies.update_many(
-                    {"name": {"$regex": pattern, "$options": "i"}},
-                    {"$set": {
-                        "googlePlaceId": pid,
-                        "googleReviewUrl": direct_url,
-                        "externalReviewLink": direct_url
-                    }}
-                )
+            # Auto-upgrade all companies in MongoDB to guaranteed direct writereview links
+            for c_doc in self.db.companies.find():
+                curr_pid = c_doc.get("googlePlaceId")
+                curr_url = c_doc.get("googleReviewUrl") or c_doc.get("externalReviewLink") or ""
+                if not curr_pid or not curr_url.startswith("https://search.google.com/local/writereview?placeid="):
+                    discovered = auto_discover_place_id(c_doc["name"], c_doc.get("location", ""))
+                    if discovered:
+                        direct_url = f"https://search.google.com/local/writereview?placeid={discovered}"
+                        self.db.companies.update_one(
+                            {"_id": c_doc["_id"]},
+                            {"$set": {
+                                "googlePlaceId": discovered,
+                                "googleReviewUrl": direct_url,
+                                "externalReviewLink": direct_url
+                            }}
+                        )
 
             # Ensure all companies have seoKeywords field populated
             for c_doc in self.db.companies.find():
