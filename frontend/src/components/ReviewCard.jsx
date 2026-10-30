@@ -16,21 +16,20 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
   const reviewId = review?.id || review?._id;
   const ratingVal = Math.max(1, Math.min(5, Math.round(Number(review.rating)) || 5));
 
-  const copyToClipboard = async () => {
+  const copyToClipboard = () => {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(review.reviewText);
-      } else {
-        const textArea = document.createElement('textarea');
-        textArea.value = review.reviewText;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-9999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
+        navigator.clipboard.writeText(review.reviewText).catch(() => {});
       }
+      const textArea = document.createElement('textarea');
+      textArea.value = review.reviewText;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-9999px';
+      textArea.style.top = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
       return true;
     } catch (err) {
       console.warn('Clipboard write failed:', err);
@@ -40,7 +39,7 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
 
   // Open Google Reviews handler: Copies text directly & launches verified review modal
   // Triggered when user taps ANYWHERE on the card or the button
-  const handleOpenGoogle = async (e) => {
+  const handleOpenGoogle = (e) => {
     if (e && e.stopPropagation) {
       e.stopPropagation();
     }
@@ -63,8 +62,8 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
       triggerExtensionAutoFill(review, company);
     } catch (e) {}
 
-    // 2. Copy review text to clipboard immediately
-    await copyToClipboard();
+    // 2. Copy review text to clipboard synchronously to preserve user gesture
+    copyToClipboard();
     if (reviewId) {
       api.recordCopyEvent(reviewId).catch(() => {});
     }
@@ -72,12 +71,17 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
     // 3. User notification
     addToast(`Review text copied to clipboard! (5.0 Stars) Opening Google...`, 'success', 3500);
 
-    // 4. Open verified Google Review dialog in a new tab, falling back to same tab if blocked
-    const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
-    if (!win || win.closed || typeof win.closed === 'undefined') {
+    // 4. On mobile devices, navigate directly via window.location.href to guarantee native Google Review dialog triggers
+    // without popup blocking. On desktop PC, open in a new tab.
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
+    if (isMobile) {
       window.location.href = googleUrl;
+    } else {
+      const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
+      if (!win || win.closed || typeof win.closed === 'undefined') {
+        window.location.href = googleUrl;
+      }
     }
-
   };
 
   return (

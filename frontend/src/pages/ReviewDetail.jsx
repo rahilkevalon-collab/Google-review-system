@@ -75,11 +75,11 @@ export default function ReviewDetail() {
     return () => { isMounted = false; };
   }, [effectiveId]);
 
-  const copyToClipboard = async () => {
+  const copyToClipboard = () => {
     if (!reviewText.trim()) return false;
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(reviewText);
+        navigator.clipboard.writeText(reviewText).catch(() => {});
       } else {
         const textArea = document.createElement("textarea");
         textArea.value = reviewText;
@@ -95,8 +95,8 @@ export default function ReviewDetail() {
     }
   };
 
-  const handleCopy = async () => {
-    const ok = await copyToClipboard();
+  const handleCopy = () => {
+    const ok = copyToClipboard();
     if (ok) {
       setIsCopied(true);
       addToast('Review text copied to clipboard successfully!', 'success');
@@ -120,16 +120,22 @@ export default function ReviewDetail() {
       triggerExtensionAutoFill({ ...review, reviewText, text: reviewText }, company);
     } catch (e) {}
 
-    // 2. Copy review text to clipboard
-    await copyToClipboard();
+    // 2. Copy review text to clipboard synchronously
+    copyToClipboard();
     api.recordCopyEvent(effectiveId).catch(() => {});
 
     addToast(`Review text copied to clipboard! (5.0 Stars) Opening Google...`, 'success', 3500);
 
-    // 3. Open in new tab, falling back to same tab if blocked
-    const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
-    if (!win || win.closed || typeof win.closed === 'undefined') {
+    // 3. On mobile devices, navigate directly via window.location.href to guarantee native Google Review dialog triggers
+    // without popup blocking. On desktop PC, open in a new tab.
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
+    if (isMobile) {
       window.location.href = googleUrl;
+    } else {
+      const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
+      if (!win || win.closed || typeof win.closed === 'undefined') {
+        window.location.href = googleUrl;
+      }
     }
   };
 

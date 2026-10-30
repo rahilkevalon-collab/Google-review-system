@@ -116,9 +116,13 @@ export function getGoogleReviewUrl(item = {}) {
     }
   }
 
-  // Embed review payload hash for 1-Click Auto-Filler
+  // Embed review payload hash for desktop extension ONLY on plain search fallback URLs
+  // Never append #rc_auto= to direct writereview?placeid= URLs as it corrupts mobile OS #lrd= dialog redirection!
   const reviewText = (item.reviewText || item.text || '').trim();
-  if (reviewText && !resolved.includes('rc_auto=')) {
+  const isDirectReviewUrl = resolved.includes('writereview?placeid=') || resolved.includes('#lrd=') || resolved.includes('g.page/r/');
+  const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
+
+  if (reviewText && !isDirectReviewUrl && !isMobile && !resolved.includes('rc_auto=')) {
     const ratingVal = Math.max(1, Math.min(5, Math.round(Number(item.rating)) || 5));
     const payload = encodeURIComponent(JSON.stringify({
       text: reviewText,
