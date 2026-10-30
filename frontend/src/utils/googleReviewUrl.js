@@ -34,13 +34,18 @@ export function hexFeatureToPlaceId(hexStr) {
 }
 
 /**
- * Resolves a reliable, verified Google Review / Business link.
+ * Resolves a reliable, verified Google Review / Business link for ANY company.
  * 
- * Supports both Mobile devices (Android/iOS) and Desktop:
- * - Direct search.google.com/local/writereview?placeid={PLACE_ID} opens the 5-star
- *   rating dialog DIRECTLY on phones (Google Maps App / Mobile Chrome) and Desktop!
- * - Converts #lrd hex links to Place IDs so mobile phones don't get stuck on Maps overview.
- * - Embeds payload fragment for 1-Click Bookmarklet Auto-Filler (Alternative A).
+ * Flow:
+ * 1. Checks explicit `googlePlaceId` or `placeId`.
+ * 2. If missing, attempts to extract `placeid` or `place_id` from the provided URL.
+ * 3. If URL contains `#lrd=0x...:0x...`, converts hex coordinates to a canonical Place ID.
+ * 4. Whenever a Place ID is resolved, returns canonical:
+ *    `https://search.google.com/local/writereview?placeid={PLACE_ID}`
+ *    which opens Google's review dialog box directly on desktop and mobile!
+ * 5. Supports direct shortlinks (g.page/r/..., maps.app.goo.gl/...) and custom review links.
+ * 6. Fallback: Google Search targeting the exact business entity Knowledge Panel (without '+ reviews').
+ * 7. Embeds `#rc_auto=` payload hash for extension / auto-filler fallback.
  */
 export function getGoogleReviewUrl(item = {}) {
   const name = item.companyName || item.name || '';
@@ -49,46 +54,53 @@ export function getGoogleReviewUrl(item = {}) {
 
   let resolved = '';
 
-  // 1. Explicit googlePlaceId / placeId -> Canonical direct writereview URL (works on phones & desktop)
-  const placeId = (item.googlePlaceId || item.placeId || '').trim();
-  if (placeId) {
-    resolved = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
-  } else if (link && link.includes('writereview?placeid=')) {
-    // 2. Direct Write-Review Link already formatted
-    resolved = link;
-  } else if (name.toLowerCase().includes('kevalon')) {
-    // 3. Known verified Place ID for Kevalon Technology (ChIJQwrcdyL0U6cRLe6thND0Dvw)
-    // Directly opens the 5-star review modal on mobile phones (Android/iOS) and desktop!
-    resolved = 'https://search.google.com/local/writereview?placeid=ChIJQwrcdyL0U6cRLe6thND0Dvw';
-  } else if (link && link.includes('#lrd=')) {
-    // 4. Convert #lrd hex links into Place ID writereview URLs for full mobile support
+  // 1. Check explicit Place ID
+  let placeId = (item.googlePlaceId || item.placeId || '').trim();
+
+  // 2. Extract Place ID from link if present
+  if (!placeId && link) {
+    const pidMatch = link.match(/[?&](?:placeid|place_id)=([^&#]+)/i);
+    if (pidMatch) {
+      placeId = decodeURIComponent(pidMatch[1]).trim();
+    }
+  }
+
+  // 3. Extract and convert hex feature pair in #lrd= links if present
+  if (!placeId && link && link.includes('#lrd=')) {
     const lrdPart = link.split('#lrd=')[1] || '';
     const hexMatch = lrdPart.match(/(0x[0-9a-fA-F]+:0x[0-9a-fA-F]+)/);
     if (hexMatch) {
       const convertedPid = hexFeatureToPlaceId(hexMatch[1]);
       if (convertedPid) {
-        resolved = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(convertedPid)}`;
+        placeId = convertedPid;
       }
     }
-    if (!resolved) resolved = link;
+  }
+
+  // 4. Resolve destination URL based on extracted Place ID or link type
+  if (placeId) {
+    // Canonical direct write-review URL: opens Google Review dialog directly across all devices
+    resolved = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
+  } else if (link && link.includes('writereview?placeid=')) {
+    resolved = link;
   } else if (link && (link.includes('g.page/r/') || link.includes('maps.app.goo.gl'))) {
-    // 5. Shortlinks that directly trigger review form on mobile (g.page/r/..., maps.app.goo.gl)
+    resolved = link;
+  } else if (link && link.includes('#lrd=')) {
     resolved = link;
   } else if (link && link.startsWith('http') && !link.includes('maps/search') && !link.includes('google.com/search') && !link.includes('maps?q=')) {
-    // 6. Direct custom URL that is NOT a generic search
     resolved = link;
   } else {
-    // 7. Fallback: Google search targeting company with reviews
+    // Fallback: Google Search targeted directly at the business entity Knowledge Panel (do NOT append 'reviews')
     const cleanLoc = loc ? loc.replace(/\s+/g, ' ').trim() : '';
     const query = [name, cleanLoc].filter(Boolean).join(' ').trim();
     if (query) {
-      resolved = `https://www.google.com/search?q=${encodeURIComponent(query + ' reviews')}`;
+      resolved = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
     } else {
       resolved = 'https://www.google.com/maps';
     }
   }
 
-  // Embed review payload hash for 1-Click Bookmarklet Auto-Filler (Alternative A)
+  // Embed review payload hash for 1-Click Auto-Filler
   const reviewText = (item.reviewText || item.text || '').trim();
   if (reviewText && !resolved.includes('rc_auto=')) {
     const ratingVal = Math.max(1, Math.min(5, Math.round(Number(item.rating)) || 5));

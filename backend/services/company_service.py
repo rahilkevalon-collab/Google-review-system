@@ -212,6 +212,47 @@ DEFAULT_SAMPLE_COMPANIES = [
     }
 ]
 
+def hex_feature_to_place_id(hex_str: str) -> str | None:
+    """Converts a Google hex feature pair (0x...:0x...) into a canonical Place ID (ChIJ...)."""
+    try:
+        if not hex_str or ":" not in hex_str:
+            return None
+        parts = hex_str.split(":")
+        clean0 = parts[0].strip()
+        clean1 = parts[1].split(",")[0].strip()
+        if not (clean0.startswith("0x") and clean1.startswith("0x")):
+            return None
+        f1 = int(clean0, 16)
+        f2 = int(clean1, 16)
+        import struct, base64
+        buf = bytearray(20)
+        buf[0] = 10
+        buf[1] = 18
+        buf[2] = 9
+        struct.pack_into("<Q", buf, 3, f1)
+        buf[11] = 17
+        struct.pack_into("<Q", buf, 12, f2)
+        b64 = base64.b64encode(buf).decode("ascii")
+        return b64.replace("+", "-").replace("/", "_").rstrip("=")
+    except Exception:
+        return None
+
+def extract_place_id_from_url(url: str) -> str:
+    """Extracts Google Place ID from any URL format (?placeid=, ?place_id=, or #lrd=0x...:0x...)."""
+    if not url:
+        return ""
+    import re, urllib.parse
+    m = re.search(r'[?&](?:placeid|place_id)=([^&#]+)', url, re.I)
+    if m:
+        return urllib.parse.unquote(m.group(1)).strip()
+    if "#lrd=" in url:
+        m_hex = re.search(r'0x[0-9a-fA-F]+:0x[0-9a-fA-F]+', url)
+        if m_hex:
+            conv = hex_feature_to_place_id(m_hex.group(0))
+            if conv:
+                return conv
+    return ""
+
 class CompanyService:
     @property
     def db(self):

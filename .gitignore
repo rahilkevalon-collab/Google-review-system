@@ -2,6 +2,13 @@
 node_modules/
 frontend/node_modules/
 
+# Virtual environments
+.venv/
+backend/.venv/
+venv/
+env/
+ENV/
+
 # Production builds
 frontend/dist/
 dist/

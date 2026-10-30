@@ -1,3 +1,5 @@
+
+
 /**
  * ReviewCraft Chrome Extension - Google Review Auto-Filler Content Script (v1.1.3)
  * Runs on Google Search, Google Maps, and Google Local Review pages.
@@ -30,6 +32,8 @@
   let lastAppliedReviewId = null;
   let isProcessing = false;
   let hasTriggeredOpen = false;
+  let lastTriggerTime = 0;
+  let triggerCount = 0;
   let hasClickedListingCard = false;
   let hasClickedTab = false;
   let domObserver = null;
@@ -45,7 +49,7 @@
   function isBusinessMatching(pending) {
     if (!pending || !pending.text) return false;
     if (!pending.companyName) return true;
-    
+
     // Inside iframes (dialog frames), always allow so autofill is not blocked
     if (!isTopFrame) return true;
 
@@ -127,6 +131,8 @@
         source: pending.source
       });
       hasTriggeredOpen = false;
+      lastTriggerTime = 0;
+      triggerCount = 0;
       hasClickedListingCard = false;
       hasClickedTab = false;
       cleanup();
@@ -165,8 +171,8 @@
       // 1. Locate review dialog
       const dialog = findReviewDialog();
 
-      // If review modal is NOT open yet, trigger it ONCE in the top frame
-      if (isTopFrame && !dialog && !hasTriggeredOpen) {
+      // If review modal is NOT open yet, trigger it in the top frame (throttled inside tryOpenReviewDialog)
+      if (isTopFrame && !dialog) {
         tryOpenReviewDialog();
       }
 
@@ -214,7 +220,7 @@
               }
             });
           }
-        } catch (e) {}
+        } catch (e) { }
 
         // Update floating badge to success
         if (isTopFrame) {
@@ -235,7 +241,7 @@
         childList: true,
         subtree: true
       });
-    } catch (e) {}
+    } catch (e) { }
 
     // First attempt immediately
     step();
@@ -310,7 +316,7 @@
         }
       });
     }
-  } catch (e) {}
+  } catch (e) { }
 
   // 3. Tab focus & visibility change listener
   window.addEventListener('focus', checkInitialStorage);
@@ -333,24 +339,66 @@
   function handleUrlChange() {
     lastUrl = window.location.href;
     hasTriggeredOpen = false;
+    lastTriggerTime = 0;
+    triggerCount = 0;
     hasClickedListingCard = false;
     hasClickedTab = false;
     checkInitialStorage();
   }
 
   /**
-   * Triggers the "Write a review" modal ONCE in top frame.
+   * Dispatches complete synthetic pointer, mouse, and native events to trigger custom buttons.
+   */
+  function dispatchReviewClick(el) {
+    if (!el) return;
+    try {
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + (rect.width > 0 ? rect.width / 2 : 10);
+      const cy = rect.top + (rect.height > 0 ? rect.height / 2 : 10);
+      const opts = { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy };
+      el.dispatchEvent(new PointerEvent('pointerdown', opts));
+      el.dispatchEvent(new MouseEvent('mousedown', opts));
+      el.dispatchEvent(new PointerEvent('pointerup', opts));
+      el.dispatchEvent(new MouseEvent('mouseup', opts));
+      el.dispatchEvent(new MouseEvent('click', opts));
+      if (typeof el.click === 'function') {
+        el.click();
+      }
+    } catch (e) {
+      try { el.click(); } catch (err) {}
+    }
+  }
+
+  /**
+   * Robust multilingual check for review trigger button text or aria labels.
+   */
+  function isReviewTriggerLabel(text) {
+    if (!text || text.length > 150) return false;
+    const clean = text.toLowerCase().trim();
+    if (/write a review|rate and review|leave a review|add a review|post a review|user review/i.test(clean)) return true;
+    if (/સમીક્ષા લખો|સમીક્ષા આપો|રિવ્યુ લખો|રિવ્યુ આપો|રિવ્યુ/i.test(clean)) return true;
+    if (/समीक्षा लिखें|रिव्यू लिखें|समीक्षा दें|रेटिंग दें/i.test(clean)) return true;
+    return false;
+  }
+
+  /**
+   * Triggers the "Write a review" modal in top frame across Google Search & Maps.
    */
   function tryOpenReviewDialog() {
-    if (!isTopFrame || hasTriggeredOpen || findReviewDialog()) return false;
+    if (!isTopFrame || findReviewDialog()) return false;
+    const now = Date.now();
+    // Throttle triggers: wait at least 800ms between attempts, allow up to 8 attempts until dialog opens
+    if (now - lastTriggerTime < 800) return false;
+    if (triggerCount >= 8) return false;
 
     try {
-      // Auto-open place listing or Reviews tab on Google Maps
+      // 1. Auto-open place listing or Reviews tab on Google Maps
       if (window.location.href.includes('/maps')) {
         const placeCard = document.querySelector('a[href*="/maps/place/"], div[role="article"] a, div[role="feed"] a');
         if (placeCard && isVisible(placeCard) && !hasClickedListingCard) {
           hasClickedListingCard = true;
-          placeCard.click();
+          lastTriggerTime = now;
+          dispatchReviewClick(placeCard);
         }
 
         const reviewTabs = Array.from(document.querySelectorAll('button[role="tab"], div[role="tab"]')).filter(isVisible);
@@ -358,41 +406,82 @@
           const tabText = (tab.innerText || tab.getAttribute('aria-label') || '').toLowerCase();
           if ((tabText.includes('review') || tabText.includes('રિવ્યુ') || tabText.includes('समीक्षा')) && !hasClickedTab) {
             hasClickedTab = true;
-            tab.click();
+            lastTriggerTime = now;
+            dispatchReviewClick(tab);
             break;
           }
         }
       }
 
+      // 2. Direct #lrd review links
       const allLinks = Array.from(document.querySelectorAll('a[href*="lrd="]'));
       for (const a of allLinks) {
         const href = a.getAttribute('href') || '';
         if (href.includes(',3,') || href.includes(',3,,') || /review/i.test(a.innerText || '')) {
-          console.log('[ReviewCraft Google] Triggering #lrd review link once:', href);
+          console.log('[ReviewCraft Google] Triggering #lrd review link:', href);
+          lastTriggerTime = now;
+          triggerCount++;
           hasTriggeredOpen = true;
           const hashIdx = href.indexOf('#lrd=');
           if (hashIdx !== -1) {
             window.location.hash = href.substring(hashIdx);
           }
-          a.click();
+          dispatchReviewClick(a);
           return true;
         }
       }
 
-      const clickables = Array.from(document.querySelectorAll('button, a, div[role="button"], span[role="button"]'));
-      for (const el of clickables) {
-        if (!isVisible(el)) continue;
-        const text = (el.innerText || el.getAttribute('aria-label') || '').trim();
-        if (
-          /^(write a review|rate and review|leave a review|add a review|રિવ્યુ લખો|રિવ્યુ આપો|रिव्यू लिखें)$/i.test(text) ||
-          (text.length < 35 && /write a review|rate and review/i.test(text))
-        ) {
+      // 3. Dedicated Google Knowledge Panel & Maps Review Selectors
+      const dedicatedSelectors = [
+        '[data-async-trigger="reviewDialog"]',
+        '[data-lrd*=",3"]',
+        'button[data-value="Write a review"]',
+        'button[jsaction*="writeReview"]',
+        'button[aria-label*="Write a review" i]',
+        'button[aria-label*="सમીक्षा" i]',
+        'button[aria-label*="રિવ્યુ" i]',
+        'div[data-fid] [role="button"]'
+      ];
+      for (const sel of dedicatedSelectors) {
+        const matches = Array.from(document.querySelectorAll(sel)).filter(isVisible);
+        if (matches.length > 0) {
+          const target = matches[0];
+          console.log('[ReviewCraft Google] Triggering dedicated review selector:', sel);
+          lastTriggerTime = now;
+          triggerCount++;
           hasTriggeredOpen = true;
-          el.click();
+          dispatchReviewClick(target);
           return true;
         }
       }
-    } catch (e) {}
+
+      // 4. Fallback search for any visible button / link with review labels (up to 150 chars)
+      const clickables = Array.from(document.querySelectorAll('button, a, div[role="button"], span[role="button"]'));
+      for (const el of clickables) {
+        if (!isVisible(el)) continue;
+        const text = (el.innerText || el.getAttribute('aria-label') || el.getAttribute('title') || '').trim();
+        if (isReviewTriggerLabel(text)) {
+          console.log('[ReviewCraft Google] Triggering review button by label:', text);
+          lastTriggerTime = now;
+          triggerCount++;
+          hasTriggeredOpen = true;
+          dispatchReviewClick(el);
+          return true;
+        }
+      }
+
+      // 5. Google Maps listing 5 empty stars in rating prompt ("Rate this place")
+      const rateStars = Array.from(document.querySelectorAll('[role="radiogroup"] [role="radio"]')).filter(isVisible);
+      if (rateStars.length >= 5 && window.location.href.includes('/maps')) {
+        const star5 = rateStars[rateStars.length - 1];
+        console.log('[ReviewCraft Google] Triggering rating prompt star in Maps');
+        lastTriggerTime = now;
+        triggerCount++;
+        hasTriggeredOpen = true;
+        dispatchReviewClick(star5);
+        return true;
+      }
+    } catch (e) { }
     return false;
   }
 
@@ -403,8 +492,8 @@
     if (!isTopFrame) {
       const body = document.body;
       if (body && (document.querySelector('textarea, div[role="textbox"], [role="radio"]') ||
-          (document.body.innerText || '').toLowerCase().includes('post') ||
-          (document.body.innerText || '').toLowerCase().includes('review'))) {
+        (document.body.innerText || '').toLowerCase().includes('post') ||
+        (document.body.innerText || '').toLowerCase().includes('review'))) {
         return body;
       }
     }
@@ -473,9 +562,9 @@
           if (f.contentDocument && f.contentDocument.body) {
             roots.push(f.contentDocument);
           }
-        } catch (e) {}
+        } catch (e) { }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     return roots;
   }
@@ -548,7 +637,7 @@
           el.ownerDocument.execCommand('selectAll', false, null);
           el.ownerDocument.execCommand('insertText', false, text);
         }
-      } catch (e) {}
+      } catch (e) { }
 
       if (el.tagName !== 'TEXTAREA' && el.isContentEditable) {
         el.innerText = text;
@@ -890,14 +979,14 @@
           badge.remove();
         });
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function removeFloatingBadge() {
     try {
       const badge = document.getElementById('reviewcraft-floating-badge');
       if (badge) badge.remove();
-    } catch (e) {}
+    } catch (e) { }
   }
 
 })();
