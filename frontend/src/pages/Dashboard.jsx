@@ -27,9 +27,9 @@ export default function Dashboard({ categories = [] }) {
   const [selectedKeywords, setSelectedKeywords] = useState([]);
   const [activeReviewId, setActiveReviewId] = useState(null);
 
-  // Reviews state (strictly 3 distinct suggestions)
+  // Reviews state (strictly 3 distinct suggestions, fresh on every load/refresh)
   const [reviews, setReviews] = useState([]);
-  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [loadingReviews, setLoadingReviews] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [dedupNotice, setDedupNotice] = useState(null);
 
@@ -46,7 +46,7 @@ export default function Dashboard({ categories = [] }) {
   const keywordsRef = useRef(keywords);
   keywordsRef.current = keywords;
 
-  // 1. Generate or fetch reviews helper
+  // 1. Generate fresh reviews helper using Groq AI
   const generateReviews = useCallback(async (keywordsToUse, forceFresh = false, companyOverride = null) => {
     const targetComp = companyOverride || companyRef.current;
     if (!targetComp?.id) return;
@@ -100,28 +100,12 @@ export default function Dashboard({ categories = [] }) {
           );
         }
       } else {
-        const fallbackRes = await api.getReviews({
-          companyId: targetComp.id,
-          limit: 3
-        });
-        if (fallbackRes.success && fallbackRes.reviews && fallbackRes.reviews.length > 0) {
-          const topFallback = fallbackRes.reviews.slice(0, 3);
-          setReviews(topFallback);
-          try {
-            localStorage.setItem(`reviewcraft_cached_reviews_${targetComp.id}`, JSON.stringify(topFallback));
-          } catch (e) {}
-        }
+        const errorMsg = res.error || 'Groq AI did not return review suggestions.';
+        addToast(errorMsg, 'error', 6000);
       }
     } catch (err) {
-      console.warn('Review generation error, fetching stored reviews:', err);
-      try {
-        const fallback = await api.getReviews({ companyId: targetComp?.id, limit: 3 });
-        if (fallback.success && fallback.reviews && fallback.reviews.length > 0) {
-          setReviews(fallback.reviews.slice(0, 3));
-        }
-      } catch (e) {
-        addToast('Unable to load reviews. Please verify backend connection.', 'error');
-      }
+      console.error('Groq review generation error:', err);
+      addToast(err.message || 'Groq AI review generation failed. Please check connection.', 'error', 6000);
     } finally {
       setLoadingReviews(false);
       setIsGenerating(false);
@@ -129,7 +113,7 @@ export default function Dashboard({ categories = [] }) {
     }
   }, [addToast]);
 
-  // 2. Load Company Profile deterministically & display existing reviews instantly
+  // 2. Load Company Profile & trigger fresh Groq generation immediately on load / refresh
   useEffect(() => {
     let isMounted = true;
     setLoadingCompany(true);
@@ -172,13 +156,23 @@ export default function Dashboard({ categories = [] }) {
 
           setKeywords(finalKeywords);
 
-          // Always set selection to the 1st SEO keyword
-          const initialSelected = [finalKeywords[0]];
+          // Restore selection or default to 1st SEO keyword
+          let initialSelected = [finalKeywords[0]];
+          try {
+            const saved = localStorage.getItem(`reviewcraft_selected_kw_${comp.id}`);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(k => finalKeywords.includes(k))) {
+                initialSelected = parsed;
+              }
+            }
+          } catch (e) {}
+
           setSelectedKeywords(initialSelected);
-          if (comp?.id) {
-            localStorage.setItem(`reviewcraft_selected_kw_${comp.id}`, JSON.stringify(initialSelected));
-          }
-          // Generate fresh reviews on every page load and refresh
+
+          // Immediately trigger fresh Groq AI review generation on every refresh
+          // Never display old cached reviews while fresh reviews are loading
+          setLoadingReviews(true);
           generateReviews(initialSelected, true, comp);
         } else {
           setCompanyError('Business profile not found in database.');
@@ -262,7 +256,7 @@ export default function Dashboard({ categories = [] }) {
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <div className="w-10 h-10 rounded-full border-2 border-[#068dcb] border-t-transparent animate-spin"></div>
         <p className="text-xs text-slate-500 font-medium tracking-wide">
-          Loading business profile & SEO reviews...
+          Loading business profile...
         </p>
       </div>
     );
@@ -318,7 +312,13 @@ export default function Dashboard({ categories = [] }) {
         />
       </div>
 
-
+      {/* Deduplication Notice */}
+      {dedupNotice && (
+        <div className="p-3 text-xs text-slate-600 bg-sky-50/70 border border-[#068dcb]/20 rounded-2xl flex items-center gap-2 animate-in fade-in">
+          <Sparkles className="w-3.5 h-3.5 text-[#068dcb] shrink-0" />
+          <span>{dedupNotice}</span>
+        </div>
+      )}
 
       {/* 3 Review Cards Grid - 100% consistent across all devices */}
       {reviews.length === 0 && (loadingReviews || isGenerating) ? (
@@ -329,16 +329,7 @@ export default function Dashboard({ categories = [] }) {
         </div>
       ) : reviews.length > 0 ? (
         <div className="relative">
-          {/* Subtle loading overlay while regenerating existing reviews */}
-          {isGenerating && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/60 backdrop-blur-[1px] rounded-3xl transition-opacity duration-300">
-              <div className="p-3.5 rounded-2xl bg-white shadow-xl border border-[#068dcb]/30">
-                <div className="w-6 h-6 rounded-full border-2 border-[#068dcb] border-t-transparent animate-spin"></div>
-              </div>
-            </div>
-          )}
-
-          <div className={`grid grid-cols-1 md:grid-cols-3 gap-5 transition-opacity duration-300 ${isGenerating ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {reviews.slice(0, 3).map((rev) => {
               const revId = rev._id || rev.id;
               const fullRev = {

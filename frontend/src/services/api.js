@@ -106,7 +106,7 @@ export const api = {
     return handleResponse(res);
   },
 
-    // Auto SEO Keyword Generator
+  // Auto SEO Keyword Generator
   generateSeoKeywords: async (payload) => {
     const res = await fetch(`${API_BASE}/companies/generate-seo-keywords`, {
       method: 'POST',
@@ -123,9 +123,12 @@ export const api = {
   },
 
   generateReviews: async (payload) => {
-    const res = await fetch(`${API_BASE}/generate-reviews`, {
+    const res = await fetch(`${API_BASE}/generate-reviews?_t=${Date.now()}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      },
       body: JSON.stringify(payload),
     });
     return handleResponse(res);

@@ -1,6 +1,10 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
+# Reliably load .env from backend directory regardless of working directory
+_backend_dir = Path(__file__).resolve().parent
+load_dotenv(_backend_dir / ".env")
 load_dotenv()
 
 class Config:
@@ -18,7 +22,7 @@ class Config:
     # Options: "groq" (default), "demo" (offline template fallback)
     LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq").lower()
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip().strip('"').strip("'")
-    GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b").strip()
+    GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b").strip()
     
     # NLP & Deduplication Settings
     SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "0.72"))

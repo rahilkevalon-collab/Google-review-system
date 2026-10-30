@@ -21,7 +21,7 @@ def health_check():
         "aiProvider": {
             "name": provider.name,
             "isAi": provider.is_ai,
-            "model": "gemini-2.5-flash" if provider.name == "google-gemini" else "template-fallback"
+            "model": Config.GROQ_MODEL if provider.name == "groq" else ("gemini-2.5-flash" if provider.name == "google-gemini" else "template-fallback")
         },
         "settings": {
             "similarityThreshold": Config.SIMILARITY_THRESHOLD,

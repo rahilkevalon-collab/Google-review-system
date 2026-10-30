@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import re
+import time
 from abc import ABC, abstractmethod
 from config import Config
 from ai.templates import generate_template_candidates
@@ -83,7 +84,7 @@ class DemoTemplateProvider(BaseLLMProvider):
 class GroqLLMProvider(BaseLLMProvider):
     def __init__(self, api_key: str, model: str = None):
         self.api_key = api_key.strip().strip('"').strip("'")
-        self.model = (model or Config.GROQ_MODEL or "openai/gpt-oss-120b").strip()
+        self.model = (model or Config.GROQ_MODEL or "openai/gpt-oss-20b").strip()
         self._client = None
         self._init_client()
 
@@ -138,16 +139,28 @@ class GroqLLMProvider(BaseLLMProvider):
                         res = [self._clean_unicode_artifacts(str(x)) for x in parsed if str(x).strip()]
                         if res:
                             return res
+                    elif isinstance(parsed, dict):
+                        for val in parsed.values():
+                            if isinstance(val, list):
+                                res = [self._clean_unicode_artifacts(str(x)) for x in val if str(x).strip()]
+                                if res:
+                                    return res
                 except Exception:
                     continue
 
-        # 2. Direct JSON array parsing
+        # 2. Direct JSON parsing
         try:
             parsed = json.loads(cleaned)
             if isinstance(parsed, list):
                 res = [self._clean_unicode_artifacts(str(x)) for x in parsed if str(x).strip()]
                 if res:
                     return res
+            elif isinstance(parsed, dict):
+                for val in parsed.values():
+                    if isinstance(val, list):
+                        res = [self._clean_unicode_artifacts(str(x)) for x in val if str(x).strip()]
+                        if res:
+                            return res
         except Exception:
             pass
 
@@ -202,10 +215,7 @@ class GroqLLMProvider(BaseLLMProvider):
         target_rating: int = 5
     ) -> tuple[list[str], str]:
         if not self._client or not self.api_key:
-            logger.warning("Groq client not initialized or API key missing; falling back to template engine.")
-            return DemoTemplateProvider(is_fallback=True).generate_review_candidates(
-                company_name, category, keyword, description, services, location, language, tone, length, count, target_rating
-            )
+            raise RuntimeError("Groq client not initialized or GROQ_API_KEY missing. Please configure GROQ_API_KEY in backend/.env.")
 
         lang_name = {"en": "English", "hi": "Hindi (Devanagari script)", "gu": "Gujarati (Gujarati script)"}.get(language, "English")
         length_guideline = {
@@ -231,11 +241,12 @@ class GroqLLMProvider(BaseLLMProvider):
             "based on their own genuine, personal experiences. "
             "Do NOT fabricate specific factual claims, fake customer names, or unverifiable personal anecdotes. "
             "Write authentic, human-sounding drafts appropriate for Google Maps reviews, avoiding corporate jargon or repetitive phrasing. "
+            "Generate distinct, creative phrasing for each draft to ensure variety across batches and refreshes. "
             "Output MUST be a valid JSON array of strings ONLY."
         )
 
         user_prompt = f"""
-Create {count + 2} varied, editable review draft suggestions for customers of the following business:
+Create {count + 2} varied, distinct review draft suggestions for customers of the following business:
 
 Business Details:
 - Company Name: {company_name}
@@ -248,44 +259,41 @@ Business Details:
 
 Rules for Authentic Review Drafts:
 1. Length: {length_guideline}. Keep drafts brief, crisp, and realistic for Google Maps reviews.
-2. Naturally integrate the focus keyword "{keyword}" into each draft without keyword stuffing.
+2. Naturally integrate the exact focus keyword '{keyword}' into each draft with exact spelling and capitalization.
 3. Keep the wording authentic, warm, and natural. Do NOT use corporate marketing clichés (avoid words like 'partnered with', 'domain expertise', 'strategic alignment', 'milestones', 'dependable execution').
-4. {rating_instructions.strip()}
-5. Output format: Return ONLY a valid JSON array of strings with {count + 2} review drafts, like:
+4. Make every draft start with a different opening and highlight a different aspect of customer satisfaction.
+5. {rating_instructions.strip()}
+6. Output format: Return ONLY a valid JSON array of strings with {count + 2} review drafts, like:
 ["Review draft 1...", "Review draft 2...", ...]
 Do not include any conversational preamble, markdown code blocks, or extra text.
 """
 
-        try:
-            response = self._client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_message},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.7,
-                max_tokens=1500
-            )
+        last_error = None
+        for attempt in range(2):
+            try:
+                response = self._client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_message},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.85,
+                    max_tokens=1500
+                )
 
-            raw_text = response.choices[0].message.content or ""
-            candidates = self._parse_json_candidates(raw_text)
+                raw_text = response.choices[0].message.content or ""
+                candidates = self._parse_json_candidates(raw_text)
 
-            if candidates and len(candidates) > 0:
-                return candidates, "groq"
-            else:
-                logger.warning("Groq response could not be parsed into candidates. Falling back to template engine.")
+                if candidates and len(candidates) > 0:
+                    return candidates, "groq"
+                else:
+                    logger.warning("Groq response attempt %d could not be parsed. Retrying...", attempt + 1)
+            except Exception as e:
+                last_error = e
+                logger.error("Groq API error on attempt %d: %s", attempt + 1, str(e))
+                time.sleep(0.5)
 
-        except Exception as e:
-            # Handle rate limits, auth errors, timeouts, and network issues gracefully
-            error_msg = str(e)
-            error_type = type(e).__name__
-            logger.error("Groq API error (%s) during review generation: %s", error_type, error_msg)
-
-        # Graceful fallback to DemoTemplateProvider
-        logger.info("Falling back to DemoTemplateProvider due to Groq API error or empty result.")
-        return DemoTemplateProvider(is_fallback=True).generate_review_candidates(
-            company_name, category, keyword, description, services, location, language, tone, length, count, target_rating
-        )
+        raise RuntimeError(f"Groq AI generation failed: {str(last_error or 'Could not parse response')}")
 
 def get_llm_provider() -> BaseLLMProvider:
     """Factory to instantiate the appropriate LLM provider based on config and available keys."""
@@ -293,14 +301,8 @@ def get_llm_provider() -> BaseLLMProvider:
 
     if provider_name == "groq":
         if Config.GROQ_API_KEY:
-            try:
-                return GroqLLMProvider(api_key=Config.GROQ_API_KEY, model=Config.GROQ_MODEL)
-            except Exception as e:
-                logger.warning("Error instantiating GroqLLMProvider: %s. Using DemoTemplateProvider fallback.", str(e))
-                return DemoTemplateProvider(is_fallback=True)
+            return GroqLLMProvider(api_key=Config.GROQ_API_KEY, model=Config.GROQ_MODEL)
         else:
-            logger.warning("LLM_PROVIDER is set to 'groq' but GROQ_API_KEY is missing. Using DemoTemplateProvider fallback.")
-            return DemoTemplateProvider(is_fallback=True)
+            raise RuntimeError("LLM_PROVIDER is set to 'groq' but GROQ_API_KEY is missing. Demo mode is disabled.")
 
-    # Default to explicitly-labelled Demo Template Engine
     return DemoTemplateProvider(is_fallback=False)
