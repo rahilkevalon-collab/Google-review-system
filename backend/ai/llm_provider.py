@@ -215,7 +215,10 @@ class GroqLLMProvider(BaseLLMProvider):
         target_rating: int = 5
     ) -> tuple[list[str], str]:
         if not self._client or not self.api_key:
-            raise RuntimeError("Groq client not initialized or GROQ_API_KEY missing. Please configure GROQ_API_KEY in backend/.env.")
+            logger.warning("Groq client not initialized or GROQ_API_KEY missing; falling back to template engine.")
+            return DemoTemplateProvider(is_fallback=True).generate_review_candidates(
+                company_name, category, keyword, description, services, location, language, tone, length, count, target_rating
+            )
 
         lang_name = {"en": "English", "hi": "Hindi (Devanagari script)", "gu": "Gujarati (Gujarati script)"}.get(language, "English")
         length_guideline = {
@@ -293,16 +296,35 @@ Do not include any conversational preamble, markdown code blocks, or extra text.
                 logger.error("Groq API error on attempt %d: %s", attempt + 1, str(e))
                 time.sleep(0.5)
 
-        raise RuntimeError(f"Groq AI generation failed: {str(last_error or 'Could not parse response')}")
+        logger.warning("Groq AI generation unavailable (%s); falling back to template engine.", str(last_error or "Could not parse response"))
+        return DemoTemplateProvider(is_fallback=True).generate_review_candidates(
+            company_name, category, keyword, description, services, location, language, tone, length, count, target_rating
+        )
 
 def get_llm_provider() -> BaseLLMProvider:
     """Factory to instantiate the appropriate LLM provider based on config and available keys."""
-    provider_name = Config.LLM_PROVIDER.lower()
+    try:
+        from pathlib import Path
+        from dotenv import load_dotenv
+        _backend_dir = Path(__file__).resolve().parent.parent
+        load_dotenv(_backend_dir / ".env", override=True)
+    except Exception:
+        pass
+
+    import os
+    groq_api_key = os.getenv("GROQ_API_KEY", Config.GROQ_API_KEY).strip().strip('"').strip("'")
+    groq_model = os.getenv("GROQ_MODEL", Config.GROQ_MODEL or "openai/gpt-oss-120b").strip()
+    provider_name = os.getenv("LLM_PROVIDER", Config.LLM_PROVIDER).lower()
 
     if provider_name == "groq":
-        if Config.GROQ_API_KEY:
-            return GroqLLMProvider(api_key=Config.GROQ_API_KEY, model=Config.GROQ_MODEL)
+        if groq_api_key:
+            try:
+                return GroqLLMProvider(api_key=groq_api_key, model=groq_model)
+            except Exception as e:
+                logger.warning("Error instantiating GroqLLMProvider: %s. Using DemoTemplateProvider fallback.", str(e))
+                return DemoTemplateProvider(is_fallback=True)
         else:
-            raise RuntimeError("LLM_PROVIDER is set to 'groq' but GROQ_API_KEY is missing. Demo mode is disabled.")
+            logger.warning("LLM_PROVIDER is set to 'groq' but GROQ_API_KEY is missing. Using DemoTemplateProvider fallback.")
+            return DemoTemplateProvider(is_fallback=True)
 
     return DemoTemplateProvider(is_fallback=False)

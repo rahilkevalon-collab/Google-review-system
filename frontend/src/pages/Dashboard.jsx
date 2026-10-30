@@ -100,12 +100,27 @@ export default function Dashboard({ categories = [] }) {
           );
         }
       } else {
-        const errorMsg = res.error || 'Groq AI did not return review suggestions.';
-        addToast(errorMsg, 'error', 6000);
+        const fallbackRes = await api.getReviews({ companyId: targetComp.id, limit: 3 });
+        if (fallbackRes.success && fallbackRes.reviews && fallbackRes.reviews.length > 0) {
+          const topFallback = fallbackRes.reviews.slice(0, 3);
+          setReviews(topFallback);
+        } else {
+          const errorMsg = res.error || 'Review generation unavailable. Please check connection.';
+          addToast(errorMsg, 'error', 6000);
+        }
       }
     } catch (err) {
-      console.error('Groq review generation error:', err);
-      addToast(err.message || 'Groq AI review generation failed. Please check connection.', 'error', 6000);
+      console.warn('Review generation error, loading stored reviews:', err);
+      try {
+        const fallbackRes = await api.getReviews({ companyId: targetComp?.id, limit: 3 });
+        if (fallbackRes.success && fallbackRes.reviews && fallbackRes.reviews.length > 0) {
+          setReviews(fallbackRes.reviews.slice(0, 3));
+        } else {
+          addToast(err.message || 'Review generation failed.', 'error', 6000);
+        }
+      } catch (e) {
+        addToast(err.message || 'Review generation failed.', 'error', 6000);
+      }
     } finally {
       setLoadingReviews(false);
       setIsGenerating(false);

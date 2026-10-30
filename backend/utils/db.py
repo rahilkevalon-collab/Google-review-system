@@ -41,16 +41,25 @@ class Database:
             cls._is_mock = False
             logger.info("Connected successfully to real MongoDB database: %s", cls._db.name)
         except (ConnectionFailure, ServerSelectionTimeoutError, Exception) as e:
-            logger.warning("Could not connect to real MongoDB (%s). Falling back to in-memory mongomock database.", str(e))
+            logger.warning("Could not connect to configured MongoDB (%s). Trying local MongoDB on 127.0.0.1:27017...", str(e))
             try:
-                import mongomock
-                cls._client = mongomock.MongoClient()
-                cls._db = cls._client[Config.DB_NAME]
-                cls._is_mock = True
-                logger.info("In-memory mongomock database initialized.")
-            except Exception as mock_err:
-                logger.error("Failed to initialize mongomock: %s", str(mock_err))
-                raise
+                client = MongoClient("mongodb://127.0.0.1:27017/seo_review_generator", serverSelectionTimeoutMS=2000)
+                client.admin.command('ping')
+                cls._client = client
+                cls._db = client[Config.DB_NAME]
+                cls._is_mock = False
+                logger.info("Connected successfully to local MongoDB: %s", cls._db.name)
+            except Exception as local_err:
+                logger.warning("Local MongoDB not available (%s). Falling back to in-memory mongomock database.", str(local_err))
+                try:
+                    import mongomock
+                    cls._client = mongomock.MongoClient()
+                    cls._db = cls._client[Config.DB_NAME]
+                    cls._is_mock = True
+                    logger.info("In-memory mongomock database initialized.")
+                except Exception as mock_err:
+                    logger.error("Failed to initialize mongomock: %s", str(mock_err))
+                    raise
 
         cls._setup_indexes()
 
