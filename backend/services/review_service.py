@@ -37,7 +37,7 @@ class ReviewService:
                 else:
                     ext_link = c.get("googleReviewUrl") or c.get("externalReviewLink") or ""
                     if not ext_link or ext_link == "https://search.google.com/local/writereview" or not ext_link.startswith("http"):
-                        query_str = f"{r['companyName']} {r['companyLocation']} reviews".strip()
+                        query_str = f"{r['companyName']} {r['companyLocation']}".strip()
                         ext_link = f"https://www.google.com/search?q={urllib.parse.quote_plus(query_str)}"
                 
                 r["googleReviewUrl"] = ext_link
@@ -110,7 +110,7 @@ class ReviewService:
             
             ext_link = (c.get("externalReviewLink") if c else "") or r.get("externalReviewLink") or ""
             if not ext_link or ext_link == "https://search.google.com/local/writereview" or not ext_link.startswith("http"):
-                query_str = f"{comp_name} {comp_loc} reviews".strip()
+                query_str = f"{comp_name} {comp_loc}".strip()
                 ext_link = f"https://www.google.com/search?q={urllib.parse.quote_plus(query_str)}"
             
             r["externalReviewLink"] = ext_link

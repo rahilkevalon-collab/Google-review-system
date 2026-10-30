@@ -9,7 +9,7 @@ import {
 import { api } from '../services/api';
 import { useToast } from './Toast';
 import { getGoogleReviewUrl } from '../utils/googleReviewUrl';
-import { triggerExtensionAutoFillAsync } from '../utils/extensionSync';
+import { triggerExtensionAutoFill } from '../utils/extensionSync';
 
 export default function ReviewCard({ review, company = {}, isActive = false, onSelect }) {
   const { addToast } = useToast();
@@ -58,22 +58,25 @@ export default function ReviewCard({ review, company = {}, isActive = false, onS
       onSelect(review);
     }
 
-    // 1. Copy review text to clipboard immediately
+    // 1. Dispatch event for ReviewCraft Chrome Extension synchronously
+    try {
+      triggerExtensionAutoFill(review, company);
+    } catch (e) {}
+
+    // 2. Copy review text to clipboard immediately
     await copyToClipboard();
     if (reviewId) {
       api.recordCopyEvent(reviewId).catch(() => {});
     }
 
-// 2. Dispatch event for ReviewCraft Chrome Extension & wait for storage ACK
-    try {
-      await triggerExtensionAutoFillAsync(review, company, 350);
-    } catch (e) {}
+    // 3. User notification
+    addToast(`Review text copied to clipboard! (5.0 Stars) Opening Google...`, 'success', 3500);
 
-    // 3. Clear, honest, reliable user notification on every device
-    addToast(`Review text copied to clipboard! (5.0 Stars) Paste into Google's review box to submit.`, 'success', 4500);
-
-    // 4. Navigate directly to verified Google Review dialog in the same page
-    window.location.href = googleUrl;
+    // 4. Open verified Google Review dialog in a new tab, falling back to same tab if blocked
+    const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
+    if (!win || win.closed || typeof win.closed === 'undefined') {
+      window.location.href = googleUrl;
+    }
 
   };
 

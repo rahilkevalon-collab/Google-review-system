@@ -414,17 +414,19 @@
       }
 
       // 2. Direct #lrd review links
-      const allLinks = Array.from(document.querySelectorAll('a[href*="lrd="]'));
+      const allLinks = Array.from(document.querySelectorAll('a[href*="lrd="], [data-lrd]'));
       for (const a of allLinks) {
-        const href = a.getAttribute('href') || '';
-        if (href.includes(',3,') || href.includes(',3,,') || /review/i.test(a.innerText || '')) {
+        const href = (a.getAttribute('href') || '') + ' ' + (a.getAttribute('data-lrd') || '');
+        if (href.includes(',3') || /0x[0-9a-fA-F]+:0x[0-9a-fA-F]+/.test(href) || /review/i.test(a.innerText || '')) {
           console.log('[ReviewCraft Google] Triggering #lrd review link:', href);
           lastTriggerTime = now;
           triggerCount++;
           hasTriggeredOpen = true;
-          const hashIdx = href.indexOf('#lrd=');
-          if (hashIdx !== -1) {
-            window.location.hash = href.substring(hashIdx);
+          const hexMatch = href.match(/(0x[0-9a-fA-F]+:0x[0-9a-fA-F]+)/);
+          if (hexMatch) {
+            window.location.hash = `#lrd=${hexMatch[1]},3,,,`;
+          } else if (href.indexOf('#lrd=') !== -1) {
+            window.location.hash = href.substring(href.indexOf('#lrd='));
           }
           dispatchReviewClick(a);
           return true;
@@ -436,6 +438,23 @@
         '[data-async-trigger="reviewDialog"]',
         '[data-lrd*=",3"]',
         'button[data-value="Write a review"]',
+        'button[jsaction*="writeReview"]',
+        'button[jsaction*="review.write"]',
+        'button[jsaction*="reviewDialog"]',
+        'button[aria-label*="Write a review" i]',
+        'button[aria-label*="સમીક્ષા" i]',
+        'button[aria-label*="રિવ્યુ" i]',
+        'button[aria-label*="समीक्षा" i]',
+        'button[aria-label*="रिव्यू" i]',
+        'a[aria-label*="Write a review" i]',
+        'a[aria-label*="सમીક્ષા" i]',
+        'a[aria-label*="રિવ્યુ" i]',
+        'div[role="button"][aria-label*="Write a review" i]',
+        'div[role="button"][aria-label*="સમીક્ષા" i]',
+        'div[role="button"][aria-label*="રિવ્યુ" i]',
+        '[aria-label*="Write a review" i]',
+        '[aria-label*="Rate and review" i]',
+        '[data-ved][role="button"][aria-label*="review" i]',
         'button[jsaction*="writeReview"]',
         'button[aria-label*="Write a review" i]',
         'button[aria-label*="सમીक्षा" i]',
@@ -455,7 +474,18 @@
         }
       }
 
-      // 4. Fallback search for any visible button / link with review labels (up to 150 chars)
+      // 4. Auto-expand Local 3-Pack result if on Google Search and Knowledge Panel not yet opened
+      if (!window.location.href.includes('/maps') && !hasClickedListingCard) {
+        const localPackCard = document.querySelector('div.VkpGBb a, a.C8Tukc, div.dbg0pd a, div.dbg0pd, div[data-cid] a');
+        if (localPackCard && isVisible(localPackCard)) {
+          hasClickedListingCard = true;
+          lastTriggerTime = now;
+          console.log('[ReviewCraft Google] Expanding business local listing card on Google Search');
+          dispatchReviewClick(localPackCard);
+        }
+      }
+
+      // 5. Fallback search for any visible button / link with review labels (up to 150 chars)
       const clickables = Array.from(document.querySelectorAll('button, a, div[role="button"], span[role="button"]'));
       for (const el of clickables) {
         if (!isVisible(el)) continue;

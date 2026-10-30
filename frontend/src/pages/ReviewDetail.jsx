@@ -108,11 +108,6 @@ export default function ReviewDetail() {
   };
 
   const handleOpenGoogle = async () => {
-    await copyToClipboard();
-    api.recordCopyEvent(effectiveId).catch(() => {});
-
-    await triggerExtensionAutoFillAsync({ ...review, reviewText, text: reviewText }, company, 350);
-
     const targetItem = {
       ...(company || {}),
       ...review,
@@ -120,9 +115,22 @@ export default function ReviewDetail() {
     };
     const googleUrl = getGoogleReviewUrl(targetItem);
 
-addToast("Review text copied to clipboard! (5.0 Stars) Paste into Google's review box to submit.", 'success', 4500);
-    window.location.href = googleUrl;
+    // 1. Dispatch event for ReviewCraft Chrome Extension synchronously
+    try {
+      triggerExtensionAutoFill({ ...review, reviewText, text: reviewText }, company);
+    } catch (e) {}
 
+    // 2. Copy review text to clipboard
+    await copyToClipboard();
+    api.recordCopyEvent(effectiveId).catch(() => {});
+
+    addToast(`Review text copied to clipboard! (5.0 Stars) Opening Google...`, 'success', 3500);
+
+    // 3. Open in new tab, falling back to same tab if blocked
+    const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
+    if (!win || win.closed || typeof win.closed === 'undefined') {
+      window.location.href = googleUrl;
+    }
   };
 
   const handleSaveEdits = async () => {

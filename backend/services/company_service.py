@@ -55,6 +55,37 @@ DEFAULT_SAMPLE_COMPANIES = [
         ]
     },
     {
+        "name": "Prime Restaurant & Banquet",
+        "category": "Restaurants and Food",
+        "description": "Exquisite fine dining restaurant and royal banquet hall offering authentic multi-cuisine delicacies, family dining, and premier celebrations.",
+        "services": "Fine Dining, Royal Banquet, Gourmet Catering, Family Celebrations, Corporate Dinners",
+        "location": "Ahmedabad, India",
+        "preferredLanguage": "en",
+        "googlePlaceId": "ChIJszBVRACHXjkRtG5e073CAoQ",
+        "googleReviewUrl": "https://search.google.com/local/writereview?placeid=ChIJszBVRACHXjkRtG5e073CAoQ",
+        "externalReviewLink": "https://search.google.com/local/writereview?placeid=ChIJszBVRACHXjkRtG5e073CAoQ",
+        "keywords": [
+            "Culinary Taste",
+            "Ambiance & Atmosphere",
+            "Attentive Service",
+            "Fresh Ingredients",
+            "Signature Dishes",
+            "Cleanliness & Hygiene",
+            "Great Value",
+            "Family Friendly"
+        ],
+        "seoKeywords": [
+            "Culinary Taste",
+            "Ambiance & Atmosphere",
+            "Attentive Service",
+            "Fresh Ingredients",
+            "Signature Dishes",
+            "Cleanliness & Hygiene",
+            "Great Value",
+            "Family Friendly"
+        ]
+    },
+    {
         "name": "Spice Pavilion Fine Dine",
         "category": "Restaurants and Food",
         "description": "Award-winning heritage Indian fine dining restaurant serving royal thalis, slow-cooked curries, and artisanal mocktails.",
@@ -238,19 +269,96 @@ def hex_feature_to_place_id(hex_str: str) -> str | None:
         return None
 
 def extract_place_id_from_url(url: str) -> str:
-    """Extracts Google Place ID from any URL format (?placeid=, ?place_id=, or #lrd=0x...:0x...)."""
+    """Extracts Google Place ID from any URL format (?placeid=, ?place_id=, #lrd=0x...:0x..., !1s0x...:0x..., or raw ChIJ...)."""
     if not url:
         return ""
     import re, urllib.parse
-    m = re.search(r'[?&](?:placeid|place_id)=([^&#]+)', url, re.I)
+    clean_url = str(url).strip()
+
+    # If it is a shortlink, resolve redirect first
+    if "maps.app.goo.gl" in clean_url or "goo.gl/maps" in clean_url:
+        try:
+            import urllib.request
+            req = urllib.request.Request(clean_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                clean_url = resp.geturl()
+        except Exception:
+            pass
+
+    # 1. Raw ChIJ string directly passed
+    m_raw = re.search(r'\b(ChIJ[0-9A-Za-z_-]{23,})\b', clean_url)
+    if m_raw:
+        return m_raw.group(1).strip()
+    # 2. Query param ?placeid= or ?place_id=
+    m = re.search(r'[?&](?:placeid|place_id)=([^&#]+)', clean_url, re.I)
     if m:
         return urllib.parse.unquote(m.group(1)).strip()
-    if "#lrd=" in url:
-        m_hex = re.search(r'0x[0-9a-fA-F]+:0x[0-9a-fA-F]+', url)
-        if m_hex:
-            conv = hex_feature_to_place_id(m_hex.group(0))
-            if conv:
-                return conv
+    # 3. Google hex feature pair (in #lrd= or maps data parameter !1s0x...:0x...)
+    m_hex = re.search(r'0x[0-9a-fA-F]+:0x[0-9a-fA-F]+', clean_url)
+    if m_hex:
+        conv = hex_feature_to_place_id(m_hex.group(0))
+        if conv:
+            return conv
+    return ""
+
+PRESET_BUSINESS_PLACE_IDS = {
+    "kevalon": "ChIJQwrcdyL0U6cRLe6thND0Dvw",
+    "prime": "ChIJszBVRACHXjkRtG5e073CAoQ",
+    "budventure": "ChIJMWJeZ_aEXjkRFt-P5KOVgFE",
+    "maxgen": "ChIJOYKhVKyEXjkRU_gN_7BOj1U",
+    "shivalik": "ChIJk0usKwCBXjkRpPxi1bxD4vI"
+}
+
+def auto_discover_place_id(name: str, location: str = "") -> str:
+    """Discovers verified Google Place ID from presets, extracted links, or candidate official domains."""
+    clean_name = str(name or "").lower().strip()
+    if not clean_name:
+        return ""
+
+    # 1. Match presets dictionary
+    for key, pid in PRESET_BUSINESS_PLACE_IDS.items():
+        if key in clean_name:
+            return pid
+
+    # 2. Extract from location/name if user pasted link
+    pid = extract_place_id_from_url(location) or extract_place_id_from_url(name)
+    if pid:
+        return pid
+
+    # 3. Check official domain candidates for maps embeds or shortlinks
+    import re, urllib.request
+    words = clean_name.split()
+    slug = re.sub(r'[^a-z0-9]', '', words[0]) if words else ""
+    full_slug = re.sub(r'[^a-z0-9]', '', "".join(words[:2])) if len(words) >= 2 else slug
+    candidates = [
+        f"https://www.{slug}.com/",
+        f"https://www.{slug}.technology/",
+        f"https://www.{full_slug}.com/",
+        f"https://{slug}tech.com/",
+        f"https://www.{slug}.in/",
+        f"https://{slug}.co.in/"
+    ]
+    for url in candidates:
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
+            html = urllib.request.urlopen(req, timeout=3).read().decode('utf-8', errors='ignore')
+
+            # Check for maps.app.goo.gl shortlinks
+            shorts = re.findall(r'https?://(?:maps\.app\.goo\.gl|goo\.gl/maps)/[a-zA-Z0-9_-]+', html)
+            for s in shorts:
+                s_pid = extract_place_id_from_url(s)
+                if s_pid:
+                    return s_pid
+
+            # Check for hex feature pair in embed
+            embed_hex = re.search(r'0x[0-9a-fA-F]+:0x[0-9a-fA-F]+', html)
+            if embed_hex:
+                conv = hex_feature_to_place_id(embed_hex.group(0))
+                if conv:
+                    return conv
+        except Exception:
+            continue
+
     return ""
 
 class CompanyService:
@@ -287,15 +395,25 @@ class CompanyService:
                             {"_id": exists["_id"]},
                             {"$set": {"externalReviewLink": comp["externalReviewLink"], "googleReviewUrl": comp.get("googleReviewUrl", comp["externalReviewLink"])}}
                         )
-            # Also upgrade any company with name Kevalon Technology regardless of category
-            self.db.companies.update_many(
-                {"name": {"$regex": "kevalon", "$options": "i"}},
-                {"$set": {
-                    "googlePlaceId": "ChIJQwrcdyL0U6cRLe6thND0Dvw",
-                    "googleReviewUrl": "https://search.google.com/local/writereview?placeid=ChIJQwrcdyL0U6cRLe6thND0Dvw",
-                    "externalReviewLink": "https://search.google.com/local/writereview?placeid=ChIJQwrcdyL0U6cRLe6thND0Dvw"
-                }}
-            )
+
+            # Upgrade verified companies with their direct writereview links
+            preset_updates = [
+                ("kevalon", "ChIJQwrcdyL0U6cRLe6thND0Dvw"),
+                ("prime.*(?:rest|banq|benq)", "ChIJszBVRACHXjkRtG5e073CAoQ"),
+                ("budventure", "ChIJMWJeZ_aEXjkRFt-P5KOVgFE"),
+                ("maxgen", "ChIJOYKhVKyEXjkRU_gN_7BOj1U"),
+                ("shivalik", "ChIJk0usKwCBXjkRpPxi1bxD4vI")
+            ]
+            for pattern, pid in preset_updates:
+                direct_url = f"https://search.google.com/local/writereview?placeid={pid}"
+                self.db.companies.update_many(
+                    {"name": {"$regex": pattern, "$options": "i"}},
+                    {"$set": {
+                        "googlePlaceId": pid,
+                        "googleReviewUrl": direct_url,
+                        "externalReviewLink": direct_url
+                    }}
+                )
 
             # Ensure all companies have seoKeywords field populated
             for c_doc in self.db.companies.find():
@@ -569,21 +687,28 @@ class CompanyService:
         lower_name = name.lower()
         lower_loc = location.lower()
         import re
+
+        # Check if place_id was provided or can be extracted from any link/location/name
+        if not place_id:
+            place_id = extract_place_id_from_url(ext_link)
+        if not place_id:
+            place_id = extract_place_id_from_url(location)
+        if not place_id:
+            place_id = extract_place_id_from_url(name)
+
+        # Check known verified business profiles & auto-discover place ID
+        if not place_id:
+            place_id = auto_discover_place_id(name, location)
+
+        clean_loc = " ".join(location.replace(",", " ").split()).strip() if location else ""
+        clean_q = f"{name} {clean_loc}".strip()
+
         if place_id:
             review_url = f"https://search.google.com/local/writereview?placeid={place_id}"
-        elif ext_link and "writereview" in ext_link and "placeid=" in ext_link:
+        elif ext_link and (ext_link.startswith("http://") or ext_link.startswith("https://")) and not ext_link.startswith("https://search.google.com/local/writereview") and "maps/search" not in ext_link:
             review_url = ext_link
-            m = re.search(r'placeid=([^&]+)', ext_link)
-            if m and not place_id:
-                place_id = m.group(1).strip()
-        elif ext_link and ext_link.startswith("http") and not ext_link.startswith("https://search.google.com/local/writereview") and "maps/search" not in ext_link:
-            review_url = ext_link
-        elif location:
-            clean_loc = " ".join(location.replace(",", " ").split())
-            clean_q = f"{name} {clean_loc}".strip()
-            review_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(clean_q)}"
         else:
-            clean_q = name.strip()
+            # Fallback: Targeted Google Maps business search
             review_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(clean_q)}"
 
         doc = {

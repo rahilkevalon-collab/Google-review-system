@@ -77,7 +77,23 @@ export function getGoogleReviewUrl(item = {}) {
     }
   }
 
-  // 4. Resolve destination URL based on extracted Place ID or link type
+  // 4. Client-side fallback matching for verified preset businesses
+  if (!placeId) {
+    const lowerName = (name || '').toLowerCase();
+    if (lowerName.includes('kevalon')) {
+      placeId = 'ChIJQwrcdyL0U6cRLe6thND0Dvw';
+    } else if (lowerName.includes('prime') && (lowerName.includes('rest') || lowerName.includes('banq') || lowerName.includes('benq'))) {
+      placeId = 'ChIJszBVRACHXjkRtG5e073CAoQ';
+    } else if (lowerName.includes('budventure')) {
+      placeId = 'ChIJMWJeZ_aEXjkRFt-P5KOVgFE';
+    } else if (lowerName.includes('maxgen')) {
+      placeId = 'ChIJOYKhVKyEXjkRU_gN_7BOj1U';
+    } else if (lowerName.includes('shivalik')) {
+      placeId = 'ChIJk0usKwCBXjkRpPxi1bxD4vI';
+    }
+  }
+
+  // 5. Resolve destination URL based on extracted Place ID or link type
   if (placeId) {
     // Canonical direct write-review URL: opens Google Review dialog directly across all devices
     resolved = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;

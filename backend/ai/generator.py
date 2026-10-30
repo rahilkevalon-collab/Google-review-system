@@ -178,7 +178,7 @@ class ReviewGeneratorService:
         # Construct Google review link
         ext_review_link = external_review_link
         if not ext_review_link or ext_review_link == "https://search.google.com/local/writereview" or not ext_review_link.startswith("http"):
-            query_str = f"{company_name} {location} reviews".strip()
+            query_str = f"{company_name} {location}".strip()
             ext_review_link = f"https://www.google.com/search?q={urllib.parse.quote_plus(query_str)}"
 
         accepted_reviews = []
