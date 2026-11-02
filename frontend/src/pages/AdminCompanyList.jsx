@@ -560,7 +560,7 @@ export default function AdminCompanyList() {
                     className="inline-flex items-center gap-1 text-[11px] font-bold text-[#068dcb] hover:underline cursor-pointer ml-auto"
                     title="Open public review studio"
                   >
-                    <span>Studio</span>
+                    <span>Review Pgae</span>
                     <ArrowUpRight className="w-3.5 h-3.5" />
                   </a>
                 </div>
