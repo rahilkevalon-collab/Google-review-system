@@ -28,7 +28,7 @@ function AppLayout({ children, adminUser, onLogout }) {
       {/* Footer */}
       <footer className="border-t border-slate-200/80 bg-white py-4 text-center text-xs text-slate-500 shadow-2xs">
         <div className="flex items-center justify-center gap-2 font-medium text-slate-600">
-          <span>Powered by Kevalon Technology</span>
+          <span>Powered by KevalonTap</span>
         </div>
       </footer>
     </div>
@@ -123,7 +123,7 @@ export default function App() {
                 path="/login" 
                 element={
                   adminUser ? (
-                    <Navigate to="/setup" replace />
+                    <Navigate to="/admin/companies" replace />
                   ) : (
                     <AdminLogin onLoginSuccess={handleLoginSuccess} />
                   )
@@ -135,7 +135,7 @@ export default function App() {
                 path="/" 
                 element={
                   adminUser ? (
-                    <CompanySetup categories={categories} />
+                    <Navigate to="/admin/companies" replace />
                   ) : (
                     <AdminLogin onLoginSuccess={handleLoginSuccess} />
                   )
@@ -153,6 +153,16 @@ export default function App() {
               />
 
               {/* Route 3: Admin Business Management Panel */}
+              <Route 
+                path="/admin" 
+                element={
+                  adminUser ? (
+                    <Navigate to="/admin/companies" replace />
+                  ) : (
+                    <AdminLogin onLoginSuccess={handleLoginSuccess} />
+                  )
+                } 
+              />
               <Route 
                 path="/admin/companies" 
                 element={
@@ -192,7 +202,7 @@ export default function App() {
               <Route 
                 path="*" 
                 element={
-                  adminUser ? <Navigate to="/setup" replace /> : <Navigate to="/login" replace />
+                  adminUser ? <Navigate to="/admin/companies" replace /> : <Navigate to="/login" replace />
                 } 
               />
             </Routes>

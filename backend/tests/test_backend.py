@@ -105,7 +105,7 @@ def test_api_companies_flow(client):
         "category": "Healthcare",
         "description": "Family dental care and cosmetic dentistry",
         "services": "Teeth Whitening, Dental Implants",
-        "location": "Boston, MA",
+        "googleReviewUrl": "https://search.google.com/local/writereview?placeid=ChIJmocktestplaceid",
         "preferredLanguage": "en",
         "keywords": ["Minimal Wait Time", "Compassionate Care"]
     }

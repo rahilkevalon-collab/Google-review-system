@@ -10,19 +10,14 @@ export default function Navbar() {
         {/* Brand Logo & Tagline */}
         <div className="flex items-center gap-5">
           <Link to="/setup" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-r from-[#034665] to-[#068dcb] flex items-center justify-center shadow-md shadow-[#068dcb]/25 group-hover:scale-105 transition-transform">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-lg tracking-tight text-slate-900 group-hover:text-[#068dcb] transition-colors">
-                  ReviewCraft
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 hidden sm:block font-medium">
-                Dynamic & Non-Repeating Business Reviews
-              </p>
-            </div>
+            <img 
+              src="/kevalon-tap-logo.png" 
+              alt="KevalonTap" 
+              className="h-9 w-auto object-contain group-hover:scale-[1.02] transition-transform" 
+            />
+            <p className="text-[11px] text-slate-500 hidden sm:block font-medium pl-2 border-l border-slate-200">
+              Dynamic & Authentic Business Reviews
+            </p>
           </Link>
         </div>
 

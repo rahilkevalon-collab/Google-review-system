@@ -26,6 +26,10 @@ backend/.env
 .env
 .env.local
 
+# Backups & local dumps
+backend/backups/
+*.json.bak
+
 # IDE & OS
 .vscode/
 .idea/

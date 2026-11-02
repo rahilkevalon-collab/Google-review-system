@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Sparkles, 
   MapPin, 
-  AlertCircle
+  AlertCircle,
+  GitBranch
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
@@ -14,13 +15,16 @@ import { syncReviewToExtension } from '../utils/extensionSync';
 
 export default function Dashboard({ categories = [] }) {
   const params = useParams();
-  const routeCompanyId = params.companyId || params.id;
+  // slug or ID from route (e.g. /reviews/kevlon-ahmedabad or /reviews/6ae...)
+  const routeIdentifier = params.companyId || params.id;
   const navigate = useNavigate();
   const { addToast } = useToast();
 
   const [company, setCompany] = useState(null);
+  const [branch, setBranch] = useState(null);
   const [loadingCompany, setLoadingCompany] = useState(true);
   const [companyError, setCompanyError] = useState(null);
+  const [isDeactivated, setIsDeactivated] = useState(false);
 
   // Keyword states
   const [keywords, setKeywords] = useState([]);
@@ -40,6 +44,9 @@ export default function Dashboard({ categories = [] }) {
   const companyRef = useRef(null);
   companyRef.current = company;
 
+  const branchRef = useRef(null);
+  branchRef.current = branch;
+
   const selectedKeywordsRef = useRef(selectedKeywords);
   selectedKeywordsRef.current = selectedKeywords;
 
@@ -47,9 +54,10 @@ export default function Dashboard({ categories = [] }) {
   keywordsRef.current = keywords;
 
   // 1. Generate fresh reviews helper using Groq AI
-  const generateReviews = useCallback(async (keywordsToUse, forceFresh = false, companyOverride = null) => {
+  const generateReviews = useCallback(async (keywordsToUse, forceFresh = false, companyOverride = null, branchOverride = null) => {
     const targetComp = companyOverride || companyRef.current;
-    if (!targetComp?.id) return;
+    const targetBranch = branchOverride || branchRef.current;
+    if (!targetComp) return;
 
     const now = Date.now();
     if (isGeneratingRef.current || (now - lastGenerationTime.current < 800 && !forceFresh)) {
@@ -66,15 +74,24 @@ export default function Dashboard({ categories = [] }) {
       ? keywordsToUse
       : ((selectedKeywordsRef.current && selectedKeywordsRef.current.length > 0) ? selectedKeywordsRef.current : [(keywordsRef.current && keywordsRef.current[0]) || 'Quality Service']);
 
+    const resolvedReviewUrl = targetBranch?.googleReviewUrl || targetComp?.googleReviewUrl || targetComp?.externalReviewLink || '';
+    const resolvedBranchId = targetBranch?.id || targetBranch?._id || '';
+    const resolvedBranchName = targetBranch?.branchName || '';
+    const resolvedLocation = targetBranch?.city || targetBranch?.address || targetComp?.location || '';
+
     try {
       const payload = {
-        companyId: targetComp.id,
-        companyName: targetComp.name,
+        companyId: targetComp.id || targetComp._id,
+        branchId: resolvedBranchId,
+        companyName: targetComp.companyName || targetComp.name,
+        branchName: resolvedBranchName,
         category: targetComp.category,
         selectedKeywords: activeKeywords,
         services: targetComp.services,
         description: targetComp.description,
-        location: targetComp.location || targetComp.formattedAddress,
+        location: resolvedLocation,
+        googleReviewUrl: resolvedReviewUrl,
+        externalReviewLink: resolvedReviewUrl,
         language: targetComp.preferredLanguage || 'en',
         tone: 'natural',
         length: 'medium',
@@ -84,11 +101,15 @@ export default function Dashboard({ categories = [] }) {
       const res = await api.generateReviews(payload);
 
       if (res.success && Array.isArray(res.reviews) && res.reviews.length > 0) {
-        const topReviews = res.reviews.slice(0, 3);
+        const topReviews = res.reviews.slice(0, 3).map((r) => ({
+          ...r,
+          googleReviewUrl: resolvedReviewUrl,
+          externalReviewLink: resolvedReviewUrl,
+          branchName: resolvedBranchName,
+          companyLocation: resolvedLocation
+        }));
+
         setReviews(topReviews);
-        try {
-          localStorage.setItem(`reviewcraft_cached_reviews_${targetComp.id}`, JSON.stringify(topReviews));
-        } catch (e) {}
         if (topReviews[0] && targetComp) {
           try {
             syncReviewToExtension(topReviews[0], targetComp, 'auto_sync');
@@ -100,27 +121,12 @@ export default function Dashboard({ categories = [] }) {
           );
         }
       } else {
-        const fallbackRes = await api.getReviews({ companyId: targetComp.id, limit: 3 });
-        if (fallbackRes.success && fallbackRes.reviews && fallbackRes.reviews.length > 0) {
-          const topFallback = fallbackRes.reviews.slice(0, 3);
-          setReviews(topFallback);
-        } else {
-          const errorMsg = res.error || 'Review generation unavailable. Please check connection.';
-          addToast(errorMsg, 'error', 6000);
-        }
+        const errorMsg = res.error || 'Review generation unavailable. Please check connection.';
+        addToast(errorMsg, 'error', 6000);
       }
     } catch (err) {
-      console.warn('Review generation error, loading stored reviews:', err);
-      try {
-        const fallbackRes = await api.getReviews({ companyId: targetComp?.id, limit: 3 });
-        if (fallbackRes.success && fallbackRes.reviews && fallbackRes.reviews.length > 0) {
-          setReviews(fallbackRes.reviews.slice(0, 3));
-        } else {
-          addToast(err.message || 'Review generation failed.', 'error', 6000);
-        }
-      } catch (e) {
-        addToast(err.message || 'Review generation failed.', 'error', 6000);
-      }
+      console.warn('Review generation error:', err);
+      addToast(err.message || 'Review generation failed.', 'error', 6000);
     } finally {
       setLoadingReviews(false);
       setIsGenerating(false);
@@ -128,82 +134,118 @@ export default function Dashboard({ categories = [] }) {
     }
   }, [addToast]);
 
-  // 2. Load Company Profile & trigger fresh Groq generation immediately on load / refresh
+  // 2. Load Company & Branch Profile (supports slug like 'kevlon-ahmedabad' or IDs)
   useEffect(() => {
     let isMounted = true;
     setLoadingCompany(true);
     setCompanyError(null);
 
-    async function fetchCompany() {
+    async function fetchReviewTarget() {
       try {
-        let targetId = routeCompanyId;
+        let targetSlugOrId = routeIdentifier;
 
-        if (!targetId) {
-          const savedId = localStorage.getItem('reviewcraft_company_id');
-          if (savedId) {
-            targetId = savedId;
+        if (!targetSlugOrId) {
+          // If no route identifier, check if we have any companies & branches
+          const allRes = await api.getCompanies();
+          if (allRes.success && allRes.companies && allRes.companies.length > 0) {
+            const first = allRes.companies[0];
+            const firstBranch = first.branches && first.branches[0];
+            targetSlugOrId = firstBranch?.reviewPageSlug || first.id;
           } else {
-            const allRes = await api.getCompanies();
-            if (allRes.success && allRes.companies && allRes.companies.length > 0) {
-              targetId = allRes.companies[0].id;
-            } else {
-              navigate('/setup');
-              return;
-            }
+            setCompanyError('No business review pages available in database.');
+            setLoadingCompany(false);
+            return;
           }
         }
 
-        const res = await api.getCompanyById(targetId);
+        // 1. Try public review page resolver (handles branch reviewPageSlug or branch ID)
+        let pageRes = await api.getReviewPage(targetSlugOrId).catch(() => null);
+
+        // 2. Fallback to getCompanyById if not resolved as branch slug
+        if (!pageRes || !pageRes.success || !pageRes.branch) {
+          const compRes = await api.getCompanyById(targetSlugOrId).catch(() => null);
+          if (compRes && compRes.success && compRes.company) {
+            const c = compRes.company;
+            const primaryBranch = c.branches && c.branches[0];
+            pageRes = {
+              success: true,
+              branch: primaryBranch || {
+                id: c.id,
+                branchName: c.companyName || c.name,
+                googleReviewUrl: c.googleReviewUrl || c.externalReviewLink || '',
+                reviewPageSlug: c.id,
+                isActive: c.isActive !== false,
+                seoKeywords: c.seoKeywords || c.keywords || []
+              },
+              company: c
+            };
+          }
+        }
+
         if (!isMounted) return;
 
-        if (res.success && res.company) {
-          const comp = res.company;
-          setCompany(comp);
-          localStorage.setItem('reviewcraft_company_id', comp.id);
-          localStorage.setItem('reviewcraft_category', comp.category || '');
+        if (pageRes && pageRes.success && pageRes.branch) {
+          const b = pageRes.branch;
+          const c = pageRes.company || pageRes.branch?.company || {};
 
-          const rawKeywords = Array.isArray(comp.seoKeywords) && comp.seoKeywords.length > 0
-            ? comp.seoKeywords
-            : (Array.isArray(comp.keywords) && comp.keywords.length > 0 ? comp.keywords : []);
+          // Check if either branch or parent company is inactive
+          if (b.isActive === false || b.status === 'inactive' || c.isActive === false) {
+            setIsDeactivated(true);
+            setLoadingReviews(false);
+            return;
+          }
+          setIsDeactivated(false);
+
+          setBranch(b);
+          setCompany(c);
+
+          // Build merged target object
+          const mergedTarget = {
+            id: c.id || c._id || b.companyId,
+            _id: c._id || c.id || b.companyId,
+            companyName: c.companyName || c.name || b.branchName,
+            name: c.companyName || c.name || b.branchName,
+            category: c.category || 'General',
+            services: c.services || '',
+            description: c.description || '',
+            branchId: b.id || b._id,
+            branchName: b.branchName,
+            branchCity: b.city || '',
+            branchAddress: b.address || '',
+            googleReviewUrl: b.googleReviewUrl || c.googleReviewUrl || '',
+            externalReviewLink: b.googleReviewUrl || c.externalReviewLink || '',
+            preferredLanguage: c.preferredLanguage || 'en'
+          };
+
+          const rawKeywords = Array.isArray(b.seoKeywords) && b.seoKeywords.length > 0
+            ? b.seoKeywords
+            : (Array.isArray(c.seoKeywords) && c.seoKeywords.length > 0 ? c.seoKeywords : (c.keywords || []));
 
           const cleanKeywords = Array.from(new Set(rawKeywords.map((k) => k.trim()).filter(Boolean)));
           const finalKeywords = cleanKeywords.length > 0 ? cleanKeywords : ['Quality Service', 'Customer Support'];
-
           setKeywords(finalKeywords);
 
-          // Restore selection or default to 1st SEO keyword
           let initialSelected = [finalKeywords[0]];
-          try {
-            const saved = localStorage.getItem(`reviewcraft_selected_kw_${comp.id}`);
-            if (saved) {
-              const parsed = JSON.parse(saved);
-              if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(k => finalKeywords.includes(k))) {
-                initialSelected = parsed;
-              }
-            }
-          } catch (e) {}
-
           setSelectedKeywords(initialSelected);
 
-          // Immediately trigger fresh Groq AI review generation on every refresh
-          // Never display old cached reviews while fresh reviews are loading
+          // Trigger review generation
           setLoadingReviews(true);
-          generateReviews(initialSelected, true, comp);
+          generateReviews(initialSelected, true, mergedTarget, b);
         } else {
-          setCompanyError('Business profile not found in database.');
+          setCompanyError('The requested business review page could not be found.');
         }
       } catch (err) {
         if (!isMounted) return;
-        console.error('Error fetching company details:', err);
-        setCompanyError(err.message || 'Failed to load company profile.');
+        console.error('Error fetching review page:', err);
+        setCompanyError(err.message || 'Failed to load review page.');
       } finally {
         if (isMounted) setLoadingCompany(false);
       }
     }
 
-    fetchCompany();
+    fetchReviewTarget();
     return () => { isMounted = false; };
-  }, [routeCompanyId, navigate, generateReviews]);
+  }, [routeIdentifier, generateReviews]);
 
   // 3. Handle Keyword Selection: Multi-select support
   const handleToggleKeyword = (kw) => {
@@ -217,9 +259,6 @@ export default function Dashboard({ categories = [] }) {
     }
 
     setSelectedKeywords(next);
-    if (company?.id) {
-      localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, JSON.stringify(next));
-    }
     generateReviews(next, true);
   };
 
@@ -233,19 +272,11 @@ export default function Dashboard({ categories = [] }) {
       setKeywords(updated);
       const nextSelected = [...selectedKeywords, clean];
       setSelectedKeywords(nextSelected);
-
-      if (company?.id) {
-        api.addCompanyKeyword(company.id, clean).catch(() => {});
-        localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, JSON.stringify(nextSelected));
-      }
       generateReviews(nextSelected, true);
       addToast(`Added keyword: "${clean}"`, 'success');
     } else if (!selectedKeywords.includes(clean)) {
       const nextSelected = [...selectedKeywords, clean];
       setSelectedKeywords(nextSelected);
-      if (company?.id) {
-        localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, JSON.stringify(nextSelected));
-      }
       generateReviews(nextSelected, true);
     }
   };
@@ -254,15 +285,10 @@ export default function Dashboard({ categories = [] }) {
   const handleRemoveKeyword = (kwToRemove) => {
     const updated = keywords.filter((k) => k !== kwToRemove);
     setKeywords(updated);
-
     const nextSelected = selectedKeywords.filter((k) => k !== kwToRemove);
     const finalSelected = nextSelected.length > 0 ? nextSelected : [updated[0]];
     setSelectedKeywords(finalSelected);
-
-    if (company?.id) {
-      api.removeCompanyKeyword(company.id, kwToRemove).catch(() => {});
-      localStorage.setItem(`reviewcraft_selected_kw_${company.id}`, JSON.stringify(finalSelected));
-    }
+    generateReviews(finalSelected, true);
     addToast(`Removed keyword: "${kwToRemove}"`, 'info');
   };
 
@@ -271,47 +297,68 @@ export default function Dashboard({ categories = [] }) {
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <div className="w-10 h-10 rounded-full border-2 border-[#068dcb] border-t-transparent animate-spin"></div>
         <p className="text-xs text-slate-500 font-medium tracking-wide">
-          Loading business profile...
+          Loading business review page...
         </p>
       </div>
     );
   }
 
-  if (companyError || !company) {
+  // INACTIVE REVIEW PAGE NOTICE
+  if (isDeactivated) {
     return (
-      <div className="max-w-xl mx-auto my-12 p-8 rounded-3xl glass-panel text-center space-y-5 border border-slate-200 shadow-xl bg-white">
-        <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-500 border border-red-200 flex items-center justify-center mx-auto">
-          <AlertCircle className="w-6 h-6" />
+      <div className="max-w-xl mx-auto my-16 p-8 rounded-3xl glass-panel text-center space-y-5 border border-slate-200 shadow-xl bg-white animate-in fade-in">
+        <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto">
+          <AlertCircle className="w-7 h-7" />
         </div>
-        <h2 className="text-xl font-bold text-slate-900">Business Profile Not Found</h2>
-        <p className="text-sm text-slate-500">
-          {companyError || "Could not retrieve the saved business details. Please try again."}
-        </p>
-        <Link
-          to="/setup"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#034665] to-[#068dcb] hover:from-[#02354e] hover:to-[#057db4] text-white text-xs font-bold shadow-md shadow-[#068dcb]/25"
-        >
-          <span>Go to Setup Form</span>
-        </Link>
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold text-slate-900">Review Page Inactive</h2>
+          <p className="text-sm text-slate-600 leading-relaxed max-w-md mx-auto">
+            This review page is currently inactive. Please contact your administrator.
+          </p>
+        </div>
       </div>
     );
   }
+
+  // NOT FOUND
+  if (companyError || !company) {
+    return (
+      <div className="max-w-xl mx-auto my-12 p-8 rounded-3xl glass-panel text-center space-y-5 border border-slate-200 shadow-xl bg-white animate-in fade-in">
+        <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 border border-rose-200 flex items-center justify-center mx-auto">
+          <AlertCircle className="w-6 h-6" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900">Business Profile Not Found</h2>
+        <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+          {companyError || "The requested business review page could not be found. Please check the URL or contact your administrator."}
+        </p>
+      </div>
+    );
+  }
+
+  const companyDisplayName = company.companyName || company.name || 'Business';
+  const branchDisplayName = branch?.branchName || '';
+  const branchCity = branch?.city || branch?.address || '';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       
-      {/* Company Header */}
-      <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-slate-200 bg-white shadow-md shadow-slate-200/40 text-center">
+      {/* Company & Branch Header */}
+      <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-slate-200 bg-white shadow-md shadow-slate-200/40 text-center space-y-2.5">
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-          Review <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#034665] to-[#068dcb]">{company.name}</span>
+          Review <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#034665] to-[#068dcb]">{companyDisplayName}</span>
         </h1>
-        {company.location && (
-          <p className="text-xs text-slate-600 font-semibold flex items-center justify-center gap-1.5 pt-1">
-            <MapPin className="w-3.5 h-3.5 text-[#068dcb]" />
-            <span>{company.location}</span>
-          </p>
+
+        {branchDisplayName && (
+          <div className="flex items-center justify-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 border border-cyan-200 text-[#034665] text-xs font-bold shadow-2xs">
+              <MapPin className="w-3.5 h-3.5 text-[#068dcb]" />
+              <span>{branchDisplayName}</span>
+              {branchCity && <span className="text-slate-500 font-medium">({branchCity})</span>}
+            </span>
+          </div>
         )}
-        <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#034665] pt-1.5">
+
+        <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#034665] pt-1">
           SELECT KEYWORDS & GENERATE REVIEW SUGGESTIONS
         </p>
       </div>
@@ -335,7 +382,7 @@ export default function Dashboard({ categories = [] }) {
         </div>
       )}
 
-      {/* 3 Review Cards Grid - 100% consistent across all devices */}
+      {/* 3 Review Cards Grid */}
       {reviews.length === 0 && (loadingReviews || isGenerating) ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <SkeletonReviewCard />
@@ -350,17 +397,23 @@ export default function Dashboard({ categories = [] }) {
               const fullRev = {
                 ...rev,
                 rating: Number(rev.rating) || 5,
-                companyName: rev.companyName || company?.name || '',
-                companyLocation: rev.companyLocation || company?.location || company?.formattedAddress || '',
-                googlePlaceId: rev.googlePlaceId || company?.googlePlaceId || '',
-                googleReviewUrl: rev.googleReviewUrl || company?.googleReviewUrl || '',
-                externalReviewLink: rev.externalReviewLink || company?.externalReviewLink || company?.googleReviewUrl || ''
+                companyName: companyDisplayName,
+                companyLocation: branchCity || company?.location || '',
+                googleReviewUrl: branch?.googleReviewUrl || company?.googleReviewUrl || rev.googleReviewUrl || '',
+                externalReviewLink: branch?.googleReviewUrl || company?.externalReviewLink || rev.externalReviewLink || ''
               };
+
               return (
                 <ReviewCard
-                  key={revId || `${company?.name || 'co'}-${rev.contentHash || rev.reviewText || Math.random()}`}
+                  key={revId || `${companyDisplayName}-${rev.contentHash || rev.reviewText || Math.random()}`}
                   review={fullRev}
-                  company={company}
+                  company={{
+                    ...company,
+                    name: companyDisplayName,
+                    location: branchCity || company?.location,
+                    googleReviewUrl: branch?.googleReviewUrl || company?.googleReviewUrl,
+                    externalReviewLink: branch?.googleReviewUrl || company?.externalReviewLink
+                  }}
                   isActive={Boolean(activeReviewId && revId && String(revId) === String(activeReviewId))}
                   onSelect={(selected) => setActiveReviewId(selected.id || selected._id)}
                 />

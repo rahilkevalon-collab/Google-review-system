@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SAMPLE_COMPANIES = [
     {
-        "name": "Kevalon Technology",
+        "name": "KevalonTap",
         "category": "IT Services and Software Development",
         "description": "Next-generation software engineering firm specializing in modern web, mobile apps, and enterprise AI automation.",
         "services": "Custom Software Development, Web & Mobile Apps, AI Solutions, Cloud Infrastructure",
@@ -503,6 +503,12 @@ class CompanyService:
                         {"$set": {"seoKeywords": c_doc["keywords"]}}
                     )
 
+            # Ensure all companies have isActive field populated
+            self.db.companies.update_many(
+                {"isActive": {"$exists": False}},
+                {"$set": {"isActive": True}}
+            )
+
             # Ensure every company has at least 3 initial review templates saved in generated_reviews
             for c_doc in self.db.companies.find():
                 cid_str = str(c_doc["_id"])
@@ -529,15 +535,28 @@ class CompanyService:
             logger.warning("Error seeding companies: %s", str(e))
 
     def get_all_companies(self) -> list[dict]:
-        self.seed_companies_if_empty()
         companies = list(self.db.companies.find().sort("createdAt", -1))
-        return [serialize_doc(c) for c in companies]
+        result = []
+        for c in companies:
+            cid_str = str(c["_id"])
+            c_branches = list(self.db.branches.find({"companyId": cid_str}).sort("createdAt", -1))
+            c_data = serialize_doc(c)
+            c_data["branchCount"] = len(c_branches)
+            c_data["branches"] = [serialize_doc(b) for b in c_branches]
+            result.append(c_data)
+        return result
 
     def get_company_by_id(self, company_id: str) -> dict | None:
         if not ObjectId.is_valid(company_id):
             return None
         doc = self.db.companies.find_one({"_id": ObjectId(company_id)})
-        return serialize_doc(doc) if doc else None
+        if not doc:
+            return None
+        c_data = serialize_doc(doc)
+        c_branches = list(self.db.branches.find({"companyId": str(doc["_id"])}).sort("createdAt", -1))
+        c_data["branchCount"] = len(c_branches)
+        c_data["branches"] = [serialize_doc(b) for b in c_branches]
+        return c_data
 
     def generate_seo_keywords(self, name: str, category: str, services: str, location: str = "") -> list[str]:
         """
@@ -718,9 +737,34 @@ class CompanyService:
     def create_company(self, data: dict) -> dict:
         import urllib.parse
         now = datetime.now(timezone.utc)
-        name = data.get("name", "").strip()
+        name = (data.get("companyName") or data.get("name") or "").strip()
         if not name:
             raise ValueError("Company / Business Name is required.")
+
+        category_val = (data.get("category") or "Other").strip()
+        if not category_val:
+            category_val = "Other"
+
+        # 1. Validation: Business Name and Category cannot be identical
+        if name.lower() == category_val.lower():
+            raise ValueError("Business Name and Category cannot be the same. Please enter a valid distinct company name.")
+
+        # Duplicate Prevention: Normalize company name and check global uniqueness across all companies
+        import re
+        clean_norm = re.sub(r'[^\w\s]', '', name.lower())
+        norm_name = re.sub(r'\s+', ' ', clean_norm).strip()
+        if not norm_name:
+            raise ValueError("Invalid Company Name.")
+
+        # STRICT DUPLICATE PREVENTION: Prevent duplicate company with the same name regardless of category or casing
+        existing = self.db.companies.find_one({"normalizedName": norm_name})
+        if existing:
+            existing_cat = existing.get("category", "")
+            cat_info = f" (in category '{existing_cat}')" if existing_cat else ""
+            raise ValueError(
+                f"A company named '{name}' is already registered{cat_info}. "
+                f"Company names must be unique. To add multiple locations, please manage branches under this company in the Business Directory."
+            )
 
         location = data.get("location", "").strip()
         formatted_address = data.get("formattedAddress", "").strip() or location
@@ -762,60 +806,69 @@ class CompanyService:
         elif len(unique_kws) < 3:
             unique_kws = self.generate_seo_keywords(name, category_val, services_str, location)
 
-        # Compute Google Review destination URL
-        ext_link = data.get("googleReviewUrl", "").strip() or data.get("externalReviewLink", "").strip()
-        lower_name = name.lower()
-        lower_loc = location.lower()
-        import re
+        # Optional Google Review URL configured at company or initial branch level
+        ext_link = (data.get("googleReviewUrl") or data.get("externalReviewLink") or "").strip()
+        if ext_link and not (ext_link.startswith("http://") or ext_link.startswith("https://")):
+            raise ValueError("Please enter a valid Google Review URL (must start with https:// or http://).")
 
-        # Check if place_id was provided or can be extracted from any link/location/name
-        if not place_id:
-            place_id = extract_place_id_from_url(ext_link)
-        if not place_id:
-            place_id = extract_place_id_from_url(location)
-        if not place_id:
-            place_id = extract_place_id_from_url(name)
-
-        # Check known verified business profiles & auto-discover place ID
-        if not place_id:
-            place_id = auto_discover_place_id(name, location)
-
-        clean_loc = " ".join(location.replace(",", " ").split()).strip() if location else ""
-        clean_q = f"{name} {clean_loc}".strip()
-
-        if place_id:
+        place_id = extract_place_id_from_url(ext_link) if ext_link else ""
+        if place_id and "search.google.com/local/writereview" not in ext_link:
             review_url = f"https://search.google.com/local/writereview?placeid={place_id}"
-        elif ext_link and (ext_link.startswith("http://") or ext_link.startswith("https://")) and not ext_link.startswith("https://search.google.com/local/writereview") and "maps/search" not in ext_link:
-            review_url = ext_link
         else:
-            # Fallback: Targeted Google Maps business search
-            review_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(clean_q)}"
+            review_url = ext_link
+
+        is_active = bool(data.get("isActive", True))
+        status_val = "active" if is_active else "inactive"
 
         doc = {
-            "name": name,
-            "category": data.get("category", "Other"),
+            "companyName": name,
+            "name": name,  # backwards-compatible alias
+            "normalizedName": norm_name,
+            "category": category_val,
             "services": services_str,
             "seoKeywords": unique_kws,
             "keywords": unique_kws,  # backwards-compatible alias
             "description": data.get("description", "").strip(),
+            "status": status_val,
+            "isActive": is_active,
+            "googleReviewUrl": review_url,
+            "externalReviewLink": review_url,
+            "googlePlaceId": place_id,
             "location": location,
             "formattedAddress": formatted_address,
-            "googlePlaceId": place_id,
-            "googleReviewUrl": review_url,
-            "externalReviewLink": review_url,  # backwards-compatible alias
             "preferredLanguage": data.get("preferredLanguage", "en"),
             "createdAt": now,
             "updatedAt": now
         }
         res = self.db.companies.insert_one(doc)
         doc["_id"] = res.inserted_id
+        company_id = str(res.inserted_id)
+
+        # Create initial branch if branch details were provided during registration
+        branch_name_input = data.get("branchName") or data.get("branch")
+        if branch_name_input or (review_url and review_url.startswith("http")):
+            from services.branch_service import branch_service
+            b_name = branch_name_input or (f"{location} Branch" if location else "Main Branch")
+            try:
+                branch_service.create_branch(company_id, {
+                    "branchName": b_name,
+                    "city": data.get("city") or location,
+                    "address": formatted_address or location,
+                    "state": data.get("state", ""),
+                    "country": data.get("country", "India"),
+                    "googleReviewUrl": review_url or "https://www.google.com/maps",
+                    "seoKeywords": unique_kws,
+                    "reviewPageSlug": data.get("reviewPageSlug", "")
+                })
+            except Exception as be:
+                logger.warning("Could not auto-create initial branch for %s: %s", name, str(be))
 
         # Immediately auto-generate initial review suggestions so data is stored in MongoDB
         try:
             from ai.generator import generator_service
             initial_kws = unique_kws[:2] if len(unique_kws) >= 2 else unique_kws
             generator_service.generate_reviews(
-                company_id=str(res.inserted_id),
+                company_id=company_id,
                 company_name=name,
                 category=doc["category"],
                 keyword=", ".join(initial_kws),
@@ -825,11 +878,122 @@ class CompanyService:
                 language=doc.get("preferredLanguage", "en"),
                 count=3
             )
-            logger.info("Auto-generated initial reviews for new company %s (ID: %s)", name, str(res.inserted_id))
+            logger.info("Auto-generated initial reviews for new company %s (ID: %s)", name, company_id)
         except Exception as ge:
             logger.warning("Could not auto-generate initial reviews on company creation: %s", str(ge))
 
         return serialize_doc(doc)
+
+    def update_company(self, company_id: str, data: dict) -> dict | None:
+        """Update company information including Google Review URL, keywords, services, and category."""
+        if not ObjectId.is_valid(company_id):
+            return None
+        now = datetime.now(timezone.utc)
+        updates = {"updatedAt": now}
+
+        if "name" in data or "companyName" in data:
+            name_val = str(data.get("name") or data.get("companyName")).strip()
+            if not name_val:
+                raise ValueError("Company Name cannot be empty.")
+            import re
+            clean_norm = re.sub(r'[^\w\s]', '', name_val.lower())
+            norm_name = re.sub(r'\s+', ' ', clean_norm).strip()
+            if not norm_name:
+                raise ValueError("Invalid Company Name.")
+
+            # Ensure no OTHER company already has this normalized name
+            existing = self.db.companies.find_one({
+                "normalizedName": norm_name,
+                "_id": {"$ne": ObjectId(company_id)}
+            })
+            if existing:
+                raise ValueError(f"Another company named '{name_val}' already exists. Company names must be unique.")
+
+            updates["name"] = name_val
+            updates["companyName"] = name_val
+            updates["normalizedName"] = norm_name
+
+        if "category" in data:
+            updates["category"] = str(data["category"]).strip()
+
+        if "services" in data:
+            raw_srv = data["services"]
+            if isinstance(raw_srv, list):
+                updates["services"] = ", ".join([str(s).strip() for s in raw_srv if str(s).strip()])
+            else:
+                updates["services"] = str(raw_srv).strip()
+
+        if "description" in data:
+            updates["description"] = str(data["description"]).strip()
+
+        if "googleReviewUrl" in data or "externalReviewLink" in data:
+            new_url = (data.get("googleReviewUrl") or data.get("externalReviewLink") or "").strip()
+            if new_url:
+                if not (new_url.startswith("http://") or new_url.startswith("https://")):
+                    raise ValueError("Please enter a valid Google Review URL (must start with https:// or http://).")
+                pid = extract_place_id_from_url(new_url)
+                if pid and "search.google.com/local/writereview" not in new_url:
+                    final_url = f"https://search.google.com/local/writereview?placeid={pid}"
+                else:
+                    final_url = new_url
+                updates["googleReviewUrl"] = final_url
+                updates["externalReviewLink"] = final_url
+                if pid:
+                    updates["googlePlaceId"] = pid
+
+        if "seoKeywords" in data or "keywords" in data:
+            raw_kws = data.get("seoKeywords") or data.get("keywords")
+            if isinstance(raw_kws, str):
+                parsed_kws = [k.strip() for k in raw_kws.split(",") if k.strip()]
+            elif isinstance(raw_kws, list):
+                parsed_kws = [str(k).strip() for k in raw_kws if str(k).strip()]
+            else:
+                parsed_kws = []
+            if parsed_kws:
+                unique_kws = list(dict.fromkeys(parsed_kws))
+                updates["seoKeywords"] = unique_kws
+                updates["keywords"] = unique_kws
+
+        if "isActive" in data:
+            updates["isActive"] = bool(data["isActive"])
+
+        res = self.db.companies.find_one_and_update(
+            {"_id": ObjectId(company_id)},
+            {"$set": updates},
+            return_document=True
+        )
+        return serialize_doc(res) if res else None
+
+    def delete_company(self, company_id: str) -> bool:
+        """Delete company profile, all its branches, and all its associated generated review records."""
+        if not ObjectId.is_valid(company_id):
+            return False
+        cid_str = str(company_id)
+        self.db.branches.delete_many({"companyId": cid_str})
+        self.db.generated_reviews.delete_many({"companyId": cid_str})
+        res = self.db.companies.delete_one({"_id": ObjectId(company_id)})
+        return res.deleted_count > 0
+
+    def toggle_company_status(self, company_id: str, is_active: bool = None) -> dict | None:
+        """Activate or deactivate a company review page."""
+        if not ObjectId.is_valid(company_id):
+            return None
+        existing = self.db.companies.find_one({"_id": ObjectId(company_id)})
+        if not existing:
+            return None
+
+        if is_active is None:
+            new_status = not existing.get("isActive", True)
+        else:
+            new_status = bool(is_active)
+
+        now = datetime.now(timezone.utc)
+        res = self.db.companies.find_one_and_update(
+            {"_id": ObjectId(company_id)},
+            {"$set": {"isActive": new_status, "updatedAt": now}},
+            return_document=True
+        )
+        return serialize_doc(res) if res else None
 
     def search_places(self, query: str) -> dict:
         """

@@ -2,6 +2,15 @@ const PROD_API_URL = 'https://google-review-system-9302.onrender.com';
 const rawApiUrl = (import.meta.env.VITE_API_URL || (import.meta.env.PROD ? PROD_API_URL : '')).trim();
 const API_BASE = (rawApiUrl ? rawApiUrl.replace(/\/$/, '') : '') + '/api';
 
+function getAuthHeaders(extraHeaders = {}) {
+  const token = localStorage.getItem('reviewcraft_admin_token');
+  const headers = { 'Content-Type': 'application/json', ...extraHeaders };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 async function handleResponse(response) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -54,7 +63,7 @@ export const api = {
   addCategoryKeyword: async (categoryIdentifier, keyword) => {
     const res = await fetch(`${API_BASE}/categories/${encodeURIComponent(categoryIdentifier)}/keywords`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ keyword }),
     });
     return handleResponse(res);
@@ -84,8 +93,34 @@ export const api = {
   createCompany: async (companyData) => {
     const res = await fetch(`${API_BASE}/companies`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(companyData),
+    });
+    return handleResponse(res);
+  },
+
+  updateCompany: async (id, companyData) => {
+    const res = await fetch(`${API_BASE}/companies/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(companyData),
+    });
+    return handleResponse(res);
+  },
+
+  deleteCompany: async (id) => {
+    const res = await fetch(`${API_BASE}/companies/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  toggleCompanyStatus: async (id, isActive) => {
+    const res = await fetch(`${API_BASE}/companies/${id}/status`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ isActive }),
     });
     return handleResponse(res);
   },
@@ -93,7 +128,7 @@ export const api = {
   addCompanyKeyword: async (companyId, keyword) => {
     const res = await fetch(`${API_BASE}/companies/${companyId}/keywords`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ keyword }),
     });
     return handleResponse(res);
@@ -102,6 +137,7 @@ export const api = {
   removeCompanyKeyword: async (companyId, keyword) => {
     const res = await fetch(`${API_BASE}/companies/${companyId}/keywords/${encodeURIComponent(keyword)}`, {
       method: 'DELETE',
+      headers: getAuthHeaders(),
     });
     return handleResponse(res);
   },
@@ -113,6 +149,57 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    return handleResponse(res);
+  },
+
+  // Branch Management APIs
+  getCompanyBranches: async (companyId) => {
+    const res = await fetch(`${API_BASE}/companies/${companyId}/branches`);
+    return handleResponse(res);
+  },
+
+  createBranch: async (companyId, branchData) => {
+    const res = await fetch(`${API_BASE}/companies/${companyId}/branches`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(branchData),
+    });
+    return handleResponse(res);
+  },
+
+  getBranch: async (branchId) => {
+    const res = await fetch(`${API_BASE}/branches/${branchId}`);
+    return handleResponse(res);
+  },
+
+  updateBranch: async (branchId, branchData) => {
+    const res = await fetch(`${API_BASE}/branches/${branchId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(branchData),
+    });
+    return handleResponse(res);
+  },
+
+  deleteBranch: async (branchId) => {
+    const res = await fetch(`${API_BASE}/branches/${branchId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  toggleBranchStatus: async (branchId, isActive) => {
+    const res = await fetch(`${API_BASE}/branches/${branchId}/status`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ isActive }),
+    });
+    return handleResponse(res);
+  },
+
+  getReviewPage: async (slugOrId) => {
+    const res = await fetch(`${API_BASE}/reviews/page/${encodeURIComponent(slugOrId)}`);
     return handleResponse(res);
   },
 

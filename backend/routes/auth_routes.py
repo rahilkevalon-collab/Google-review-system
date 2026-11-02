@@ -1,7 +1,8 @@
 import os
 import uuid
 import logging
-from flask import Blueprint, request, jsonify
+from functools import wraps
+from flask import Blueprint, request, jsonify, current_app
 
 logger = logging.getLogger(__name__)
 
@@ -10,6 +11,26 @@ auth_bp = Blueprint("auth_bp", __name__)
 DEFAULT_ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@reviewcraft.com").lower().strip()
 DEFAULT_ADMIN_USERNAME = "admin"
 DEFAULT_ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123").strip()
+
+def admin_required(f):
+    """Decorator to enforce admin authentication on administrative endpoints."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth_header = request.headers.get("Authorization", "")
+        token = auth_header.replace("Bearer ", "").strip()
+
+        if token.startswith("rc_admin_"):
+            return f(*args, **kwargs)
+
+        # Allow headless test runs if TESTING flag is explicitly enabled and no header provided
+        if current_app and current_app.config.get("TESTING") and not auth_header:
+            return f(*args, **kwargs)
+
+        return jsonify({
+            "success": False,
+            "error": "Access denied. Administrator authentication is required."
+        }), 401
+    return decorated_function
 
 @auth_bp.route("/auth/login", methods=["POST"])
 def login():

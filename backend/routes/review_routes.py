@@ -91,6 +91,10 @@ def generate_reviews():
         except (ValueError, TypeError):
             seed = None
 
+    branch_id = data.get("branchId", "").strip()
+    branch_name = data.get("branchName", "").strip()
+    google_review_url = (data.get("googleReviewUrl") or data.get("externalReviewLink") or "").strip()
+
     try:
         result = generator_service.generate_reviews(
             company_id=company_id or "default",
@@ -109,7 +113,10 @@ def generate_reviews():
             mode=mode,
             customer_rating=customer_rating,
             selected_keywords=selected_keywords,
-            seed=seed
+            seed=seed,
+            branch_id=branch_id,
+            branch_name=branch_name,
+            external_review_link=google_review_url
         )
         return jsonify(result), 200
     except ValueError as ve:
@@ -135,7 +142,10 @@ def generate_reviews():
                 mode="demo",
                 customer_rating=customer_rating,
                 selected_keywords=selected_keywords,
-                seed=seed
+                seed=seed,
+                branch_id=branch_id,
+                branch_name=branch_name,
+                external_review_link=google_review_url
             )
             return jsonify(result), 200
         except Exception:

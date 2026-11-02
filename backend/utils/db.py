@@ -70,9 +70,50 @@ class Database:
             # Categories index
             db.categories.create_index([("name", ASCENDING)], unique=True)
 
+            # Drop old compound index if present
+            try:
+                db.companies.drop_index("uniq_name_cat")
+            except Exception:
+                pass
+            try:
+                db.companies.drop_index("unique_company_name_category")
+            except Exception:
+                pass
+
             # Companies indexes
             db.companies.create_index([("createdAt", DESCENDING)])
+            # Strict unique index on normalizedName: each company can only be registered once globally
+            db.companies.create_index(
+                [("normalizedName", ASCENDING)],
+                unique=True,
+                name="unique_normalized_company_name"
+            )
+            db.companies.create_index([("companyName", ASCENDING)])
             db.companies.create_index([("name", ASCENDING)])
+
+            # Branches indexes
+            try:
+                db.branches.drop_index("uniq_company_branch")
+            except Exception:
+                pass
+            try:
+                db.branches.drop_index("uniq_slug")
+            except Exception:
+                pass
+            # 1. Unique compound index: companyId + normalizedBranchName (prevents duplicate branches under same company)
+            db.branches.create_index(
+                [("companyId", ASCENDING), ("normalizedBranchName", ASCENDING)],
+                unique=True,
+                name="unique_company_branch_name"
+            )
+            # 2. Unique review page slug index (for public review page URLs: /reviews/:slug)
+            db.branches.create_index(
+                [("reviewPageSlug", ASCENDING)],
+                unique=True,
+                name="unique_branch_slug"
+            )
+            db.branches.create_index([("companyId", ASCENDING), ("createdAt", DESCENDING)])
+            db.branches.create_index([("status", ASCENDING)])
 
             # Generated Reviews indexes
             # Ensure unique contentHash per company to prevent exact duplicates at the DB level
@@ -104,6 +145,7 @@ def serialize_doc(doc):
         for k, v in doc.items():
             if k == "_id":
                 result["id"] = str(v)
+                result["_id"] = str(v)
             elif isinstance(v, ObjectId):
                 result[k] = str(v)
             elif isinstance(v, datetime):

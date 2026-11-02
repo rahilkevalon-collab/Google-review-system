@@ -103,7 +103,10 @@ class ReviewGeneratorService:
         mode: str = "demo",
         customer_rating: int = None,
         selected_keywords: list = None,
-        seed: int = None
+        seed: int = None,
+        branch_id: str = None,
+        branch_name: str = "",
+        external_review_link: str = ""
     ) -> dict:
         """
         Orchestrate LLM generation, rating allocation (60% 5-star, 40% 4-star default),
@@ -162,24 +165,31 @@ class ReviewGeneratorService:
         # Load historical review pool for this company
         history_texts = self.get_history_texts(company_id)
         
-        # Resolve company externalReviewLink and location if available
-        external_review_link = ""
-        if company_id and ObjectId.is_valid(company_id):
+        # Resolve company / branch externalReviewLink and location if available
+        ext_review_link = (external_review_link or "").strip()
+        if not ext_review_link and branch_id and ObjectId.is_valid(branch_id):
+            b_doc = self.db.branches.find_one({"_id": ObjectId(branch_id)})
+            if b_doc:
+                ext_review_link = b_doc.get("googleReviewUrl") or b_doc.get("externalReviewLink", "")
+                if not branch_name:
+                    branch_name = b_doc.get("branchName") or b_doc.get("name", "")
+                if not location:
+                    location = b_doc.get("city") or b_doc.get("address", "")
+
+        if not ext_review_link and company_id and ObjectId.is_valid(company_id):
             comp = self.db.companies.find_one({"_id": ObjectId(company_id)})
             if comp:
-                external_review_link = comp.get("externalReviewLink", "")
+                ext_review_link = comp.get("googleReviewUrl") or comp.get("externalReviewLink", "")
                 if not location:
                     location = comp.get("location", "")
-        
+
         llm_provider = get_llm_provider()
         provider_name = llm_provider.name
         is_ai_powered = llm_provider.is_ai
 
-        # Construct Google review link
-        ext_review_link = external_review_link
-        if not ext_review_link or ext_review_link == "https://search.google.com/local/writereview" or not ext_review_link.startswith("http"):
-            query_str = f"{company_name} {location}".strip()
-            ext_review_link = f"https://www.google.com/search?q={urllib.parse.quote_plus(query_str)}"
+        # Construct Google review link directly without location-based search fallbacks
+        if not ext_review_link or not ext_review_link.startswith("http"):
+            ext_review_link = "https://www.google.com/maps"
 
         accepted_reviews = []
         total_rejected_count = 0
@@ -391,8 +401,11 @@ class ReviewGeneratorService:
             item_is_ai = (item_source_provider == "groq")
             doc = {
                 "companyId": str(company_id),
+                "branchId": str(branch_id) if branch_id else "",
                 "companyName": target_company_name,
+                "branchName": branch_name or "",
                 "companyLocation": location,
+                "googleReviewUrl": ext_review_link,
                 "externalReviewLink": ext_review_link,
                 "category": category,
                 "keyword": item_kw_str,

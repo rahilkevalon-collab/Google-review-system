@@ -11,6 +11,7 @@ from routes.company_routes import company_bp
 from routes.review_routes import review_bp
 from routes.analytics_routes import analytics_bp
 from routes.auth_routes import auth_bp
+from routes.branch_routes import branch_bp
 
 # Configure logging
 logging.basicConfig(
@@ -29,9 +30,8 @@ def create_app():
     # Initialize Database connection & indexes
     Database.initialize()
 
-    # Pre-seed default categories and sample companies
+    # Pre-seed default categories if empty (companies are managed purely by Admin)
     category_service.seed_categories_if_empty()
-    company_service.seed_companies_if_empty()
 
     # Register blueprints under /api
     app.register_blueprint(health_bp, url_prefix="/api")
@@ -40,6 +40,7 @@ def create_app():
     app.register_blueprint(review_bp, url_prefix="/api")
     app.register_blueprint(analytics_bp, url_prefix="/api")
     app.register_blueprint(auth_bp, url_prefix="/api")
+    app.register_blueprint(branch_bp, url_prefix="/api")
 
     @app.errorhandler(404)
     def handle_not_found(e):

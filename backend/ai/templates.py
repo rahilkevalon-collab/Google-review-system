@@ -42,7 +42,7 @@ CATEGORY_BUSINESS_NAMES = {
         "EcoBreeze Organics"
     ],
     "IT Services and Software Development": [
-        "Kevalon Technology",
+        "KevalonTap",
         "Apex Cloud Solutions",
         "NovaByte Innovations",
         "CyberCraft Software",

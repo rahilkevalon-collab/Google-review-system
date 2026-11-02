@@ -106,7 +106,7 @@ export default function CompanyModal({ isOpen, onClose, categories = [], onCompa
             <input
               type="text"
               required
-              placeholder="e.g. Kevalon Technology or Blue Horizon Cafe"
+              placeholder="e.g. KevalonTap or Blue Horizon Cafe"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#068dcb] transition-colors shadow-2xs"

@@ -77,43 +77,18 @@ export function getGoogleReviewUrl(item = {}) {
     }
   }
 
-  // 4. Client-side fallback matching for verified preset businesses
-  if (!placeId) {
-    const lowerName = (name || '').toLowerCase();
-    if (lowerName.includes('kevalon')) {
-      placeId = 'ChIJQwrcdyL0U6cRLe6thND0Dvw';
-    } else if (lowerName.includes('prime') && (lowerName.includes('rest') || lowerName.includes('banq') || lowerName.includes('benq'))) {
-      placeId = 'ChIJszBVRACHXjkRtG5e073CAoQ';
-    } else if (lowerName.includes('budventure')) {
-      placeId = 'ChIJMWJeZ_aEXjkRFt-P5KOVgFE';
-    } else if (lowerName.includes('maxgen')) {
-      placeId = 'ChIJOYKhVKyEXjkRU_gN_7BOj1U';
-    } else if (lowerName.includes('shivalik')) {
-      placeId = 'ChIJk0usKwCBXjkRpPxi1bxD4vI';
-    }
-  }
-
-  // 5. Resolve destination URL based on extracted Place ID or link type
+  // 4. Resolve destination URL directly from company's saved Google Review link
   if (placeId) {
     // Canonical direct write-review URL: opens Google Review dialog directly across all devices
     resolved = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
-  } else if (link && link.includes('writereview?placeid=')) {
+  } else if (link && (link.startsWith('http://') || link.startsWith('https://'))) {
+    // Directly use the company's saved Google Review URL without any location/search modifications
     resolved = link;
-  } else if (link && (link.includes('g.page/r/') || link.includes('maps.app.goo.gl'))) {
-    resolved = link;
-  } else if (link && link.includes('#lrd=')) {
-    resolved = link;
-  } else if (link && link.startsWith('http') && !link.includes('maps/search') && !link.includes('google.com/search') && !link.includes('maps?q=')) {
-    resolved = link;
+  } else if (link) {
+    resolved = `https://${link}`;
   } else {
-    // Fallback: Google Search targeted directly at the business entity Knowledge Panel (do NOT append 'reviews')
-    const cleanLoc = loc ? loc.replace(/\s+/g, ' ').trim() : '';
-    const query = [name, cleanLoc].filter(Boolean).join(' ').trim();
-    if (query) {
-      resolved = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-    } else {
-      resolved = 'https://www.google.com/maps';
-    }
+    // Safe generic fallback if no link was provided (no location or name queries performed)
+    resolved = 'https://www.google.com/maps';
   }
 
   // Embed review payload hash for desktop extension ONLY on plain search fallback URLs

@@ -99,18 +99,20 @@ export default function AdminLogin({ onLoginSuccess }) {
       <div className="w-full max-w-md">
         
         {/* Header Icon & Title */}
-        <div className="text-center space-y-3 mb-8">
-          <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-[#034665] to-[#068dcb] text-white flex items-center justify-center mx-auto shadow-xl shadow-[#068dcb]/25 ring-4 ring-[#068dcb]/15">
-            <ShieldCheck className="w-8 h-8 text-white stroke-[2.2]" />
+        <div className="text-center space-y-4 mb-8">
+          <div className="flex justify-center">
+            <img
+              src="/kevalon-tap-logo.png"
+              alt="KevalonTap"
+              className="h-14 sm:h-16 w-auto object-contain mx-auto"
+            />
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            ReviewCraft <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#034665] to-[#068dcb]">Admin Panel</span>
+            Admin <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#034665] to-[#068dcb]">Control Panel</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto">
             Sign in with your admin credentials to setup businesses and manage reviews.
           </p>
-
-
         </div>
 
         {/* Login Card */}
