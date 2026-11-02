@@ -124,19 +124,10 @@ export default function ReviewDetail() {
     copyToClipboard();
     api.recordCopyEvent(effectiveId).catch(() => {});
 
-    addToast(`Review text copied to clipboard! (5.0 Stars) Opening Google...`, 'success', 3500);
+    addToast(`Review text copied to clipboard! (5.0 Stars) Opening Google...`, 'success', 2000);
 
-    // 3. On mobile devices, navigate directly via window.location.href to guarantee native Google Review dialog triggers
-    // without popup blocking. On desktop PC, open in a new tab.
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
-    if (isMobile) {
-      window.location.href = googleUrl;
-    } else {
-      const win = window.open(googleUrl, '_blank', 'noopener,noreferrer');
-      if (!win || win.closed || typeof win.closed === 'undefined') {
-        window.location.href = googleUrl;
-      }
-    }
+    // 3. Open in the SAME PAGE/TAB directly (eliminates duplicate tabs and popup blocking)
+    window.location.href = googleUrl;
   };
 
   const handleSaveEdits = async () => {
