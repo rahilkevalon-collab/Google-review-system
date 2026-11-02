@@ -379,7 +379,7 @@ export default function AdminCompanyList() {
     <div className="space-y-8 animate-in fade-in duration-300">
 
       {/* Top Banner / Hero */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#034665] via-[#04618d] to-[#068dcb] p-6 sm:p-8 text-white shadow-xl shadow-[#068dcb]/15">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#034665] via-[#04618d] to-[#068dcb] p-6 sm:p-8 text-white">
         <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">

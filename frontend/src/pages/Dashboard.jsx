@@ -4,7 +4,7 @@ import {
   Sparkles, 
   MapPin, 
   AlertCircle,
-  GitBranch
+  Tag
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
@@ -12,10 +12,15 @@ import KeywordChips from '../components/KeywordChips';
 import ReviewCard from '../components/ReviewCard';
 import SkeletonReviewCard from '../components/SkeletonReviewCard';
 import { syncReviewToExtension } from '../utils/extensionSync';
+import { generateInstantReviews } from '../utils/instantReviewGenerator';
+
+function getSeoStorageKey(identifier) {
+  return `reviewcraft_selected_seo_${identifier || 'default'}`;
+}
 
 export default function Dashboard({ categories = [] }) {
   const params = useParams();
-  // slug or ID from route (e.g. /reviews/kevlon-ahmedabad or /reviews/6ae...)
+  // slug or ID from route (e.g. /reviews/kevalontap-ahmedabad or /reviews/6ae...)
   const routeIdentifier = params.companyId || params.id;
   const navigate = useNavigate();
   const { addToast } = useToast();
@@ -31,15 +36,15 @@ export default function Dashboard({ categories = [] }) {
   const [selectedKeywords, setSelectedKeywords] = useState([]);
   const [activeReviewId, setActiveReviewId] = useState(null);
 
-  // Reviews state (strictly 3 distinct suggestions, fresh on every load/refresh)
+  // Reviews state (strictly 3 distinct suggestions, fresh on every selection / refresh)
   const [reviews, setReviews] = useState([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [dedupNotice, setDedupNotice] = useState(null);
 
-  // Concurrency guard
-  const isGeneratingRef = useRef(false);
-  const lastGenerationTime = useRef(0);
+  // Request & debounce guards
+  const activeRequestIdRef = useRef(0);
+  const debounceTimerRef = useRef(null);
 
   const companyRef = useRef(null);
   companyRef.current = company;
@@ -53,88 +58,79 @@ export default function Dashboard({ categories = [] }) {
   const keywordsRef = useRef(keywords);
   keywordsRef.current = keywords;
 
-  // 1. Generate fresh reviews helper using Groq AI
-  const generateReviews = useCallback(async (keywordsToUse, forceFresh = false, companyOverride = null, branchOverride = null) => {
-    const targetComp = companyOverride || companyRef.current;
-    const targetBranch = branchOverride || branchRef.current;
-    if (!targetComp) return;
-
-    const now = Date.now();
-    if (isGeneratingRef.current || (now - lastGenerationTime.current < 800 && !forceFresh)) {
-      return;
+  // Background AI Refinement (Runs smoothly after instant client update without blocking UI)
+  const triggerBackgroundRefinement = useCallback((keywordsToUse, companyOverride = null, branchOverride = null) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
 
-    isGeneratingRef.current = true;
-    lastGenerationTime.current = now;
-    setLoadingReviews(true);
-    setIsGenerating(true);
-    setDedupNotice(null);
+    activeRequestIdRef.current += 1;
+    const currentReqId = activeRequestIdRef.current;
 
-    const activeKeywords = Array.isArray(keywordsToUse) && keywordsToUse.length > 0
-      ? keywordsToUse
-      : ((selectedKeywordsRef.current && selectedKeywordsRef.current.length > 0) ? selectedKeywordsRef.current : [(keywordsRef.current && keywordsRef.current[0]) || 'Quality Service']);
+    debounceTimerRef.current = setTimeout(async () => {
+      const targetComp = companyOverride || companyRef.current;
+      const targetBranch = branchOverride || branchRef.current;
+      if (!targetComp) return;
 
-    const resolvedReviewUrl = targetBranch?.googleReviewUrl || targetComp?.googleReviewUrl || targetComp?.externalReviewLink || '';
-    const resolvedBranchId = targetBranch?.id || targetBranch?._id || '';
-    const resolvedBranchName = targetBranch?.branchName || '';
-    const resolvedLocation = targetBranch?.city || targetBranch?.address || targetComp?.location || '';
+      const activeKws = Array.isArray(keywordsToUse) && keywordsToUse.length > 0
+        ? keywordsToUse
+        : (selectedKeywordsRef.current?.length > 0 ? selectedKeywordsRef.current : ['Quality Service']);
 
-    try {
-      const payload = {
-        companyId: targetComp.id || targetComp._id,
-        branchId: resolvedBranchId,
-        companyName: targetComp.companyName || targetComp.name,
-        branchName: resolvedBranchName,
-        category: targetComp.category,
-        selectedKeywords: activeKeywords,
-        services: targetComp.services,
-        description: targetComp.description,
-        location: resolvedLocation,
-        googleReviewUrl: resolvedReviewUrl,
-        externalReviewLink: resolvedReviewUrl,
-        language: targetComp.preferredLanguage || 'en',
-        tone: 'natural',
-        length: 'medium',
-        count: 3
-      };
+      const resolvedReviewUrl = targetBranch?.googleReviewUrl || targetComp?.googleReviewUrl || targetComp?.externalReviewLink || '';
+      const resolvedBranchId = targetBranch?.id || targetBranch?._id || '';
+      const resolvedBranchName = targetBranch?.branchName || '';
+      const resolvedLocation = targetBranch?.city || targetBranch?.address || targetComp?.location || '';
 
-      const res = await api.generateReviews(payload);
-
-      if (res.success && Array.isArray(res.reviews) && res.reviews.length > 0) {
-        const topReviews = res.reviews.slice(0, 3).map((r) => ({
-          ...r,
+      try {
+        const payload = {
+          companyId: targetComp.id || targetComp._id,
+          branchId: resolvedBranchId,
+          companyName: targetComp.companyName || targetComp.name,
+          branchName: resolvedBranchName,
+          category: targetComp.category,
+          selectedKeywords: activeKws,
+          services: targetComp.services,
+          description: targetComp.description,
+          location: resolvedLocation,
           googleReviewUrl: resolvedReviewUrl,
           externalReviewLink: resolvedReviewUrl,
-          branchName: resolvedBranchName,
-          companyLocation: resolvedLocation
-        }));
+          language: targetComp.preferredLanguage || 'en',
+          tone: 'natural',
+          length: 'medium',
+          count: 3
+        };
 
-        setReviews(topReviews);
-        if (topReviews[0] && targetComp) {
-          try {
-            syncReviewToExtension(topReviews[0], targetComp, 'auto_sync');
-          } catch (e) {}
+        const res = await api.generateReviews(payload);
+
+        // Only apply if user hasn't toggled newer keywords in the interim
+        if (currentReqId === activeRequestIdRef.current && res.success && Array.isArray(res.reviews) && res.reviews.length > 0) {
+          const topReviews = res.reviews.slice(0, 3).map((r) => ({
+            ...r,
+            googleReviewUrl: resolvedReviewUrl,
+            externalReviewLink: resolvedReviewUrl,
+            branchName: resolvedBranchName,
+            companyLocation: resolvedLocation
+          }));
+
+          setReviews(topReviews);
+          if (topReviews[0] && targetComp) {
+            try {
+              syncReviewToExtension(topReviews[0], targetComp, 'auto_sync');
+            } catch (e) {}
+          }
+          if (res.rejectedDuplicates > 0) {
+            setDedupNotice(
+              `Deduplication verified 3 distinct suggestions (${res.rejectedDuplicates} similar variant${res.rejectedDuplicates > 1 ? 's' : ''} filtered).`
+            );
+          }
         }
-        if (res.rejectedDuplicates > 0) {
-          setDedupNotice(
-            `Deduplication verified 3 distinct suggestions (${res.rejectedDuplicates} similar variant${res.rejectedDuplicates > 1 ? 's' : ''} filtered).`
-          );
-        }
-      } else {
-        const errorMsg = res.error || 'Review generation unavailable. Please check connection.';
-        addToast(errorMsg, 'error', 6000);
+      } catch (err) {
+        console.warn('Background AI refinement notice:', err.message);
       }
-    } catch (err) {
-      console.warn('Review generation error:', err);
-      addToast(err.message || 'Review generation failed.', 'error', 6000);
-    } finally {
-      setLoadingReviews(false);
-      setIsGenerating(false);
-      isGeneratingRef.current = false;
-    }
-  }, [addToast]);
+    }, 500);
+  }, []);
 
-  // 2. Load Company & Branch Profile (supports slug like 'kevlon-ahmedabad' or IDs)
+  // Load Company & Branch Profile (supports slug like 'kevalontap-ahmedabad' or IDs)
   useEffect(() => {
     let isMounted = true;
     setLoadingCompany(true);
@@ -145,7 +141,6 @@ export default function Dashboard({ categories = [] }) {
         let targetSlugOrId = routeIdentifier;
 
         if (!targetSlugOrId) {
-          // If no route identifier, check if we have any companies & branches
           const allRes = await api.getCompanies();
           if (allRes.success && allRes.companies && allRes.companies.length > 0) {
             const first = allRes.companies[0];
@@ -225,12 +220,51 @@ export default function Dashboard({ categories = [] }) {
           const finalKeywords = cleanKeywords.length > 0 ? cleanKeywords : ['Quality Service', 'Customer Support'];
           setKeywords(finalKeywords);
 
-          let initialSelected = [finalKeywords[0]];
+          // Persistent selected SEO keywords retrieval
+          // If the user selected multiple SEO keywords, retain them across refresh!
+          // They will only be removed if the user explicitly unselects them.
+          const storageKey = getSeoStorageKey(targetSlugOrId || b?.reviewPageSlug || b?.id || c?.id);
+          let initialSelected = [];
+          try {
+            const rawStored = localStorage.getItem(storageKey);
+            if (rawStored) {
+              const parsed = JSON.parse(rawStored);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                // Keep only keywords that belong to this business
+                const validKeywords = parsed.filter((k) => finalKeywords.includes(k));
+                if (validKeywords.length > 0) {
+                  initialSelected = validKeywords;
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('Error reading saved SEO keywords from storage:', e);
+          }
+
+          // Fallback only if user hasn't made any selection yet
+          if (initialSelected.length === 0) {
+            initialSelected = [finalKeywords[0]];
+            try {
+              localStorage.setItem(storageKey, JSON.stringify(initialSelected));
+            } catch (e) {}
+          }
+
           setSelectedKeywords(initialSelected);
 
-          // Trigger review generation
-          setLoadingReviews(true);
-          generateReviews(initialSelected, true, mergedTarget, b);
+          // 1. Instantly display fresh, unique reviews for the selected SEO keywords on load/refresh
+          const initialInstant = generateInstantReviews(initialSelected, mergedTarget, b, 3);
+          setReviews(initialInstant);
+          setLoadingReviews(false);
+          setIsGenerating(false);
+
+          if (initialInstant[0]) {
+            try {
+              syncReviewToExtension(initialInstant[0], mergedTarget, 'auto_sync');
+            } catch (e) {}
+          }
+
+          // 2. Background AI refinement
+          triggerBackgroundRefinement(initialSelected, mergedTarget, b);
         } else {
           setCompanyError('The requested business review page could not be found.');
         }
@@ -244,52 +278,64 @@ export default function Dashboard({ categories = [] }) {
     }
 
     fetchReviewTarget();
-    return () => { isMounted = false; };
-  }, [routeIdentifier, generateReviews]);
+    return () => {
+      isMounted = false;
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [routeIdentifier, triggerBackgroundRefinement]);
 
-  // 3. Handle Keyword Selection: Multi-select support
+  // Helper to persist keyword selection
+  const persistSelection = (newSelection) => {
+    const targetComp = companyRef.current;
+    const targetBranch = branchRef.current;
+    const targetId = routeIdentifier || targetBranch?.reviewPageSlug || targetBranch?.id || targetComp?.id || 'default';
+    const storageKey = getSeoStorageKey(targetId);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(newSelection));
+    } catch (e) {}
+  };
+
+  // Handle Keyword Selection: Multi-select support with INSTANT zero-latency review update
+  // User can select or unselect any SEO keyword freely
   const handleToggleKeyword = (kw) => {
     let next;
     if (selectedKeywords.includes(kw)) {
-      next = selectedKeywords.length > 1
-        ? selectedKeywords.filter((k) => k !== kw)
-        : selectedKeywords;
+      // Unselect this keyword
+      next = selectedKeywords.filter((k) => k !== kw);
     } else {
+      // Select this keyword
       next = [...selectedKeywords, kw];
     }
 
     setSelectedKeywords(next);
-    generateReviews(next, true);
-  };
+    persistSelection(next);
 
-  // 4. Add a new keyword chip
-  const handleAddKeyword = (newKw) => {
-    const clean = newKw.trim();
-    if (!clean) return;
-
-    if (!keywords.includes(clean)) {
-      const updated = [...keywords, clean];
-      setKeywords(updated);
-      const nextSelected = [...selectedKeywords, clean];
-      setSelectedKeywords(nextSelected);
-      generateReviews(nextSelected, true);
-      addToast(`Added keyword: "${clean}"`, 'success');
-    } else if (!selectedKeywords.includes(clean)) {
-      const nextSelected = [...selectedKeywords, clean];
-      setSelectedKeywords(nextSelected);
-      generateReviews(nextSelected, true);
+    // If user unselects all keywords, show empty state prompt
+    if (next.length === 0) {
+      setReviews([]);
+      setLoadingReviews(false);
+      setIsGenerating(false);
+      return;
     }
-  };
 
-  // 5. Remove a keyword chip
-  const handleRemoveKeyword = (kwToRemove) => {
-    const updated = keywords.filter((k) => k !== kwToRemove);
-    setKeywords(updated);
-    const nextSelected = selectedKeywords.filter((k) => k !== kwToRemove);
-    const finalSelected = nextSelected.length > 0 ? nextSelected : [updated[0]];
-    setSelectedKeywords(finalSelected);
-    generateReviews(finalSelected, true);
-    addToast(`Removed keyword: "${kwToRemove}"`, 'info');
+    // 1. INSTANT REVIEW GENERATION: Update reviews in 0 ms with ALL selected keywords!
+    const targetComp = companyRef.current;
+    const targetBranch = branchRef.current;
+    const instantReviews = generateInstantReviews(next, targetComp, targetBranch, 3);
+    setReviews(instantReviews);
+    setLoadingReviews(false);
+    setIsGenerating(false);
+
+    if (instantReviews[0] && targetComp) {
+      try {
+        syncReviewToExtension(instantReviews[0], targetComp, 'auto_sync');
+      } catch (e) {}
+    }
+
+    // 2. Refine in background via Groq AI without blocking UI or dropping clicks
+    triggerBackgroundRefinement(next, targetComp, targetBranch);
   };
 
   if (loadingCompany) {
@@ -369,8 +415,6 @@ export default function Dashboard({ categories = [] }) {
           keywords={keywords}
           selectedKeywords={selectedKeywords}
           onToggleKeyword={handleToggleKeyword}
-          onAddKeyword={handleAddKeyword}
-          onRemoveKeyword={handleRemoveKeyword}
         />
       </div>
 
@@ -382,8 +426,18 @@ export default function Dashboard({ categories = [] }) {
         </div>
       )}
 
-      {/* 3 Review Cards Grid */}
-      {reviews.length === 0 && (loadingReviews || isGenerating) ? (
+      {/* Review Cards Grid or Empty State */}
+      {selectedKeywords.length === 0 ? (
+        <div className="p-12 rounded-3xl text-center space-y-4 glass-panel border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
+          <div className="w-12 h-12 rounded-2xl bg-[#068dcb]/10 text-[#034665] border border-[#068dcb]/25 flex items-center justify-center mx-auto">
+            <Tag className="w-6 h-6 text-[#068dcb]" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900">No SEO Keywords Selected</h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            Please select one or more target SEO keywords above to view personalized 5-star customer review suggestions.
+          </p>
+        </div>
+      ) : reviews.length === 0 && (loadingReviews || isGenerating) ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <SkeletonReviewCard />
           <SkeletonReviewCard />
@@ -428,7 +482,7 @@ export default function Dashboard({ categories = [] }) {
           </div>
           <h3 className="text-base font-bold text-slate-900">No Review Suggestions Available</h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Select one of your target SEO keywords above to synthesize fresh review suggestions.
+            Select one of your target SEO keywords above to synthesize suggestions.
           </p>
         </div>
       )}
