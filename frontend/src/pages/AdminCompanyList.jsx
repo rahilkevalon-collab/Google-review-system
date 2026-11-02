@@ -1,27 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Building2, 
-  Search, 
-  PlusCircle, 
-  ExternalLink, 
-  Copy, 
-  Check, 
-  Sparkles, 
-  Layers, 
-  Loader2, 
-  Globe, 
-  ArrowUpRight, 
-  ShieldCheck, 
-  RefreshCw, 
-  Edit3, 
-  Trash2, 
-  Power, 
-  AlertTriangle, 
-  X, 
-  GitBranch, 
-  MapPin, 
-  Plus 
+import {
+  Building2,
+  Search,
+  PlusCircle,
+  ExternalLink,
+  Copy,
+  Check,
+  Sparkles,
+  Layers,
+  Loader2,
+  Globe,
+  ArrowUpRight,
+  ShieldCheck,
+  RefreshCw,
+  Edit3,
+  Trash2,
+  Power,
+  AlertTriangle,
+  X,
+  GitBranch,
+  MapPin,
+  Plus
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
@@ -377,11 +377,11 @@ export default function AdminCompanyList() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      
+
       {/* Top Banner / Hero */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#034665] via-[#04618d] to-[#068dcb] p-6 sm:p-8 text-white shadow-xl shadow-[#068dcb]/15">
         <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-        
+
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-xs font-semibold text-white/95">
@@ -455,8 +455,8 @@ export default function AdminCompanyList() {
               {searchQuery ? 'No matching companies found' : 'No companies registered yet'}
             </h3>
             <p className="text-xs text-slate-500">
-              {searchQuery 
-                ? `No company matches "${searchQuery}". Try a different keyword.` 
+              {searchQuery
+                ? `No company matches "${searchQuery}". Try a different keyword.`
                 : 'Get started by registering your first parent company with its branches.'}
             </p>
           </div>
@@ -560,7 +560,7 @@ export default function AdminCompanyList() {
                     className="inline-flex items-center gap-1 text-[11px] font-bold text-[#068dcb] hover:underline cursor-pointer ml-auto"
                     title="Open public review studio"
                   >
-                    <span>Review Pgae</span>
+                    <span>Review Page</span>
                     <ArrowUpRight className="w-3.5 h-3.5" />
                   </a>
                 </div>
@@ -577,7 +577,7 @@ export default function AdminCompanyList() {
       {branchManagerCompany && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto">
           <div className="relative w-full max-w-3xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 my-8 max-h-[90vh] overflow-y-auto">
-            
+
             {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-slate-100 pb-4">
               <div className="space-y-1">
@@ -614,11 +614,10 @@ export default function AdminCompanyList() {
                   setShowAddBranch(!showAddBranch);
                   setBranchErrors({});
                 }}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  showAddBranch
-                    ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    : 'bg-gradient-to-r from-[#034665] to-[#068dcb] text-white shadow-xs'
-                }`}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${showAddBranch
+                  ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  : 'bg-gradient-to-r from-[#034665] to-[#068dcb] text-white shadow-xs'
+                  }`}
               >
                 {showAddBranch ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                 <span>{showAddBranch ? 'Cancel' : 'Add New Branch'}</span>
@@ -742,11 +741,10 @@ export default function AdminCompanyList() {
                   return (
                     <div
                       key={branchId}
-                      className={`p-4 rounded-2xl border transition-all ${
-                        isActive
-                          ? 'bg-white border-slate-200/90 hover:border-[#068dcb]/40 shadow-2xs'
-                          : 'bg-slate-50/80 border-slate-300 opacity-80'
-                      }`}
+                      className={`p-4 rounded-2xl border transition-all ${isActive
+                        ? 'bg-white border-slate-200/90 hover:border-[#068dcb]/40 shadow-2xs'
+                        : 'bg-slate-50/80 border-slate-300 opacity-80'
+                        }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="space-y-1 min-w-0">
@@ -776,11 +774,10 @@ export default function AdminCompanyList() {
                           <button
                             type="button"
                             onClick={(e) => handleToggleBranchStatus(b, e)}
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
-                              isActive
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                : 'bg-slate-200 text-slate-600 border-slate-300 hover:bg-slate-300'
-                            }`}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${isActive
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                              : 'bg-slate-200 text-slate-600 border-slate-300 hover:bg-slate-300'
+                              }`}
                             title={isActive ? 'Deactivate branch review page' : 'Activate branch review page'}
                           >
                             <Power className={`w-3 h-3 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />

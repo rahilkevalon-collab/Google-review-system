@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint("auth_bp", __name__)
 
-DEFAULT_ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@reviewcraft.com").lower().strip()
+DEFAULT_ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@kevalon.com").lower().strip()
 DEFAULT_ADMIN_USERNAME = "admin"
 DEFAULT_ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123").strip()
 

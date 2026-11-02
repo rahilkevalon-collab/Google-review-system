@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Lock, 
-  Mail, 
-  Sparkles, 
-  Eye, 
-  EyeOff, 
-  ArrowRight, 
-  Loader2, 
+import {
+  Lock,
+  Mail,
+  Sparkles,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Loader2,
   ShieldCheck
 } from 'lucide-react';
 import { api } from '../services/api';
@@ -68,12 +68,12 @@ export default function AdminLogin({ onLoginSuccess }) {
     } catch (err) {
       // Fallback offline validation for default admin credentials
       if (
-        (cleanId.toLowerCase() === 'admin@reviewcraft.com' || cleanId.toLowerCase() === 'admin') &&
+        (cleanId.toLowerCase() === 'admin@kevalon.com' || cleanId.toLowerCase() === 'admin') &&
         cleanPass === 'admin123'
       ) {
         const dummyUser = {
           name: 'Super Admin',
-          email: 'admin@reviewcraft.com',
+          email: 'admin@kevalon.com',
           username: 'admin',
           role: 'admin'
         };
@@ -97,7 +97,7 @@ export default function AdminLogin({ onLoginSuccess }) {
   return (
     <div className="min-h-[75vh] flex items-center justify-center px-4 py-8 animate-in fade-in duration-300">
       <div className="w-full max-w-md">
-        
+
         {/* Header Icon & Title */}
         <div className="text-center space-y-4 mb-8">
           <div className="flex justify-center">
@@ -117,9 +117,9 @@ export default function AdminLogin({ onLoginSuccess }) {
 
         {/* Login Card */}
         <div className="glass-panel rounded-3xl p-7 sm:p-9 border border-slate-200/90 shadow-2xl shadow-slate-200/60 bg-white relative">
-          
+
           <form onSubmit={handleSubmit} className="space-y-5">
-            
+
             {/* Error Banner */}
             {errorMsg && (
               <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-600 font-medium flex items-center gap-2 animate-in fade-in">
@@ -139,7 +139,7 @@ export default function AdminLogin({ onLoginSuccess }) {
                   type="text"
                   name="identifier"
                   required
-                  placeholder="admin@reviewcraft.com or admin"
+                  placeholder="admin@kevalon.com or admin"
                   value={formData.identifier}
                   onChange={handleChange}
                   className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#068dcb] focus:ring-4 focus:ring-[#068dcb]/15 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
