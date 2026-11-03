@@ -67,8 +67,20 @@ class Database:
     def _setup_indexes(cls):
         try:
             db = cls._db
-            # Categories index
-            db.categories.create_index([("name", ASCENDING)], unique=True)
+            # Categories indexes
+            try:
+                db.categories.create_index([("name", ASCENDING)], unique=True, name="unique_category_name")
+            except Exception:
+                pass
+            try:
+                db.categories.create_index([("normalizedName", ASCENDING)], unique=True, sparse=True, name="unique_normalized_category_name")
+            except Exception:
+                pass
+            try:
+                db.categories.create_index([("type", ASCENDING)])
+                db.categories.create_index([("status", ASCENDING)])
+            except Exception:
+                pass
 
             # Drop old compound index if present
             try:

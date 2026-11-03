@@ -55,6 +55,15 @@ export const api = {
     return handleResponse(res);
   },
 
+  createCategory: async (categoryData) => {
+    const res = await fetch(`${API_BASE}/categories`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(typeof categoryData === 'string' ? { name: categoryData } : categoryData),
+    });
+    return handleResponse(res);
+  },
+
   getCategoryKeywords: async (categoryIdentifier) => {
     const res = await fetch(`${API_BASE}/categories/${encodeURIComponent(categoryIdentifier)}/keywords`);
     return handleResponse(res);

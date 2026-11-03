@@ -65,6 +65,25 @@ export default function App() {
     setAdminUser(null);
   };
 
+  const refreshCategories = async () => {
+    try {
+      const catRes = await api.getCategories();
+      if (catRes.success) {
+        const rawCats = catRes.categories || [];
+        const sortedCats = [...rawCats].sort((a, b) => {
+          const aIsOther = (a.name || '').trim().toLowerCase() === 'other';
+          const bIsOther = (b.name || '').trim().toLowerCase() === 'other';
+          if (aIsOther && !bIsOther) return 1;
+          if (!aIsOther && bIsOther) return -1;
+          return 0;
+        });
+        setCategories(sortedCats);
+      }
+    } catch (e) {
+      console.warn('Failed to refresh categories:', e);
+    }
+  };
+
   // Initial data bootstrap
   useEffect(() => {
     let isMounted = true;
@@ -145,7 +164,7 @@ export default function App() {
                 path="/setup" 
                 element={
                   adminUser ? (
-                    <CompanySetup categories={categories} />
+                    <CompanySetup categories={categories} onRefreshCategories={refreshCategories} />
                   ) : (
                     <AdminLogin onLoginSuccess={handleLoginSuccess} />
                   )
@@ -167,7 +186,7 @@ export default function App() {
                 path="/admin/companies" 
                 element={
                   adminUser ? (
-                    <AdminCompanyList />
+                    <AdminCompanyList onRefreshCategories={refreshCategories} />
                   ) : (
                     <AdminLogin onLoginSuccess={handleLoginSuccess} />
                   )

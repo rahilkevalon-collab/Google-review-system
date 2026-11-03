@@ -26,7 +26,7 @@ import {
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
 
-export default function AdminCompanyList() {
+export default function AdminCompanyList({ onRefreshCategories }) {
   const { addToast } = useToast();
   const [companies, setCompanies] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -42,6 +42,7 @@ export default function AdminCompanyList() {
   const [editFormData, setEditFormData] = useState({
     name: '',
     category: '',
+    customCategory: '',
     services: '',
     description: '',
     isActive: true
@@ -283,6 +284,7 @@ export default function AdminCompanyList() {
     setEditFormData({
       name: comp.companyName || comp.name || '',
       category: comp.category || '',
+      customCategory: '',
       services: srvText,
       description: comp.description || '',
       isActive: comp.isActive !== false
@@ -295,10 +297,26 @@ export default function AdminCompanyList() {
     if (!editingCompany) return;
     const targetId = editingCompany.id || editingCompany._id;
 
+    const isOtherCategory = (editFormData.category || '').trim().toLowerCase() === 'other';
+    const effectiveCategory = isOtherCategory
+      ? (editFormData.customCategory || '').trim()
+      : (editFormData.category || '').trim();
+
+    if (isOtherCategory) {
+      if (!editFormData.customCategory?.trim()) {
+        setEditErrors({ customCategory: 'Enter Custom Business Category is required.' });
+        return;
+      }
+      if (editFormData.customCategory.trim().toLowerCase() === 'other') {
+        setEditErrors({ customCategory: 'Please enter a valid custom category name.' });
+        return;
+      }
+    }
+
     if (!editFormData.name.trim()) {
       setEditErrors({ name: 'Company name is required.' });
       return;
-    } else if (editFormData.name.trim().toLowerCase() === editFormData.category.trim().toLowerCase()) {
+    } else if (effectiveCategory && editFormData.name.trim().toLowerCase() === effectiveCategory.toLowerCase()) {
       setEditErrors({ name: 'Business Name and Category cannot be the same.' });
       return;
     }
@@ -320,7 +338,8 @@ export default function AdminCompanyList() {
       const payload = {
         name: editFormData.name.trim(),
         companyName: editFormData.name.trim(),
-        category: editFormData.category.trim(),
+        category: effectiveCategory,
+        customCategory: isOtherCategory ? editFormData.customCategory.trim() : '',
         services: editFormData.services.trim(),
         description: editFormData.description.trim(),
         isActive: editFormData.isActive
@@ -333,6 +352,25 @@ export default function AdminCompanyList() {
         );
         addToast('Company details updated successfully!', 'success');
         setEditingCompany(null);
+
+        // Refresh categories list
+        try {
+          const catRes = await api.getCategories();
+          if (catRes && catRes.success) {
+            const rawCats = catRes.categories || [];
+            const sortedCats = [...rawCats].sort((a, b) => {
+              const aIsOther = (a.name || '').trim().toLowerCase() === 'other';
+              const bIsOther = (b.name || '').trim().toLowerCase() === 'other';
+              if (aIsOther && !bIsOther) return 1;
+              if (!aIsOther && bIsOther) return -1;
+              return 0;
+            });
+            setCategories(sortedCats);
+          }
+          if (onRefreshCategories) {
+            onRefreshCategories();
+          }
+        } catch (_) {}
       } else {
         addToast(res.error || 'Failed to update company.', 'error');
       }
@@ -886,14 +924,69 @@ export default function AdminCompanyList() {
                 </label>
                 <select
                   value={editFormData.category}
-                  onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEditFormData({
+                      ...editFormData,
+                      category: val,
+                      customCategory: val.toLowerCase() === 'other' ? editFormData.customCategory : ''
+                    });
+                    if (editErrors.customCategory) {
+                      setEditErrors((prev) => ({ ...prev, customCategory: '' }));
+                    }
+                  }}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-800 bg-white"
                 >
-                  {categories.map((c) => (
-                    <option key={c.id || c.name} value={c.name}>{c.name}</option>
-                  ))}
+                  {(() => {
+                    const opts = [...categories];
+                    if (
+                      editFormData.category &&
+                      !opts.some((c) => (c.name || '').toLowerCase() === editFormData.category.toLowerCase()) &&
+                      editFormData.category.toLowerCase() !== 'other'
+                    ) {
+                      opts.push({ id: editFormData.category, name: editFormData.category, type: 'custom' });
+                    }
+                    return opts
+                      .sort((a, b) => {
+                        const aIsOther = (a.name || '').trim().toLowerCase() === 'other';
+                        const bIsOther = (b.name || '').trim().toLowerCase() === 'other';
+                        if (aIsOther && !bIsOther) return 1;
+                        if (!aIsOther && bIsOther) return -1;
+                        return (a.name || '').localeCompare(b.name || '');
+                      })
+                      .map((c) => (
+                        <option key={c.id || c.name} value={c.name}>{c.name}</option>
+                      ));
+                  })()}
                 </select>
               </div>
+
+              {editFormData.category?.toLowerCase() === 'other' && (
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700">
+                      Enter Custom Business Category <span className="text-red-500 font-bold">*</span>
+                    </label>
+                    {editErrors.customCategory && (
+                      <span className="text-[11px] text-rose-500 font-semibold">{editErrors.customCategory}</span>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="e.g. Healthcare, Education, Automobile, Manufacturing"
+                    value={editFormData.customCategory || ''}
+                    onChange={(e) => {
+                      setEditFormData({ ...editFormData, customCategory: e.target.value });
+                      if (editErrors.customCategory) {
+                        setEditErrors((prev) => ({ ...prev, customCategory: '' }));
+                      }
+                    }}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border ${
+                      editErrors.customCategory ? 'border-rose-400 focus:border-rose-500' : 'border-slate-200 focus:border-[#068dcb]'
+                    } text-xs sm:text-sm text-slate-800`}
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">

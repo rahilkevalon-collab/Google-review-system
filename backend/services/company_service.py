@@ -741,8 +741,20 @@ class CompanyService:
         if not name:
             raise ValueError("Company / Business Name is required.")
 
-        category_val = (data.get("category") or "Other").strip()
-        if not category_val:
+        raw_cat = (data.get("category") or "").strip()
+        custom_cat = (data.get("customCategory") or data.get("custom_category") or "").strip()
+
+        # Handle Custom Business Category when 'Other' is selected
+        from services.category_service import category_service
+        if raw_cat.lower() == "other":
+            if not custom_cat:
+                raise ValueError("Please enter a custom business category when 'Other' is selected.")
+            cat_doc = category_service.create_or_get_category(custom_cat, category_type="custom")
+            category_val = cat_doc["name"]
+        elif raw_cat:
+            cat_doc = category_service.create_or_get_category(raw_cat, category_type="custom" if raw_cat not in [c["name"] for c in INITIAL_CATEGORIES] else "predefined")
+            category_val = cat_doc["name"]
+        else:
             category_val = "Other"
 
         # 1. Validation: Business Name and Category cannot be identical
@@ -776,8 +788,6 @@ class CompanyService:
             services_str = ", ".join([str(s).strip() for s in raw_services if str(s).strip()])
         else:
             services_str = str(raw_services).strip()
-
-        category_val = data.get("category", "Other")
 
         # SEO Keywords parsing (supports list or comma-separated string)
         raw_kws = data.get("seoKeywords") or data.get("keywords") or []
@@ -913,8 +923,18 @@ class CompanyService:
             updates["companyName"] = name_val
             updates["normalizedName"] = norm_name
 
-        if "category" in data:
-            updates["category"] = str(data["category"]).strip()
+        if "category" in data or "customCategory" in data:
+            raw_cat = str(data.get("category") or "").strip()
+            custom_cat = str(data.get("customCategory") or data.get("custom_category") or "").strip()
+            from services.category_service import category_service
+            if raw_cat.lower() == "other":
+                if not custom_cat:
+                    raise ValueError("Please enter a custom business category when 'Other' is selected.")
+                cat_doc = category_service.create_or_get_category(custom_cat, category_type="custom")
+                updates["category"] = cat_doc["name"]
+            elif raw_cat:
+                cat_doc = category_service.create_or_get_category(raw_cat, category_type="custom" if raw_cat not in [c["name"] for c in INITIAL_CATEGORIES] else "predefined")
+                updates["category"] = cat_doc["name"]
 
         if "services" in data:
             raw_srv = data["services"]

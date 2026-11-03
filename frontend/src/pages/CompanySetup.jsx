@@ -13,18 +13,20 @@ import {
   Copy, 
   ExternalLink, 
   MapPin, 
-  GitBranch 
+  GitBranch,
+  Layers
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
 
-export default function CompanySetup({ categories = [] }) {
+export default function CompanySetup({ categories = [], onRefreshCategories }) {
   const navigate = useNavigate();
   const { addToast } = useToast();
 
   const [formData, setFormData] = useState({
     name: '',
     category: 'IT Services and Software Development',
+    customCategory: '',
     services: '',
     description: '',
     // Initial Branch Fields
@@ -135,6 +137,7 @@ export default function CompanySetup({ categories = [] }) {
     const demoData = {
       name: 'KevalonTap',
       category: 'IT Services and Software Development',
+      customCategory: '',
       services: 'Web Development, AI Solutions, Mobile App Development, SEO Services',
       description: 'Next-generation software engineering firm specializing in modern web, mobile apps, and enterprise AI automation.',
       branchName: 'Ahmedabad Branch',
@@ -159,10 +162,22 @@ export default function CompanySetup({ categories = [] }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const isOtherCategory = (formData.category || '').trim().toLowerCase() === 'other';
+    const effectiveCategory = isOtherCategory ? formData.customCategory.trim() : (formData.category || '').trim();
+
     const newErrors = {};
+
+    if (isOtherCategory) {
+      if (!formData.customCategory.trim()) {
+        newErrors.customCategory = 'Enter Custom Business Category is required.';
+      } else if (formData.customCategory.trim().toLowerCase() === 'other') {
+        newErrors.customCategory = 'Please enter a valid custom category name.';
+      }
+    }
+
     if (!formData.name.trim()) {
       newErrors.name = 'Company / Business Name is required.';
-    } else if (formData.name.trim().toLowerCase() === (formData.category || '').trim().toLowerCase()) {
+    } else if (effectiveCategory && formData.name.trim().toLowerCase() === effectiveCategory.toLowerCase()) {
       newErrors.name = 'Business Name and Category cannot be the same. Please enter a distinct company name.';
     } else {
       const dup = checkDuplicateName(formData.name.trim());
@@ -193,7 +208,8 @@ export default function CompanySetup({ categories = [] }) {
       const payload = {
         name: formData.name.trim(),
         companyName: formData.name.trim(),
-        category: formData.category,
+        category: effectiveCategory,
+        customCategory: isOtherCategory ? formData.customCategory.trim() : '',
         services: formData.services.trim(),
         description: formData.description.trim(),
         branchName: formData.branchName.trim(),
@@ -205,6 +221,9 @@ export default function CompanySetup({ categories = [] }) {
       const res = await api.createCompany(payload);
       if (res.success && res.company) {
         addToast(`Company "${res.company.name}" registered successfully!`, 'success');
+        if (onRefreshCategories) {
+          onRefreshCategories();
+        }
         
         // Find created branch if any
         const branches = res.company.branches || [];
@@ -339,10 +358,16 @@ export default function CompanySetup({ categories = [] }) {
                           key={cat.id || cat.name}
                           type="button"
                           onClick={() => {
-                            setFormData((prev) => ({ ...prev, category: cat.name }));
+                            const isOther = (cat.name || '').toLowerCase() === 'other';
+                            setFormData((prev) => ({
+                              ...prev,
+                              category: cat.name,
+                              customCategory: isOther ? prev.customCategory : ''
+                            }));
                             setIsCategoryOpen(false);
                             setCategorySearch('');
-                            triggerAutoSeoGeneration(formData.name, cat.name, formData.services);
+                            const effectiveCat = isOther ? (formData.customCategory || 'Other') : cat.name;
+                            triggerAutoSeoGeneration(formData.name, effectiveCat, formData.services);
                           }}
                           className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer ${
                             isSelected
@@ -359,6 +384,43 @@ export default function CompanySetup({ categories = [] }) {
                 </div>
               )}
             </div>
+
+            {/* Custom Business Category Input (shown when 'Other' is selected) */}
+            {formData.category?.toLowerCase() === 'other' && (
+              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Enter Custom Business Category <span className="text-red-500 font-bold">*</span>
+                  </label>
+                  {errors.customCategory && (
+                    <span className="text-xs text-red-500 font-medium">
+                      {errors.customCategory}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <Layers className="w-4 h-4 text-[#068dcb] absolute left-3.5 top-3.5" />
+                  <input
+                    type="text"
+                    placeholder="e.g. Healthcare, Education, Automobile, Manufacturing"
+                    value={formData.customCategory}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData((prev) => ({ ...prev, customCategory: val }));
+                      if (errors.customCategory) {
+                        setErrors((prev) => ({ ...prev, customCategory: '' }));
+                      }
+                      triggerAutoSeoGeneration(formData.name, val || 'Other', formData.services);
+                    }}
+                    className={`w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border ${
+                      errors.customCategory
+                        ? 'border-red-400 focus:border-red-500 focus:ring-red-200'
+                        : 'border-slate-200 focus:border-[#068dcb] focus:ring-[#068dcb]/15'
+                    } focus:bg-white focus:ring-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs`}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Services Offered */}
             <div>
