@@ -23,9 +23,67 @@ async function handleResponse(response) {
   return data;
 }
 
+// =========================================================================
+// HIGH-PERFORMANCE IN-FLIGHT DEDUPLICATOR & SHORT-LIVED IN-MEMORY CACHE
+// =========================================================================
+const inFlightRequests = new Map();
+const apiCache = new Map();
+
+export function clearApiCache(prefix = '') {
+  if (!prefix) {
+    apiCache.clear();
+  } else {
+    for (const key of apiCache.keys()) {
+      if (key.includes(prefix)) {
+        apiCache.delete(key);
+      }
+    }
+  }
+}
+
+async function cachedFetch(url, options = {}, ttlMs = 0) {
+  const method = (options.method || 'GET').toUpperCase();
+  if (method !== 'GET') {
+    return fetch(url, options).then(handleResponse);
+  }
+
+  const cacheKey = url;
+  const now = Date.now();
+
+  // 1. Check TTL cache
+  if (ttlMs > 0 && apiCache.has(cacheKey)) {
+    const entry = apiCache.get(cacheKey);
+    if (now - entry.timestamp < ttlMs) {
+      return entry.data;
+    }
+    apiCache.delete(cacheKey);
+  }
+
+  // 2. In-flight request deduplication (prevents duplicate concurrent round trips)
+  if (inFlightRequests.has(cacheKey)) {
+    return inFlightRequests.get(cacheKey);
+  }
+
+  const promise = fetch(url, options)
+    .then(handleResponse)
+    .then((data) => {
+      if (ttlMs > 0 && data && data.success !== false) {
+        apiCache.set(cacheKey, { data, timestamp: Date.now() });
+      }
+      return data;
+    })
+    .finally(() => {
+      inFlightRequests.delete(cacheKey);
+    });
+
+  inFlightRequests.set(cacheKey, promise);
+  return promise;
+}
+
 export const api = {
   // Auth
   login: async (credentials) => {
+    clearApiCache();
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -35,27 +93,23 @@ export const api = {
   },
 
   verifyAuth: async (token) => {
-    const res = await fetch(`${API_BASE}/auth/verify`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    return handleResponse(res);
+    return cachedFetch(`${API_BASE}/auth/verify`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }, 15000);
   },
 
-  // Health
+  // Health (Cached for 10s with deduplication)
   getHealth: async () => {
-    const res = await fetch(`${API_BASE}/health`);
-    return handleResponse(res);
+    return cachedFetch(`${API_BASE}/health`, {}, 10000);
   },
 
-  // Categories
+  // Categories (Cached for 60s with instant invalidation on changes)
   getCategories: async () => {
-    const res = await fetch(`${API_BASE}/categories`);
-    return handleResponse(res);
+    return cachedFetch(`${API_BASE}/categories`, {}, 60000);
   },
 
   createCategory: async (categoryData) => {
+    clearApiCache('/categories');
     const res = await fetch(`${API_BASE}/categories`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -65,11 +119,11 @@ export const api = {
   },
 
   getCategoryKeywords: async (categoryIdentifier) => {
-    const res = await fetch(`${API_BASE}/categories/${encodeURIComponent(categoryIdentifier)}/keywords`);
-    return handleResponse(res);
+    return cachedFetch(`${API_BASE}/categories/${encodeURIComponent(categoryIdentifier)}/keywords`, {}, 120000);
   },
 
   addCategoryKeyword: async (categoryIdentifier, keyword) => {
+    clearApiCache('/categories');
     const res = await fetch(`${API_BASE}/categories/${encodeURIComponent(categoryIdentifier)}/keywords`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -78,28 +132,28 @@ export const api = {
     return handleResponse(res);
   },
 
-  // Companies
+  // Companies (Cached for 15s with instant invalidation on mutations)
   getCompanies: async () => {
-    const res = await fetch(`${API_BASE}/companies`);
-    return handleResponse(res);
+    return cachedFetch(`${API_BASE}/companies`, {}, 15000);
   },
 
   searchCompanies: async (query) => {
-    const res = await fetch(`${API_BASE}/companies/search?query=${encodeURIComponent(query)}`);
-    return handleResponse(res);
+    return cachedFetch(`${API_BASE}/companies/search?query=${encodeURIComponent(query)}`, {}, 5000);
   },
 
   getCompanyById: async (id) => {
-    const res = await fetch(`${API_BASE}/companies/${id}`);
-    return handleResponse(res);
+    return cachedFetch(`${API_BASE}/companies/${id}`, {}, 30000);
   },
 
   getCompanyGoogleReviewLink: async (id) => {
-    const res = await fetch(`${API_BASE}/companies/${id}/google-review-link`);
-    return handleResponse(res);
+    return cachedFetch(`${API_BASE}/companies/${id}/google-review-link`, {}, 30000);
   },
 
   createCompany: async (companyData) => {
+    clearApiCache('/companies');
+    clearApiCache('/branches');
+    clearApiCache('/categories');
+    clearApiCache('/reviews');
     const res = await fetch(`${API_BASE}/companies`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -109,6 +163,10 @@ export const api = {
   },
 
   updateCompany: async (id, companyData) => {
+    clearApiCache('/companies');
+    clearApiCache('/branches');
+    clearApiCache('/categories');
+    clearApiCache('/reviews');
     const res = await fetch(`${API_BASE}/companies/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
@@ -118,6 +176,9 @@ export const api = {
   },
 
   deleteCompany: async (id) => {
+    clearApiCache('/companies');
+    clearApiCache('/branches');
+    clearApiCache('/reviews');
     const res = await fetch(`${API_BASE}/companies/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
@@ -126,6 +187,9 @@ export const api = {
   },
 
   toggleCompanyStatus: async (id, isActive) => {
+    clearApiCache('/companies');
+    clearApiCache('/branches');
+    clearApiCache('/reviews');
     const res = await fetch(`${API_BASE}/companies/${id}/status`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
@@ -135,6 +199,7 @@ export const api = {
   },
 
   addCompanyKeyword: async (companyId, keyword) => {
+    clearApiCache('/companies');
     const res = await fetch(`${API_BASE}/companies/${companyId}/keywords`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -144,6 +209,7 @@ export const api = {
   },
 
   removeCompanyKeyword: async (companyId, keyword) => {
+    clearApiCache('/companies');
     const res = await fetch(`${API_BASE}/companies/${companyId}/keywords/${encodeURIComponent(keyword)}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
@@ -163,11 +229,13 @@ export const api = {
 
   // Branch Management APIs
   getCompanyBranches: async (companyId) => {
-    const res = await fetch(`${API_BASE}/companies/${companyId}/branches`);
-    return handleResponse(res);
+    return cachedFetch(`${API_BASE}/companies/${companyId}/branches`, {}, 15000);
   },
 
   createBranch: async (companyId, branchData) => {
+    clearApiCache('/companies');
+    clearApiCache('/branches');
+    clearApiCache('/reviews');
     const res = await fetch(`${API_BASE}/companies/${companyId}/branches`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -177,11 +245,13 @@ export const api = {
   },
 
   getBranch: async (branchId) => {
-    const res = await fetch(`${API_BASE}/branches/${branchId}`);
-    return handleResponse(res);
+    return cachedFetch(`${API_BASE}/branches/${branchId}`, {}, 30000);
   },
 
   updateBranch: async (branchId, branchData) => {
+    clearApiCache('/companies');
+    clearApiCache('/branches');
+    clearApiCache('/reviews');
     const res = await fetch(`${API_BASE}/branches/${branchId}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
@@ -191,6 +261,9 @@ export const api = {
   },
 
   deleteBranch: async (branchId) => {
+    clearApiCache('/companies');
+    clearApiCache('/branches');
+    clearApiCache('/reviews');
     const res = await fetch(`${API_BASE}/branches/${branchId}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
@@ -199,6 +272,9 @@ export const api = {
   },
 
   toggleBranchStatus: async (branchId, isActive) => {
+    clearApiCache('/companies');
+    clearApiCache('/branches');
+    clearApiCache('/reviews');
     const res = await fetch(`${API_BASE}/branches/${branchId}/status`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
@@ -208,14 +284,12 @@ export const api = {
   },
 
   getReviewPage: async (slugOrId) => {
-    const res = await fetch(`${API_BASE}/reviews/page/${encodeURIComponent(slugOrId)}`);
-    return handleResponse(res);
+    return cachedFetch(`${API_BASE}/reviews/page/${encodeURIComponent(slugOrId)}`, {}, 20000);
   },
 
   // Review Generation & Rating Settings
   getRatingDistributionSettings: async () => {
-    const res = await fetch(`${API_BASE}/settings/rating-distribution`);
-    return handleResponse(res);
+    return cachedFetch(`${API_BASE}/settings/rating-distribution`, {}, 60000);
   },
 
   generateReviews: async (payload) => {
@@ -238,16 +312,15 @@ export const api = {
         query.append(key, val);
       }
     });
-    const res = await fetch(`${API_BASE}/reviews?${query.toString()}`);
-    return handleResponse(res);
+    return cachedFetch(`${API_BASE}/reviews?${query.toString()}`, {}, 10000);
   },
 
   getReviewById: async (id) => {
-    const res = await fetch(`${API_BASE}/reviews/${id}`);
-    return handleResponse(res);
+    return cachedFetch(`${API_BASE}/reviews/${id}`, {}, 30000);
   },
 
   updateReviewText: async (id, reviewText) => {
+    clearApiCache('/reviews');
     const res = await fetch(`${API_BASE}/reviews/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -257,6 +330,7 @@ export const api = {
   },
 
   patchReviewText: async (id, reviewText) => {
+    clearApiCache('/reviews');
     const res = await fetch(`${API_BASE}/reviews/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -275,7 +349,6 @@ export const api = {
 
   // Analytics
   getAnalyticsOverview: async () => {
-    const res = await fetch(`${API_BASE}/analytics/overview`);
-    return handleResponse(res);
+    return cachedFetch(`${API_BASE}/analytics/overview`, {}, 15000);
   },
 };

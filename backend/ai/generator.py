@@ -60,30 +60,36 @@ class ReviewGeneratorService:
     def db(self):
         return Database.get_db()
 
-    def get_history_hashes(self, company_id: str) -> set[str]:
+    def get_history_pool(self, company_id: str) -> tuple[set[str], list[str]]:
         """
-        Retrieve set of contentHash values of previously generated reviews for this company.
+        Retrieve previously generated review hashes and texts in a single lean query
+        to prevent duplicates with minimal database latency.
         """
         cursor = self.db.generated_reviews.find(
             {"companyId": str(company_id)},
-            {"contentHash": 1, "_id": 0}
-        ).limit(1000)
-        return {doc["contentHash"] for doc in cursor if "contentHash" in doc}
+            {"contentHash": 1, "reviewText": 1, "_id": 0}
+        ).sort("createdAt", -1).limit(500)
+
+        hashes = set()
+        texts = []
+        for doc in cursor:
+            h = doc.get("contentHash")
+            if h:
+                hashes.add(h)
+            t = doc.get("reviewText")
+            if t:
+                texts.append(t)
+        return hashes, texts
+
+    def get_history_hashes(self, company_id: str) -> set[str]:
+        """Backward-compatible helper."""
+        h, _ = self.get_history_pool(company_id)
+        return h
 
     def get_history_texts(self, company_id: str, keyword: str = None) -> list[str]:
-        """
-        Retrieve previously generated review texts for a company to prevent duplicates.
-        """
-        query = {"companyId": str(company_id)}
-        if keyword:
-            query["keyword"] = keyword
-        
-        cursor = self.db.generated_reviews.find(
-            query,
-            {"reviewText": 1, "_id": 0}
-        ).sort("createdAt", -1).limit(500)
-        
-        return [doc["reviewText"] for doc in cursor if "reviewText" in doc]
+        """Backward-compatible helper."""
+        _, t = self.get_history_pool(company_id)
+        return t
 
     def generate_reviews(
         self,
@@ -162,8 +168,8 @@ class ReviewGeneratorService:
                 rotated = clean_selected_kws[idx % len(clean_selected_kws):] + clean_selected_kws[:idx % len(clean_selected_kws)]
                 batch_keyword_distribution.append(rotated)
 
-        # Load historical review pool for this company
-        history_texts = self.get_history_texts(company_id)
+        # Load historical review pool (both hashes & texts) in a single optimized query
+        existing_hashes, history_texts = self.get_history_pool(company_id)
         
         # Resolve company / branch externalReviewLink and location if available
         ext_review_link = (external_review_link or "").strip()
@@ -196,8 +202,6 @@ class ReviewGeneratorService:
         attempts = 0
         max_attempts = Config.MAX_GENERATION_RETRIES
 
-        # Load historical review hashes & texts to guarantee 100% non-repetition across all batches
-        existing_hashes = self.get_history_hashes(company_id)
         working_pool = list(history_texts)
         current_threshold = threshold
         target_company_name = company_name.strip() if company_name and company_name.strip() else "Business"

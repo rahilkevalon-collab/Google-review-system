@@ -535,14 +535,32 @@ class CompanyService:
             logger.warning("Error seeding companies: %s", str(e))
 
     def get_all_companies(self) -> list[dict]:
+        """Fetch all companies with all their branches in 2 batch queries instead of N+1 queries."""
         companies = list(self.db.companies.find().sort("createdAt", -1))
+        if not companies:
+            return []
+
+        # Batch-fetch all branches belonging to these companies in ONE single query
+        cids_str = [str(c["_id"]) for c in companies]
+        cids_obj = [c["_id"] for c in companies if isinstance(c.get("_id"), ObjectId)]
+        
+        all_branches = list(self.db.branches.find(
+            {"companyId": {"$in": cids_str + cids_obj}}
+        ).sort("createdAt", -1))
+
+        # Group branches by companyId in memory for O(1) assignment
+        branches_by_cid = {}
+        for b in all_branches:
+            cid_key = str(b.get("companyId", ""))
+            branches_by_cid.setdefault(cid_key, []).append(serialize_doc(b))
+
         result = []
         for c in companies:
             cid_str = str(c["_id"])
-            c_branches = list(self.db.branches.find({"companyId": cid_str}).sort("createdAt", -1))
+            c_branches = branches_by_cid.get(cid_str, [])
             c_data = serialize_doc(c)
             c_data["branchCount"] = len(c_branches)
-            c_data["branches"] = [serialize_doc(b) for b in c_branches]
+            c_data["branches"] = c_branches
             result.append(c_data)
         return result
 
@@ -553,7 +571,10 @@ class CompanyService:
         if not doc:
             return None
         c_data = serialize_doc(doc)
-        c_branches = list(self.db.branches.find({"companyId": str(doc["_id"])}).sort("createdAt", -1))
+        cid_str = str(doc["_id"])
+        c_branches = list(self.db.branches.find({
+            "companyId": {"$in": [cid_str, doc["_id"]]}
+        }).sort("createdAt", -1))
         c_data["branchCount"] = len(c_branches)
         c_data["branches"] = [serialize_doc(b) for b in c_branches]
         return c_data

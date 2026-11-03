@@ -94,6 +94,8 @@ class Database:
 
             # Companies indexes
             db.companies.create_index([("createdAt", DESCENDING)])
+            db.companies.create_index([("isActive", ASCENDING), ("createdAt", DESCENDING)])
+            db.companies.create_index([("category", ASCENDING)])
             # Strict unique index on normalizedName: each company can only be registered once globally
             db.companies.create_index(
                 [("normalizedName", ASCENDING)],
@@ -125,6 +127,7 @@ class Database:
                 name="unique_branch_slug"
             )
             db.branches.create_index([("companyId", ASCENDING), ("createdAt", DESCENDING)])
+            db.branches.create_index([("companyId", ASCENDING), ("isActive", ASCENDING)])
             db.branches.create_index([("status", ASCENDING)])
 
             # Generated Reviews indexes

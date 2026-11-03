@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 from datetime import datetime, timezone
 from bson import ObjectId
 from utils.db import Database, serialize_doc
@@ -15,12 +16,27 @@ def normalize_category_name(name: str) -> str:
     return re.sub(r'\s+', ' ', clean).strip()
 
 class CategoryService:
+    def __init__(self):
+        self._seeded = False
+        self._cached_categories = None
+        self._cached_categories_time = 0
+        self._cached_keywords = {}
+        self._cache_ttl = 60  # seconds
+
     @property
     def db(self):
         return Database.get_db()
 
-    def seed_categories_if_empty(self):
+    def invalidate_cache(self):
+        """Invalidate in-memory cache on write operations."""
+        self._cached_categories = None
+        self._cached_categories_time = 0
+        self._cached_keywords.clear()
+
+    def seed_categories_if_empty(self, force: bool = False):
         """Seed default predefined categories and backfill missing normalized fields on existing categories."""
+        if self._seeded and not force:
+            return
         try:
             now = datetime.now(timezone.utc)
             # Ensure predefined categories exist and have standard required fields
@@ -71,6 +87,8 @@ class CategoryService:
                         }
                     }
                 )
+            self._seeded = True
+            self.invalidate_cache()
         except Exception as e:
             logger.warning("Notice during categories seeding/updating: %s", str(e))
 
@@ -135,20 +153,40 @@ class CategoryService:
         }
         res = self.db.categories.insert_one(doc)
         doc["_id"] = res.inserted_id
+        self.invalidate_cache()
         logger.info("Created new %s business category: '%s' (ID: %s)", category_type, name_clean, str(res.inserted_id))
         return serialize_doc(doc)
 
     def get_all_categories(self) -> list[dict]:
         """Return all active categories sorted alphabetically with 'Other' strictly at the end."""
+        now = time.time()
+        if self._cached_categories is not None and (now - self._cached_categories_time < self._cache_ttl):
+            return list(self._cached_categories)
+
         self.seed_categories_if_empty()
-        categories = list(self.db.categories.find({"status": {"$ne": "inactive"}}).sort("name", 1))
+        categories = list(self.db.categories.find(
+            {"status": {"$ne": "inactive"}},
+            {"_id": 1, "name": 1, "normalizedName": 1, "type": 1, "status": 1, "isActive": 1, "icon": 1}
+        ).sort("name", 1))
+
         serialized = [serialize_doc(c) for c in categories]
         non_other = [c for c in serialized if c.get("name", "").strip().lower() != "other"]
         other = [c for c in serialized if c.get("name", "").strip().lower() == "other"]
-        return non_other + other
+        result = non_other + other
+
+        self._cached_categories = result
+        self._cached_categories_time = now
+        return result
 
     def get_keywords_by_category(self, category_identifier: str) -> list[str]:
-        """Lookup keywords by category ID, name, or normalizedName."""
+        """Lookup keywords by category ID, name, or normalizedName with in-memory caching."""
+        if not category_identifier:
+            return []
+
+        ident_key = str(category_identifier).strip().lower()
+        if ident_key in self._cached_keywords:
+            return list(self._cached_keywords[ident_key])
+
         self.seed_categories_if_empty()
         query = {}
         if ObjectId.is_valid(category_identifier):
@@ -157,15 +195,19 @@ class CategoryService:
             norm = normalize_category_name(category_identifier)
             query = {"$or": [{"name": category_identifier}, {"normalizedName": norm}]}
 
-        cat = self.db.categories.find_one(query)
+        cat = self.db.categories.find_one(query, {"keywords": 1})
         if cat and "keywords" in cat and cat["keywords"]:
-            return cat["keywords"]
+            kws = list(cat["keywords"])
+            self._cached_keywords[ident_key] = kws
+            return kws
 
         for item in INITIAL_CATEGORIES:
             if item["name"].lower() == category_identifier.lower():
-                return item["keywords"]
+                kws = list(item["keywords"])
+                self._cached_keywords[ident_key] = kws
+                return kws
 
-        return [
+        fallback_kws = [
             f"{category_identifier} Services",
             "Quality Customer Care",
             "Professional Service",
@@ -173,6 +215,8 @@ class CategoryService:
             "Reliability",
             "Top Rated Provider"
         ]
+        self._cached_keywords[ident_key] = fallback_kws
+        return fallback_kws
 
     def add_keyword(self, category_identifier: str, keyword: str) -> bool:
         """Add a custom keyword to a category."""
@@ -188,6 +232,7 @@ class CategoryService:
             norm = normalize_category_name(category_identifier)
             query = {"$or": [{"name": category_identifier}, {"normalizedName": norm}]}
         res = self.db.categories.update_one(query, {"$addToSet": {"keywords": kw}})
+        self.invalidate_cache()
         return res.matched_count > 0
 
 category_service = CategoryService()

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Building2,
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
+import SkeletonCompanyCard from '../components/SkeletonCompanyCard';
 
 export default function AdminCompanyList({ onRefreshCategories }) {
   const { addToast } = useToast();
@@ -33,6 +34,7 @@ export default function AdminCompanyList({ onRefreshCategories }) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedId, setCopiedId] = useState(null);
+  const [loadError, setLoadError] = useState(null);
 
   // Status toggling state
   const [togglingId, setTogglingId] = useState(null);
@@ -78,9 +80,10 @@ export default function AdminCompanyList({ onRefreshCategories }) {
   const [editBranchFormData, setEditBranchFormData] = useState({});
   const [isSavingBranchEdit, setIsSavingBranchEdit] = useState(false);
 
-  // Fetch Companies Directory
+  // Fetch Companies Directory with error recovery
   const fetchCompanies = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [compRes, catRes] = await Promise.allSettled([
         api.getCompanies(),
@@ -90,7 +93,8 @@ export default function AdminCompanyList({ onRefreshCategories }) {
       if (compRes.status === 'fulfilled' && compRes.value && compRes.value.success) {
         setCompanies(compRes.value.companies || []);
       } else {
-        setCompanies([]);
+        const errMsg = compRes.reason?.message || 'Failed to connect to business database.';
+        setLoadError(errMsg);
       }
 
       if (catRes.status === 'fulfilled' && catRes.value && catRes.value.success) {
@@ -98,6 +102,7 @@ export default function AdminCompanyList({ onRefreshCategories }) {
       }
     } catch (err) {
       console.error('Failed to load companies:', err);
+      setLoadError(err.message || 'Failed to load business directory.');
       addToast('Failed to load business directory.', 'error');
     } finally {
       setLoading(false);
@@ -402,16 +407,18 @@ export default function AdminCompanyList({ onRefreshCategories }) {
     }
   };
 
-  const filteredCompanies = companies.filter((c) => {
-    if (!searchQuery.trim()) return true;
+  const filteredCompanies = useMemo(() => {
+    if (!searchQuery.trim()) return companies;
     const q = searchQuery.toLowerCase();
-    const nameMatch = (c.companyName || c.name || '').toLowerCase().includes(q);
-    const catMatch = (c.category || '').toLowerCase().includes(q);
-    const servicesMatch = Array.isArray(c.services)
-      ? c.services.some((s) => s.toLowerCase().includes(q))
-      : (c.services || '').toLowerCase().includes(q);
-    return nameMatch || catMatch || servicesMatch;
-  });
+    return companies.filter((c) => {
+      const nameMatch = (c.companyName || c.name || '').toLowerCase().includes(q);
+      const catMatch = (c.category || '').toLowerCase().includes(q);
+      const servicesMatch = Array.isArray(c.services)
+        ? c.services.some((s) => s.toLowerCase().includes(q))
+        : (c.services || '').toLowerCase().includes(q);
+      return nameMatch || catMatch || servicesMatch;
+    });
+  }, [companies, searchQuery]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -479,9 +486,28 @@ export default function AdminCompanyList({ onRefreshCategories }) {
 
       {/* Directory Grid */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center min-h-[350px] space-y-3 bg-white rounded-3xl border border-slate-200/80 p-12">
-          <Loader2 className="w-8 h-8 text-[#068dcb] animate-spin" />
-          <p className="text-xs font-medium text-slate-500">Loading business directory...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[...Array(6)].map((_, i) => (
+            <SkeletonCompanyCard key={i} />
+          ))}
+        </div>
+      ) : loadError && companies.length === 0 ? (
+        <div className="flex flex-col items-center justify-center min-h-[320px] space-y-4 bg-white rounded-3xl border border-rose-200/80 p-8 text-center shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-500">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <div className="space-y-1 max-w-md">
+            <h3 className="text-sm font-bold text-slate-800">Unable to load business directory</h3>
+            <p className="text-xs text-slate-500">{loadError}</p>
+          </div>
+          <button
+            type="button"
+            onClick={fetchCompanies}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#034665] to-[#068dcb] text-white text-xs font-bold hover:brightness-110 transition-all cursor-pointer shadow-sm"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Retry Connection</span>
+          </button>
         </div>
       ) : filteredCompanies.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[350px] space-y-4 bg-white rounded-3xl border border-dashed border-slate-300 p-12 text-center">

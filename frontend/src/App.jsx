@@ -2,11 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { api } from './services/api';
 import { ToastProvider } from './components/Toast';
-import CompanySetup from './pages/CompanySetup';
-import Dashboard from './pages/Dashboard';
-import ReviewDetail from './pages/ReviewDetail';
-import AdminLogin from './pages/AdminLogin';
-import AdminCompanyList from './pages/AdminCompanyList';
+const CompanySetup = React.lazy(() => import('./pages/CompanySetup'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const ReviewDetail = React.lazy(() => import('./pages/ReviewDetail'));
+const AdminLogin = React.lazy(() => import('./pages/AdminLogin'));
+const AdminCompanyList = React.lazy(() => import('./pages/AdminCompanyList'));
+
+function PageFallback() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[350px] space-y-3 p-8 animate-in fade-in duration-150">
+      <div className="w-8 h-8 rounded-full border-2 border-[#068dcb] border-t-transparent animate-spin"></div>
+      <p className="text-xs text-slate-400 font-medium tracking-wide">Loading view...</p>
+    </div>
+  );
+}
 import AdminHeader from './components/AdminHeader';
 
 function AppLayout({ children, adminUser, onLogout }) {
@@ -38,7 +47,7 @@ function AppLayout({ children, adminUser, onLogout }) {
 export default function App() {
   const [categories, setCategories] = useState([]);
   const [healthStatus, setHealthStatus] = useState(null);
-  const [initialLoading, setInitialLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(false);
 
   // Admin authentication state
   const [adminUser, setAdminUser] = useState(() => {
@@ -135,7 +144,8 @@ export default function App() {
           </div>
         ) : (
           <AppLayout adminUser={adminUser} onLogout={handleLogout}>
-            <Routes>
+            <React.Suspense fallback={<PageFallback />}>
+              <Routes>
               
               {/* Route 1: Explicit Admin Login */}
               <Route 
@@ -224,7 +234,8 @@ export default function App() {
                   adminUser ? <Navigate to="/admin/companies" replace /> : <Navigate to="/login" replace />
                 } 
               />
-            </Routes>
+              </Routes>
+            </React.Suspense>
           </AppLayout>
         )}
       </BrowserRouter>

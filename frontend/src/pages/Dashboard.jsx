@@ -340,11 +340,27 @@ export default function Dashboard({ categories = [] }) {
 
   if (loadingCompany) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-        <div className="w-10 h-10 rounded-full border-2 border-[#068dcb] border-t-transparent animate-spin"></div>
-        <p className="text-xs text-slate-500 font-medium tracking-wide">
-          Loading business review page...
-        </p>
+      <div className="space-y-6 animate-in fade-in duration-200">
+        {/* Header Skeleton */}
+        <div className="p-6 sm:p-7 rounded-3xl border border-slate-200 bg-white shadow-md shadow-slate-200/40 text-center space-y-3">
+          <div className="h-8 w-64 bg-slate-200/80 rounded-xl mx-auto animate-pulse"></div>
+          <div className="h-5 w-40 bg-slate-100 rounded-full mx-auto animate-pulse"></div>
+          <div className="h-3 w-72 bg-slate-100 rounded-md mx-auto animate-pulse"></div>
+        </div>
+
+        {/* Chips Skeleton */}
+        <div className="flex flex-wrap items-center justify-center gap-2 p-3 bg-white/70 rounded-2xl border border-slate-100">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-8 w-24 bg-slate-100 rounded-xl animate-pulse"></div>
+          ))}
+        </div>
+
+        {/* 3 Review Cards Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <SkeletonReviewCard />
+          <SkeletonReviewCard />
+          <SkeletonReviewCard />
+        </div>
       </div>
     );
   }
@@ -377,6 +393,13 @@ export default function Dashboard({ categories = [] }) {
         <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
           {companyError || "The requested business review page could not be found. Please check the URL or contact your administrator."}
         </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#034665] to-[#068dcb] text-white text-xs font-bold hover:brightness-110 shadow-sm transition-all cursor-pointer"
+        >
+          <span>Retry Loading</span>
+        </button>
       </div>
     );
   }
