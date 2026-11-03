@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timezone
 from bson import ObjectId
 from utils.db import Database, serialize_doc
+from models.schemas import INITIAL_CATEGORIES
 
 logger = logging.getLogger(__name__)
 
